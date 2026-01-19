@@ -1,0 +1,10 @@
+{
+  "name": "trackwisy-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "TrackWisy dashboard with robust auth/login/user management",
+  "engines": {
+    "node": "24.x"
+  }
+}
