@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Login</h2>
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<script>
+async function login(){
+ const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({username:u.value,password:p.value})});
+ if(r.status===200){localStorage.setItem('auth','1');location='index.html'}
+ else alert('Invalid login');
+}
+</script>
+</body>
+</html>

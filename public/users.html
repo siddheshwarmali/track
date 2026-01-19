@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>User Management</h2>
+<ul id="list"></ul>
+<script>
+fetch('/api/users').then(r=>r.json()).then(d=>{
+ document.getElementById('list').innerHTML=d.map(u=>`<li>${u.username} (${u.role})</li>`).join('')
+})
+</script>
+</body>
+</html>
