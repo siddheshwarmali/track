@@ -1091,13 +1091,13 @@
       }
       if (action === 'export') return wsExportCurrent && wsExportCurrent();
       if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
+      if (action === 'publish') return wsOpenPublishModal && wsOpenPublishModal();
+      if (action === 'unpublish') return wsUnpublishCurrent && wsUnpublishCurrent();
       if (action === 'import') {
         const inp = document.getElementById('ws-import-file');
         if (inp) inp.click();
         return;
       }
-      if (action === 'publish') return wsOpenPublishModal && wsOpenPublishModal();
-      if (action === 'unpublish') return wsUnpublishCurrent && wsUnpublishCurrent();
     } catch (e) {
       console.error(e);
       alert(e.message || String(e));
@@ -1209,14 +1209,14 @@
     if(action==='delete') return window.wsDeleteCurrent && window.wsDeleteCurrent();
     if(action==='export') return window.wsExportCurrent && window.wsExportCurrent();
     if(action==='exportExcel') return window.wsExportCurrentExcel && window.wsExportCurrentExcel();
+    if(action==='publish') return window.wsOpenPublishModal && window.wsOpenPublishModal();
+    if(action==='unpublish') return window.wsUnpublishCurrent && window.wsUnpublishCurrent();
     if(action==='import'){
       const inp = qs('ws-import-file');
       if(inp) inp.click();
       return;
     }
-  if(action==='publish') return window.wsOpenPublishModal && window.wsOpenPublishModal();
-  if(action==='unpublish') return window.wsUnpublishCurrent && window.wsUnpublishCurrent();
-}
+  }
   window.addEventListener('DOMContentLoaded', ()=>{
     const btn = qs('ws-actions-btn');
     const menu = qs('ws-actions-menu');
@@ -1414,8 +1414,7 @@
             { id: 'section-bau', label: 'BAU Update' }
         ];
 
-// ===== Publish Permissions + Section Masking (Vercel + GitHub DB) =====
-// Publish section list includes Build sections + Run dashboard
+// ===== Publish (Audience + Sections) =====
 const publishSectionDefs = (typeof reportSections !== 'undefined' ? reportSections : []).concat([
   { id: 'run-dashboard', label: 'Run Dashboard' }
 ]);
@@ -1424,18 +1423,18 @@ function wsPublishSelectAllSections(select){
   document.querySelectorAll('.publish-section').forEach(cb => cb.checked = !!select);
 }
 
-function wsCanPublish() {
+function wsCanPublish(){
   const me = window.twMe || {};
-  if (!me.authenticated) return false;
-  if (me.role === 'admin') return true;
+  if(!me.authenticated) return false;
+  if(me.role === 'admin') return true;
   return (window.wsCurrentMeta && window.wsCurrentMeta.ownerId === me.userId) || false;
 }
 
-function wsIsViewerRestricted() {
+function wsIsViewerRestricted(){
   const me = window.twMe || {};
-  if (!me.authenticated) return true;
-  if (me.role === 'admin') return false;
-  if (window.wsCurrentMeta && window.wsCurrentMeta.ownerId && window.wsCurrentMeta.ownerId === me.userId) return false;
+  if(!me.authenticated) return true;
+  if(me.role === 'admin') return false;
+  if(window.wsCurrentMeta && window.wsCurrentMeta.ownerId === me.userId) return false;
   return !!(window.wsCurrentMeta && window.wsCurrentMeta.published);
 }
 
@@ -1445,17 +1444,16 @@ function wsApplyPublishMask(meta){
   window.wsPublishMask = allowed;
 
   const restricted = wsIsViewerRestricted();
-  if (!restricted || allowed.size === 0) {
+  if(!restricted || allowed.size === 0) {
     const runTab = document.getElementById('tab-run');
-    if (runTab) runTab.classList.remove('hidden');
+    if(runTab) runTab.classList.remove('hidden');
     return;
   }
 
-  // Build sections
   (typeof reportSections !== 'undefined' ? reportSections : []).forEach(s => {
     const el = document.getElementById(s.id);
-    if (!el) return;
-    if (!allowed.has(s.id)) {
+    if(!el) return;
+    if(!allowed.has(s.id)) {
       el.classList.add('hidden-by-report');
       el.classList.add('hidden');
     } else {
@@ -1464,19 +1462,17 @@ function wsApplyPublishMask(meta){
     }
   });
 
-  // Run section
   const runAllowed = allowed.has('run-dashboard');
   const runTabBtn = document.getElementById('tab-run');
   const runContent = document.getElementById('content-run');
-  if (runTabBtn) runTabBtn.classList.toggle('hidden', !runAllowed);
-  if (runContent) runContent.classList.toggle('hidden', !runAllowed);
-  if (!runAllowed) {
-    if (typeof switchTab === 'function') switchTab('build');
+  if(runTabBtn) runTabBtn.classList.toggle('hidden', !runAllowed);
+  if(runContent) runContent.classList.toggle('hidden', !runAllowed);
+  if(!runAllowed) {
+    if(typeof switchTab === 'function') switchTab('build');
   }
 
-  // Prevent restricted viewers from re-enabling hidden sections
   const customizeBtn = document.querySelector('button[onclick="openReportModal()"]');
-  if (customizeBtn) customizeBtn.classList.add('hidden');
+  if(customizeBtn) customizeBtn.classList.add('hidden');
 }
 
 async function wsOpenPublishModal(){
@@ -1485,26 +1481,24 @@ async function wsOpenPublishModal(){
   errEl?.classList.add('hidden');
   okEl?.classList.add('hidden');
 
-  if (!wsCanPublish()) {
-    if (errEl) { errEl.textContent = 'Forbidden: only the owner or an admin can publish.'; errEl.classList.remove('hidden'); }
+  if(!wsCanPublish()) {
+    if(errEl) { errEl.textContent = 'Forbidden: only the owner or an admin can publish.'; errEl.classList.remove('hidden'); }
     document.getElementById('modal-publish').classList.add('open');
     return;
   }
 
-  // Load users
   let users=[];
   try {
     const r = await twJson('/api/users/list', { method:'GET' });
-    users = (r.users || []).filter(u=>u && u.userId);
+    users = (r.users || []).filter(u => u && u.userId);
   } catch(e) {
-    if (errEl) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
+    if(errEl) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
   }
 
-  // Render users
   const me = window.twMe || {};
   const boxUsers = document.getElementById('publish-users');
-  if (boxUsers) {
-    boxUsers.innerHTML = users.map(u=>{
+  if(boxUsers) {
+    boxUsers.innerHTML = users.map(u => {
       const isMe = (u.userId === me.userId);
       return `
         <label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
@@ -1517,24 +1511,21 @@ async function wsOpenPublishModal(){
     }).join('') || '<div class="p-3 text-sm text-slate-500">No users found.</div>';
   }
 
-  // Render sections
   const boxSections = document.getElementById('publish-sections');
-  if (boxSections) {
-    boxSections.innerHTML = publishSectionDefs.map(s=>{
-      return `
-        <label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
-          <span class="text-sm text-slate-800">${s.label}</span>
-          <input type="checkbox" class="publish-section w-4 h-4" value="${s.id}" checked />
-        </label>`;
-    }).join('');
+  if(boxSections) {
+    boxSections.innerHTML = publishSectionDefs.map(s => `
+      <label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
+        <span class="text-sm text-slate-800">${s.label}</span>
+        <input type="checkbox" class="publish-section w-4 h-4" value="${s.id}" checked />
+      </label>`).join('');
   }
 
   const allCb = document.getElementById('publish-all');
-  if (allCb) {
+  if(allCb) {
     allCb.checked = false;
-    allCb.onchange = ()=>{
-      document.querySelectorAll('.publish-user').forEach(cb=>{
-        if (cb.disabled) return;
+    allCb.onchange = () => {
+      document.querySelectorAll('.publish-user').forEach(cb => {
+        if(cb.disabled) return;
         cb.checked = false;
         cb.disabled = allCb.checked;
       });
@@ -1550,34 +1541,34 @@ async function wsPublishNow(){
   errEl?.classList.add('hidden');
   okEl?.classList.add('hidden');
 
-  if (!wsCurrentId) {
-    if (errEl) { errEl.textContent = 'No workspace selected.'; errEl.classList.remove('hidden'); }
+  if(!wsCurrentId) {
+    if(errEl) { errEl.textContent = 'No workspace selected.'; errEl.classList.remove('hidden'); }
     return;
   }
 
   const all = !!document.getElementById('publish-all')?.checked;
-  const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb=>cb.checked).map(cb=>cb.value);
-  const sections = Array.from(document.querySelectorAll('.publish-section')).filter(cb=>cb.checked).map(cb=>cb.value);
+  const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb => cb.checked).map(cb => cb.value);
+  const sections = Array.from(document.querySelectorAll('.publish-section')).filter(cb => cb.checked).map(cb => cb.value);
 
-  if (sections.length === 0) {
-    if (errEl) { errEl.textContent = 'Select at least one section to publish.'; errEl.classList.remove('hidden'); }
+  if(sections.length === 0) {
+    if(errEl) { errEl.textContent = 'Select at least one section to publish.'; errEl.classList.remove('hidden'); }
     return;
   }
 
   try {
     await gh6Request('POST', { dash: wsCurrentId, publish: 1 }, { all, users, sections });
-    if (okEl) { okEl.textContent = 'Published successfully.'; okEl.classList.remove('hidden'); }
+    if(okEl) { okEl.textContent = 'Published successfully.'; okEl.classList.remove('hidden'); }
     try { await gh6SyncListIntoStore(); } catch(e) {}
-    setTimeout(()=>closeModal('modal-publish'), 350);
+    setTimeout(() => closeModal('modal-publish'), 350);
   } catch(e) {
-    if (errEl) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
+    if(errEl) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
   }
 }
 
 async function wsUnpublishCurrent(){
-  if (!wsCanPublish()) return alert('Forbidden: only the owner or an admin can unpublish.');
-  if (!wsCurrentId) return alert('No workspace selected.');
-  if (!confirm('Unpublish this dashboard? It will be visible only to the creator.')) return;
+  if(!wsCanPublish()) return alert('Forbidden: only the owner or an admin can unpublish.');
+  if(!wsCurrentId) return alert('No workspace selected.');
+  if(!confirm('Unpublish this dashboard? It will be visible only to the creator.')) return;
   try {
     await gh6Request('POST', { dash: wsCurrentId, unpublish: 1 }, {});
     try { await gh6SyncListIntoStore(); } catch(e) {}
@@ -3516,7 +3507,6 @@ async function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
         const data = await gh6Get(id);
         if (seq !== gh6LoadSeq || wsCurrentId !== id) return;
 
-        // Store meta (owner/publish info) and apply publish mask for viewers
         try { wsApplyPublishMask(data.meta || (data.data && data.data.meta) || {}); } catch(e) {}
  // ignore stale response
 
