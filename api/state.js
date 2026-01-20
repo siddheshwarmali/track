@@ -49,11 +49,35 @@ function filterStateForViewer(state, publishedSections){
   return s;
 }
 
+
 async function loadIndex(){
   const f = await ghGetFile(INDEX_PATH);
-  if(!f.exists) return { dashboards:{}, exists:false };
-  const data = JSON.parse(decodeContent(f) || '{"dashboards":{}}');
-  return { dashboards: data.dashboards || {}, exists:true };
+
+  // If file doesn't exist, return empty dashboards (and optionally auto-create)
+  if(!f.exists) {
+    // Optional auto-create (requires GitHub write permissions)
+    await ghPutFileRetry(INDEX_PATH, JSON.stringify({ dashboards: {} }, null, 2), 'init dashboards index');
+    return { dashboards: {} };
+  }
+
+  // Decode + sanitize
+  const raw = (decodeContent(f) || '').trim();
+
+  // If file exists but is blank/whitespace -> fix it
+  if(!raw) {
+    await ghPutFileRetry(INDEX_PATH, JSON.stringify({ dashboards: {} }, null, 2), 'repair blank dashboards index');
+    return { dashboards: {} };
+  }
+
+  // Parse with safety
+  try {
+    const data = JSON.parse(raw);
+    return { dashboards: data.dashboards || {} };
+  } catch (e) {
+    // If JSON is corrupted -> overwrite with valid structure
+    await ghPutFileRetry(INDEX_PATH, JSON.stringify({ dashboards: {} }, null, 2), 'repair corrupted dashboards index');
+    return { dashboards: {} };
+  }
 }
 
 async function saveIndex(dashboards){
