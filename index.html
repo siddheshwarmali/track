@@ -189,8 +189,8 @@
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem">Publish</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem">Unpublish</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem" onclick="wsOpenPublishModal();">Publish</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem" onclick="wsUnpublishCurrent();">Unpublish</button>
     </div>
     <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
   </div>
@@ -1091,8 +1091,6 @@
       }
       if (action === 'export') return wsExportCurrent && wsExportCurrent();
       if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
-      if (action === 'publish') return wsOpenPublishModal && wsOpenPublishModal();
-      if (action === 'unpublish') return wsUnpublishCurrent && wsUnpublishCurrent();
       if (action === 'import') {
         const inp = document.getElementById('ws-import-file');
         if (inp) inp.click();
@@ -1209,8 +1207,8 @@
     if(action==='delete') return window.wsDeleteCurrent && window.wsDeleteCurrent();
     if(action==='export') return window.wsExportCurrent && window.wsExportCurrent();
     if(action==='exportExcel') return window.wsExportCurrentExcel && window.wsExportCurrentExcel();
-    if(action==='publish') return window.wsOpenPublishModal && window.wsOpenPublishModal();
-    if(action==='unpublish') return window.wsUnpublishCurrent && window.wsUnpublishCurrent();
+    if(action==='publish') return wsOpenPublishModal();
+    if(action==='unpublish') return wsUnpublishCurrent();
     if(action==='import'){
       const inp = qs('ws-import-file');
       if(inp) inp.click();
@@ -1249,9 +1247,7 @@
       <h3 class="text-lg font-bold text-slate-900">Publish Dashboard</h3>
       <button onclick="closeModal('modal-publish')" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
     </div>
-
     <p class="text-sm text-slate-600">Choose <b>who</b> can see this dashboard and <b>which sections</b> they can view.</p>
-
     <div id="publish-err" class="hidden mt-3 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
     <div id="publish-ok" class="hidden mt-3 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3"></div>
 
@@ -1414,170 +1410,6 @@
             { id: 'section-bau', label: 'BAU Update' }
         ];
 
-// ===== Publish (Audience + Sections) =====
-const publishSectionDefs = (typeof reportSections !== 'undefined' ? reportSections : []).concat([
-  { id: 'run-dashboard', label: 'Run Dashboard' }
-]);
-
-function wsPublishSelectAllSections(select){
-  document.querySelectorAll('.publish-section').forEach(cb => cb.checked = !!select);
-}
-
-function wsCanPublish(){
-  const me = window.twMe || {};
-  if(!me.authenticated) return false;
-  if(me.role === 'admin') return true;
-  return (window.wsCurrentMeta && window.wsCurrentMeta.ownerId === me.userId) || false;
-}
-
-function wsIsViewerRestricted(){
-  const me = window.twMe || {};
-  if(!me.authenticated) return true;
-  if(me.role === 'admin') return false;
-  if(window.wsCurrentMeta && window.wsCurrentMeta.ownerId === me.userId) return false;
-  return !!(window.wsCurrentMeta && window.wsCurrentMeta.published);
-}
-
-function wsApplyPublishMask(meta){
-  window.wsCurrentMeta = meta || {};
-  const allowed = new Set((meta && meta.publishedSections) ? meta.publishedSections : []);
-  window.wsPublishMask = allowed;
-
-  const restricted = wsIsViewerRestricted();
-  if(!restricted || allowed.size === 0) {
-    const runTab = document.getElementById('tab-run');
-    if(runTab) runTab.classList.remove('hidden');
-    return;
-  }
-
-  (typeof reportSections !== 'undefined' ? reportSections : []).forEach(s => {
-    const el = document.getElementById(s.id);
-    if(!el) return;
-    if(!allowed.has(s.id)) {
-      el.classList.add('hidden-by-report');
-      el.classList.add('hidden');
-    } else {
-      el.classList.remove('hidden-by-report');
-      el.classList.remove('hidden');
-    }
-  });
-
-  const runAllowed = allowed.has('run-dashboard');
-  const runTabBtn = document.getElementById('tab-run');
-  const runContent = document.getElementById('content-run');
-  if(runTabBtn) runTabBtn.classList.toggle('hidden', !runAllowed);
-  if(runContent) runContent.classList.toggle('hidden', !runAllowed);
-  if(!runAllowed) {
-    if(typeof switchTab === 'function') switchTab('build');
-  }
-
-  const customizeBtn = document.querySelector('button[onclick="openReportModal()"]');
-  if(customizeBtn) customizeBtn.classList.add('hidden');
-}
-
-async function wsOpenPublishModal(){
-  const errEl = document.getElementById('publish-err');
-  const okEl = document.getElementById('publish-ok');
-  errEl?.classList.add('hidden');
-  okEl?.classList.add('hidden');
-
-  if(!wsCanPublish()) {
-    if(errEl) { errEl.textContent = 'Forbidden: only the owner or an admin can publish.'; errEl.classList.remove('hidden'); }
-    document.getElementById('modal-publish').classList.add('open');
-    return;
-  }
-
-  let users=[];
-  try {
-    const r = await twJson('/api/users/list', { method:'GET' });
-    users = (r.users || []).filter(u => u && u.userId);
-  } catch(e) {
-    if(errEl) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
-  }
-
-  const me = window.twMe || {};
-  const boxUsers = document.getElementById('publish-users');
-  if(boxUsers) {
-    boxUsers.innerHTML = users.map(u => {
-      const isMe = (u.userId === me.userId);
-      return `
-        <label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
-          <span class="text-sm text-slate-800 font-mono">${u.userId}</span>
-          <span class="flex items-center gap-2">
-            <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${u.role || ''}</span>
-            <input type="checkbox" class="publish-user w-4 h-4" value="${u.userId}" ${isMe ? 'disabled checked' : ''} />
-          </span>
-        </label>`;
-    }).join('') || '<div class="p-3 text-sm text-slate-500">No users found.</div>';
-  }
-
-  const boxSections = document.getElementById('publish-sections');
-  if(boxSections) {
-    boxSections.innerHTML = publishSectionDefs.map(s => `
-      <label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
-        <span class="text-sm text-slate-800">${s.label}</span>
-        <input type="checkbox" class="publish-section w-4 h-4" value="${s.id}" checked />
-      </label>`).join('');
-  }
-
-  const allCb = document.getElementById('publish-all');
-  if(allCb) {
-    allCb.checked = false;
-    allCb.onchange = () => {
-      document.querySelectorAll('.publish-user').forEach(cb => {
-        if(cb.disabled) return;
-        cb.checked = false;
-        cb.disabled = allCb.checked;
-      });
-    };
-  }
-
-  document.getElementById('modal-publish').classList.add('open');
-}
-
-async function wsPublishNow(){
-  const errEl = document.getElementById('publish-err');
-  const okEl = document.getElementById('publish-ok');
-  errEl?.classList.add('hidden');
-  okEl?.classList.add('hidden');
-
-  if(!wsCurrentId) {
-    if(errEl) { errEl.textContent = 'No workspace selected.'; errEl.classList.remove('hidden'); }
-    return;
-  }
-
-  const all = !!document.getElementById('publish-all')?.checked;
-  const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb => cb.checked).map(cb => cb.value);
-  const sections = Array.from(document.querySelectorAll('.publish-section')).filter(cb => cb.checked).map(cb => cb.value);
-
-  if(sections.length === 0) {
-    if(errEl) { errEl.textContent = 'Select at least one section to publish.'; errEl.classList.remove('hidden'); }
-    return;
-  }
-
-  try {
-    await gh6Request('POST', { dash: wsCurrentId, publish: 1 }, { all, users, sections });
-    if(okEl) { okEl.textContent = 'Published successfully.'; okEl.classList.remove('hidden'); }
-    try { await gh6SyncListIntoStore(); } catch(e) {}
-    setTimeout(() => closeModal('modal-publish'), 350);
-  } catch(e) {
-    if(errEl) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
-  }
-}
-
-async function wsUnpublishCurrent(){
-  if(!wsCanPublish()) return alert('Forbidden: only the owner or an admin can unpublish.');
-  if(!wsCurrentId) return alert('No workspace selected.');
-  if(!confirm('Unpublish this dashboard? It will be visible only to the creator.')) return;
-  try {
-    await gh6Request('POST', { dash: wsCurrentId, unpublish: 1 }, {});
-    try { await gh6SyncListIntoStore(); } catch(e) {}
-  } catch(e) {
-    alert(e.message || String(e));
-  }
-}
-
-
         function openReportModal() {
             const container = document.getElementById('report-toggles');
             container.innerHTML = reportSections.map(s => {
@@ -1602,12 +1434,6 @@ async function wsUnpublishCurrent(){
 
         function applyReportView() {
             reportSections.forEach(s => {
-            /* publish-mask */
-            if (window.wsPublishMask && window.wsPublishMask.size && !window.wsPublishMask.has(s.id)) {
-                const el = document.getElementById(s.id);
-                if (el) { el.classList.add('hidden-by-report'); el.classList.add('hidden'); }
-                return;
-            }
                 const cb = document.getElementById(`toggle-${s.id}`);
                 const el = document.getElementById(s.id);
                 if (el && cb) {
@@ -3505,10 +3331,7 @@ async function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
     try {
         gh6Overlay(true, 'Fetching from GitHub...');
         const data = await gh6Get(id);
-        if (seq !== gh6LoadSeq || wsCurrentId !== id) return;
-
-        try { wsApplyPublishMask(data.meta || (data.data && data.data.meta) || {}); } catch(e) {}
- // ignore stale response
+        if (seq !== gh6LoadSeq || wsCurrentId !== id) return; // ignore stale response
 
         const state = data.state ? gh6SanitizeState(data.state) : null;
         if (state) {
@@ -4029,9 +3852,7 @@ async function wsModalPrimary() {
       <h3 class="text-lg font-bold text-slate-900">Publish Dashboard</h3>
       <button onclick="closeModal('modal-publish')" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
     </div>
-
     <p class="text-sm text-slate-600">Choose <b>who</b> can see this dashboard and <b>which sections</b> they can view.</p>
-
     <div id="publish-err" class="hidden mt-3 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
     <div id="publish-ok" class="hidden mt-3 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3"></div>
 
