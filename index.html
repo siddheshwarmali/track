@@ -76,9 +76,33 @@
       document.body.classList.remove('role-admin','role-creator','role-viewer');
       document.body.classList.add('role-'+role);
       window.twMe = me;
+    // Show Executive Board link only when allowed (admin or executiveBoard permission)
+    const execLink = document.getElementById('tw-execboard');
+    if (execLink) {
+      const perms = me.permissions || {};
+      const allowed = (me.role === 'admin') || !!perms.executiveBoard;
+      // keep visible; access is enforced by server
+      execLink.classList.remove('hidden');
+    }
+
       if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
-      if(mgr) mgr.classList.toggle('hidden', role!=='admin');
-      if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
+      if(mgr) // keep visible; backend will enforce
+      mgr.classList.remove('hidden');
+      
+    // Guard User Manager navigation for non-admin users
+    const um = document.getElementById('tw-usermgr');
+    if (um) {
+      um.onclick = (e)=>{
+        try{
+          if (me.role !== 'admin' && !(me.permissions||{}).userManager) {
+            e.preventDefault();
+            alert('Access denied: User Manager permission is not granted.');
+            return false;
+          }
+        }catch(err){}
+      };
+    }
+if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
     }catch(e){
       const next=encodeURIComponent(location.pathname+location.search+location.hash);
       location.replace('/login.html?next='+next);
@@ -124,7 +148,9 @@
       <span class="text-slate-700 text-xl leading-none">☰</span>
     </button>
 
-    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+    <!-- Mobile backdrop for hamburger menu -->
+<div id="tw-menu-backdrop" class="hidden fixed inset-0 bg-black/30 z-40" aria-hidden="true"></div>
+<div id="tw-menu" class="hidden fixed right-4 top-16 sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[min(92vw,20rem)] sm:w-80 max-h-[80vh] overflow-auto bg-white border border-slate-200 rounded-2xl shadow-xl z-50">
       <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
         <div class="text-xs text-slate-500">Signed in as</div>
         <div id="tw-userpill" class="mt-1 text-sm font-semibold text-slate-900">Checking login…</div>
@@ -139,6 +165,30 @@
         <button type="button" onclick="twNav('run')" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">▶️</span><span>Run</span>
         </button>
+  <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">🏛️</span><span>Executive Board</span>
+  </a>
+  <button id="tw-customize" type="button" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">🎛️</span><span>Customize View</span>
+  </button>
+  <button id="tw-export" type="button" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">📤</span><span>Export Report</span>
+  </button>
+  <button id="tw-actions" type="button" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">⚙️</span><span>Workspace Actions</span>
+  </button>
+  <button id="tw-publish" type="button" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">🟣</span><span>Publish</span>
+  </button>
+  <button id="tw-unpublish" type="button" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">⚪</span><span>Unpublish</span>
+  </button>
+
+  <button id="tw-diag" type="button" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">🧪</span><span>Diagnostics</span>
+  </button>
+
+
       </div>
 
       <!-- Account -->
@@ -265,7 +315,7 @@
                             title="Click to Add Milestone | Double click to Toggle Upload">
                             Project Milestones - Application Tracker
                         </h3>
-                        <div id="milestone-upload-controls" class="hidden flex items-center space-x-2 no-print">
+                        <div id=\"milestone-upload-controls\" class=\" flex items-center space-x-2 no-print\">
                             <label class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition animate-fade-in">
                                 <i data-lucide="upload" class="w-4 h-4"></i><span class="text-sm font-medium">Upload Excel</span>
                                 <input type="file" accept=".xlsx,.xls" onchange="handleFileUpload(this, 'milestones')" class="hidden" />
@@ -294,7 +344,7 @@
                             title="Double-click to toggle upload/edit buttons">
                             <i data-lucide="table" class="w-5 h-5 mr-2 text-teal-600"></i>Task Discipline Status
                         </h3>
-                        <div id="discipline-controls" class="hidden flex space-x-2 animate-fade-in no-print">
+                        <div id=\"discipline-controls\" class=\" flex space-x-2 animate-fade-in no-print\">
                             <button onclick="openAdoModal('discipline')" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm">
                                 <i data-lucide="cloud-lightning" class="w-4 h-4"></i><span class="text-sm font-medium">Sync ADO</span>
                             </button>
@@ -412,7 +462,7 @@
                             title="Click to Add KPI | Double click to show/hide upload option">
                             <i data-lucide="bar-chart-2" class="w-5 h-5 mr-2 text-blue-600"></i>Key Performance Indicators
                         </h3>
-                        <div id="kpi-upload-controls" class="hidden no-print">
+                        <div id=\"kpi-upload-controls\" class=\" no-print\">
                              <label class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm animate-fade-in">
                                 <i data-lucide="database" class="w-4 h-4"></i><span class="text-sm font-medium">Upload KPI Excel</span>
                                 <input type="file" accept=".xlsx,.xls" onchange="handleFileUpload(this, 'kpi')" class="hidden" />
@@ -737,7 +787,8 @@
       document.body.classList.remove('role-admin','role-creator','role-viewer');
       document.body.classList.add('role-'+role);
       if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
-      if(mgr) mgr.classList.toggle('hidden', role!=='admin');
+      if(mgr) // keep visible; backend will enforce
+      mgr.classList.remove('hidden');
       if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
     }catch(e){
       const next=encodeURIComponent(location.pathname+location.search+location.hash);
@@ -1032,13 +1083,18 @@
 
   // ---------- Advanced Hamburger ----------
   function twMenuOpen(open) {
-    const menu = document.getElementById('tw-menu');
-    if (!menu) return;
-    const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
-    menu.classList.toggle('hidden', !next);
-  }
+  const menu = document.getElementById('tw-menu');
+  const back = document.getElementById('tw-menu-backdrop');
+  const btn = document.getElementById('tw-menu-btn');
+  if (!menu) return;
+  const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !next);
+  if (back) back.classList.toggle('hidden', !next);
+  if (btn) btn.setAttribute('aria-expanded', String(next));
+  document.body.classList.toggle('overflow-hidden', next);
+}
 
-  function twNav(tab) {
+function twNav(tab) {
     try {
       if (typeof switchTab === 'function') switchTab(tab);
     } finally {
@@ -1176,7 +1232,15 @@
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') twMenuOpen(false); });
 
-    // Start app init after DOM is ready
+    
+  // Hamburger quick actions
+  const c = document.getElementById('tw-customize'); if(c) c.onclick = twOpenCustomize;
+  const x = document.getElementById('tw-export'); if(x) x.onclick = twExportReport;
+  const a = document.getElementById('tw-actions'); if(a) a.onclick = twOpenActions;
+  const d = document.getElementById('tw-diag'); if(d) d.onclick = twShowDiagnostics;
+  const p = document.getElementById('tw-publish'); if(p) p.onclick = twOpenPublish;
+  const u = document.getElementById('tw-unpublish'); if(u) u.onclick = twUnpublish;
+// Start app init after DOM is ready
     twInitApp();
   });
 </script>
@@ -1397,6 +1461,30 @@
 })();
 </script>
 
+
+<!-- Diagnostics Modal -->
+<div id="tw-diag-modal" class="fixed inset-0 hidden items-center justify-center bg-black/50 z-[100000]">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-[min(920px,92vw)] max-h-[85vh] overflow-auto">
+    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <div class="text-sm font-bold text-slate-900">Diagnostics</div>
+        <div class="text-xs text-slate-500">Role/permissions, workspace, and runtime errors</div>
+      </div>
+      <button id="tw-diag-close" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
+    </div>
+    <div class="p-4 space-y-3">
+      <div class="text-xs font-semibold text-slate-700">Summary</div>
+      <div id="tw-diag-summary" class="text-sm text-slate-700"></div>
+
+      <div class="text-xs font-semibold text-slate-700 mt-4">Errors</div>
+      <pre id="tw-diag-errors" class="text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-auto"></pre>
+
+      <div class="text-xs font-semibold text-slate-700 mt-4">Raw JSON</div>
+      <pre id="tw-diag-json" class="text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-auto"></pre>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
 </template>
@@ -1593,6 +1681,63 @@
   const tr = document.getElementById('tab-run');
   if(tb) tb.className = t==='build' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
   if(tr) tr.className = t==='run' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
+}
+
+
+// --- Quick actions from hamburger ---
+function twClick(id){ try{ const el=document.getElementById(id); if(el) el.click(); }catch(e){} }
+function twOpenCustomize(){ try{ twMenuOpen(false); if(typeof openReportModal==='function') openReportModal(); }catch(e){ alert(e.message||String(e)); } }
+function twExportReport(){ try{ twMenuOpen(false); if(typeof exportReport==='function') exportReport(); }catch(e){ alert(e.message||String(e)); } }
+function twOpenActions(){ try{ twMenuOpen(false); twClick('ws-actions-btn'); }catch(e){} }
+
+function twOpenPublish(){ try{ twMenuOpen(false); if(window.wsOpenPublishModal) return window.wsOpenPublishModal(); alert('Publish feature is not available.'); }catch(e){ alert(e.message||String(e)); } }
+function twUnpublish(){ try{ twMenuOpen(false); if(window.wsUnpublishCurrent) return window.wsUnpublishCurrent(); alert('Unpublish feature is not available.'); }catch(e){ alert(e.message||String(e)); } }
+
+// --- Diagnostics ---
+window.twErrors = window.twErrors || [];
+window.addEventListener('error', (e)=>{ try{ window.twErrors.push({type:'error', message: e.message, source: e.filename, line: e.lineno, col: e.colno}); }catch(_){} });
+window.addEventListener('unhandledrejection', (e)=>{ try{ window.twErrors.push({type:'promise', message: (e.reason && (e.reason.message||String(e.reason))) || 'Unhandled rejection'}); }catch(_){} });
+
+function twBuildDiag(){
+  const me = window.twMe || {};
+  const store = (typeof wsLoadStore==='function') ? wsLoadStore() : null;
+  const currentId = (typeof wsCurrentId !== 'undefined') ? wsCurrentId : (window.wsCurrentId||null);
+  const current = store && store.workspaces ? store.workspaces[currentId] : null;
+  return {
+    time: new Date().toISOString(),
+    location: { path: location.pathname, search: location.search, hash: location.hash },
+    auth: { authenticated: !!me.authenticated, userId: me.userId || null, role: me.role || null, permissions: me.permissions || {} },
+    workspace: { currentId, currentName: current ? current.name : null, workspaces: store ? Object.keys(store.workspaces||{}).length : null },
+    ui: {
+      menu: { hasBackdrop: !!document.getElementById('tw-menu-backdrop'), hasMenu: !!document.getElementById('tw-menu') },
+      features: {
+        execBoardLinkVisible: (()=>{ const el=document.getElementById('tw-execboard'); return !!el && !el.classList.contains('hidden'); })(),
+        userMgrLinkVisible: (()=>{ const el=document.getElementById('tw-usermgr'); return !!el && !el.classList.contains('hidden'); })(),
+        actionsBtn: !!document.getElementById('ws-actions-btn')
+      }
+    },
+    errors: window.twErrors || []
+  };
+}
+
+function twShowDiagnostics(){
+  try{
+    twMenuOpen(false);
+    const modal = document.getElementById('tw-diag-modal');
+    const close = document.getElementById('tw-diag-close');
+    if(!modal) return;
+    const diag = twBuildDiag();
+    const sum = document.getElementById('tw-diag-summary');
+    const err = document.getElementById('tw-diag-errors');
+    const raw = document.getElementById('tw-diag-json');
+    if(sum) sum.textContent = `User: ${diag.auth.userId||'—'} • Role: ${diag.auth.role||'—'} • Workspace: ${diag.workspace.currentName||diag.workspace.currentId||'—'}`;
+    if(err) err.textContent = JSON.stringify(diag.errors, null, 2) || '[]';
+    if(raw) raw.textContent = JSON.stringify(diag, null, 2);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if(close) close.onclick = ()=>{ modal.classList.add('hidden'); modal.classList.remove('flex'); };
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); } }, { once:true });
+  }catch(e){ alert(e.message||String(e)); }
 }
         
         function toggleTrackerDetails() {
@@ -1793,14 +1938,7 @@
             renderKPIs();
             renderBauStats();
             renderSummary(); 
-  try {
-    const el = document.getElementById('milestone-details');
-    const icon = document.getElementById('tracker-arrow');
-    if (icon) icon.classList.toggle('rotate-180', !!showTrackerDetails);
-    if (el) el.classList.toggle('hidden', !showTrackerDetails);
-  } catch (e) {}
-
-}
+        }
 
         function renderMilestones() {
             const container = document.getElementById('milestone-container');
@@ -2368,8 +2506,8 @@ function renderBlockers() {
             document.getElementById('ms-index').value = isEdit ? idx : '';
             document.getElementById('btn-delete-ms').classList.toggle('hidden', !isEdit);
             if(isEdit) { const m = milestones[idx]; document.getElementById('ms-phase').value = m.phase; document.getElementById('ms-start').value = m.startDate; document.getElementById('ms-end').value = m.endDate; document.getElementById('ms-act-start').value = m.actualStartDate; document.getElementById('ms-act-end').value = m.actualEndDate;
- document.getElementById('ms-owner').value = m.owner || '';
- document.getElementById('ms-remark').value = m.remark; } 
+      document.getElementById('ms-owner').value = m.owner || '';
+      document.getElementById('ms-remark').value = m.remark; } 
             else { ['ms-phase','ms-start','ms-end','ms-act-start','ms-act-end','ms-owner','ms-remark'].forEach(id => document.getElementById(id).value = ''); }
             document.getElementById('modal-milestone').classList.add('open');
         }
@@ -4128,6 +4266,30 @@ async function wsModalPrimary() {
   }, true);
 })();
 </script>
+
+
+<!-- Diagnostics Modal -->
+<div id="tw-diag-modal" class="fixed inset-0 hidden items-center justify-center bg-black/50 z-[100000]">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-[min(920px,92vw)] max-h-[85vh] overflow-auto">
+    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <div class="text-sm font-bold text-slate-900">Diagnostics</div>
+        <div class="text-xs text-slate-500">Role/permissions, workspace, and runtime errors</div>
+      </div>
+      <button id="tw-diag-close" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
+    </div>
+    <div class="p-4 space-y-3">
+      <div class="text-xs font-semibold text-slate-700">Summary</div>
+      <div id="tw-diag-summary" class="text-sm text-slate-700"></div>
+
+      <div class="text-xs font-semibold text-slate-700 mt-4">Errors</div>
+      <pre id="tw-diag-errors" class="text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-auto"></pre>
+
+      <div class="text-xs font-semibold text-slate-700 mt-4">Raw JSON</div>
+      <pre id="tw-diag-json" class="text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-auto"></pre>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
