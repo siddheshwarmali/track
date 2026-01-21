@@ -76,14 +76,6 @@
       document.body.classList.remove('role-admin','role-creator','role-viewer');
       document.body.classList.add('role-'+role);
       window.twMe = me;
-    // Executive Board menu item visibility
-    const execLink = document.getElementById('tw-execboard');
-    if (execLink) {
-      const perms = me.permissions || {};
-      const allowed = (me.role === 'admin') || !!perms.executiveBoard;
-      execLink.classList.toggle('hidden', !allowed);
-    }
-
       if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
       if(mgr) mgr.classList.toggle('hidden', role!=='admin');
       if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
@@ -131,9 +123,8 @@
       <span class="sr-only">Menu</span>
       <span class="text-slate-700 text-xl leading-none">☰</span>
     </button>
-<!-- Mobile backdrop for hamburger menu -->
-<div id=\"tw-menu-backdrop\" class=\"hidden fixed inset-0 bg-black/30 z-40\" aria-hidden=\"true\"></div>
-<div id="tw-menu" class="hidden fixed right-4 top-16 sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[min(92vw,20rem)] sm:w-80 max-h-[80vh] overflow-auto bg-white border border-slate-200 rounded-2xl shadow-xl z-50">
+
+    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
       <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
         <div class="text-xs text-slate-500">Signed in as</div>
         <div id="tw-userpill" class="mt-1 text-sm font-semibold text-slate-900">Checking login…</div>
@@ -145,9 +136,9 @@
         <button type="button" onclick="twNav('build')" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">🛠️</span><span>Build</span>
         </button>
-        <a href=\"run-dashboard.html\" class=\"w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50\">
+        <button type="button" onclick="twNav('run')" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">▶️</span><span>Run</span>
-        </a>
+        </button>
       </div>
 
       <!-- Account -->
@@ -573,11 +564,7 @@
     <div id="modal-milestone" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in">
             <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-800" id="milestone-modal-title">Add New Milestone</h3><button onclick="closeModal('modal-milestone')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div>
-<div>
-  <label class=\"block text-sm font-medium text-gray-700 mb-1\">Owner</label>
-  <input type=\"text\" id=\"ms-owner\" class=\"w-full border border-gray-300 rounded-lg p-2\" placeholder=\"Owner / Assignee\">
-</div></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea id="ms-remark" class="w-full border border-gray-300 rounded-lg p-2 h-20"></textarea></div></div>
+            <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea id="ms-remark" class="w-full border border-gray-300 rounded-lg p-2 h-20"></textarea></div></div>
             <div class="flex justify-end space-x-3 mt-6"><button id="btn-delete-ms" onclick="deleteMilestone()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium mr-auto hidden">Delete</button><button onclick="closeModal('modal-milestone')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button onclick="saveMilestone()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Save</button></div>
         </div>
     </div>
@@ -1041,26 +1028,568 @@
 
   // ---------- Advanced Hamburger ----------
   function twMenuOpen(open) {
-  const menu = document.getElementById('tw-menu');
-  const back = document.getElementById('tw-menu-backdrop');
-  const btn = document.getElementById('tw-menu-btn');
-  if (!menu) return;
-  const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
-  menu.classList.toggle('hidden', !next);
-  if (back) back.classList.toggle('hidden', !next);
-  if (btn) btn.setAttribute('aria-expanded', String(next));
-  document.body.classList.toggle('overflow-hidden', next);
-}
-
-function twNav(tab) {
-  try {
-    if (tab === 'run') { location.href = 'run-dashboard.html'; return; }
-    if (typeof switchTab === 'function') switchTab(tab);
-  } finally {
-    try { twMenuOpen(false); } catch (e) {}
+    const menu = document.getElementById('tw-menu');
+    if (!menu) return;
+    const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !next);
   }
-}
 
+  function twNav(tab) {
+    try {
+      if (typeof switchTab === 'function') switchTab(tab);
+    } finally {
+      twMenuOpen(false);
+    }
+  }
+
+  // Workspace select inside hamburger mirrors main workspace select
+  function twSyncWsSelectFromMain() {
+    const main = document.getElementById('ws-select');
+    const tw = document.getElementById('tw-ws-select');
+    if (!main || !tw) return;
+    tw.innerHTML = main.innerHTML;
+    tw.value = main.value;
+    const ind = document.getElementById('tw-ws-indicator');
+    const saved = document.getElementById('ws-saved-indicator');
+    if (ind && saved) ind.textContent = saved.textContent || '';
+  }
+
+  async function twSelectWorkspace(id) {
+    try {
+      twMenuOpen(false);
+      if (!id) return;
+      if (typeof wsSelectWorkspace === 'function') {
+        twLoader.show('Loading dashboard…', 'Switching workspace', 35);
+        twLoader.pct(45);
+        await Promise.resolve(wsSelectWorkspace(id));
+        // Ensure render on first load / after switch
+        if (typeof renderAll === 'function') renderAll();
+      }
+    } catch (e) {
+      console.error(e);
+      alert(e.message || String(e));
+    } finally {
+      twLoader.hide();
+      // sync selects
+      setTimeout(twSyncWsSelectFromMain, 50);
+    }
+  }
+
+  async function twWsAction(action) {
+    try {
+      twMenuOpen(false);
+      if (!action) return;
+      if (action === 'new') return wsOpenCreateModal && wsOpenCreateModal();
+      if (action === 'rename') return wsRenameCurrent && wsRenameCurrent();
+      if (action === 'delete') {
+        twLoader.show('Deleting dashboard…', 'Removing from GitHub / database', 40);
+        return await Promise.resolve(wsDeleteCurrent && wsDeleteCurrent());
+      }
+      if (action === 'save') {
+        twLoader.show('Saving dashboard…', 'Persisting to GitHub / database', 45);
+        return await Promise.resolve(wsSaveNow && wsSaveNow({ prompt: true }));
+      }
+      if (action === 'export') return wsExportCurrent && wsExportCurrent();
+      if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
+      if (action === 'import') {
+        const inp = document.getElementById('ws-import-file');
+        if (inp) inp.click();
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      alert(e.message || String(e));
+    } finally {
+      twLoader.hide();
+      setTimeout(twSyncWsSelectFromMain, 50);
+    }
+  }
+
+  // ---------- First-load Fix + Advanced Init ----------
+  async function twInitApp() {
+    try {
+      twLoader.show('Starting…', 'Checking session', 15);
+      // Ensure auth init runs (existing twInit redirects if not logged in)
+      if (typeof twInit === 'function') {
+        await Promise.resolve(twInit());
+      }
+      twLoader.pct(30);
+
+      // Inject Run iframe content early so Run tab is ready
+      try {
+        const tmpl = document.getElementById('run-dashboard-template');
+        const iframe = document.getElementById('run-iframe');
+        if (tmpl && iframe && !iframe.srcdoc) {
+          iframe.srcdoc = tmpl.innerHTML;
+        }
+      } catch (e) {
+        console.warn('Run iframe init failed:', e);
+      }
+
+      twLoader.show('Loading dashboards…', 'Syncing workspace list', 45);
+
+      // Initialize workspace manager (some versions are async)
+      if (typeof wsInitWorkspaceManager === 'function') {
+        await Promise.resolve(wsInitWorkspaceManager());
+      }
+      twLoader.pct(70);
+
+      // Ensure first-time render happens (this fixes "loads only after switching dashboard")
+      if (typeof renderAll === 'function') {
+        renderAll();
+      }
+
+      // Sync hamburger workspace select from main select
+      setTimeout(twSyncWsSelectFromMain, 100);
+
+      // Hook main workspace select changes to keep hamburger select updated
+      const mainSel = document.getElementById('ws-select');
+      if (mainSel) {
+        mainSel.addEventListener('change', () => setTimeout(twSyncWsSelectFromMain, 50));
+      }
+
+      twLoader.show('Almost done…', 'Finalizing UI', 88);
+      // Allow browser a tick to paint
+      await new Promise(r => setTimeout(r, 150));
+      twLoader.hide();
+
+    } catch (e) {
+      console.error(e);
+      twLoader.show('Failed to load', e.message || String(e), 100);
+      // keep visible so user can read
+    }
+  }
+
+  // Close menu on outside click and Escape; open on button
+  window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('tw-menu-btn');
+    const menu = document.getElementById('tw-menu');
+    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); twMenuOpen(); });
+    document.addEventListener('click', (e) => {
+      if (!menu) return;
+      const inside = menu.contains(e.target) || (btn && btn.contains(e.target));
+      if (!inside) twMenuOpen(false);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') twMenuOpen(false); });
+
+    // Start app init after DOM is ready
+    twInitApp();
+  });
+</script>
+
+<script>
+
+// ===== Workspace Actions Menu (responsive) =====
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function isOpen(){ const m=qs('ws-actions-menu'); return m && !m.classList.contains('hidden'); }
+  function openMenu(){
+    const menu = qs('ws-actions-menu');
+    const btn = qs('ws-actions-btn');
+    const back = qs('ws-actions-backdrop');
+    if(!menu || !btn) return;
+    menu.classList.remove('hidden');
+    btn.setAttribute('aria-expanded','true');
+    if(back) back.classList.remove('hidden');
+  }
+  function closeMenu(){
+    const menu = qs('ws-actions-menu');
+    const btn = qs('ws-actions-btn');
+    const back = qs('ws-actions-backdrop');
+    if(menu) menu.classList.add('hidden');
+    if(back) back.classList.add('hidden');
+    if(btn) btn.setAttribute('aria-expanded','false');
+  }
+  async function perform(action){
+    if(action==='new') return window.wsOpenCreateModal && window.wsOpenCreateModal();
+    if(action==='rename') return window.wsRenameCurrent && window.wsRenameCurrent();
+    if(action==='save') return window.wsSaveNow && window.wsSaveNow({prompt:true});
+    if(action==='delete') return window.wsDeleteCurrent && window.wsDeleteCurrent();
+    if(action==='export') return window.wsExportCurrent && window.wsExportCurrent();
+    if(action==='exportExcel') return window.wsExportCurrentExcel && window.wsExportCurrentExcel();
+    if(action==='import'){
+      const inp = qs('ws-import-file');
+      if(inp) inp.click();
+      return;
+    }
+  }
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const btn = qs('ws-actions-btn');
+    const menu = qs('ws-actions-menu');
+    const back = qs('ws-actions-backdrop');
+    if(btn) btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); isOpen()?closeMenu():openMenu(); });
+    if(back) back.addEventListener('click', closeMenu);
+    if(menu) menu.addEventListener('click', async (e)=>{
+      const t=e.target;
+      const c=t && t.closest ? t.closest('[data-ws-close]') : null;
+      if(c){ e.preventDefault(); closeMenu(); return; }
+      const item=t && t.closest ? t.closest('[data-ws-action]') : null;
+      if(!item) return;
+      e.preventDefault();
+      const action=item.getAttribute('data-ws-action');
+      closeMenu();
+      try{ await perform(action); }catch(err){ console.error(err); alert(err.message||String(err)); }
+    });
+    document.addEventListener('click', (e)=>{ if(!isOpen()) return; const inside = (menu && menu.contains(e.target)) || (btn && btn.contains(e.target)); if(!inside) closeMenu(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+  });
+})();
+
+</script>
+
+
+<!-- Publish Modal -->
+<div id="modal-publish" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl animate-fade-in">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-slate-900">Publish Dashboard</h3>
+      <button onclick="closeModal('modal-publish')" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
+    </div>
+    <p class="text-sm text-slate-600">Choose <b>who</b> can see this dashboard. (All sections will be visible to published users.)</p>
+
+    <div id="publish-err" class="hidden mt-3 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
+    <div id="publish-ok" class="hidden mt-3 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3"></div>
+
+    <div class="mt-4 grid md:grid-cols-2 gap-4">
+      <div class="border border-slate-200 rounded-xl p-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Audience</div>
+        <label class="flex items-center gap-2 mt-2 p-2 rounded border border-slate-200 bg-slate-50">
+          <input id="publish-all" type="checkbox" class="w-4 h-4" />
+          <span class="text-sm font-medium text-slate-800">Publish to <b>All users</b></span>
+        </label>
+        <div class="mt-3">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Or select specific users</div>
+          <div id="publish-users" class="mt-2 max-h-56 overflow-auto border border-slate-200 rounded-lg"></div>
+        </div>
+      </div>
+      <div class="border border-slate-200 rounded-xl p-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note</div>
+        <p class="mt-2 text-sm text-slate-600">Only the <b>owner</b> of the dashboard or an <b>admin</b> can publish/unpublish.</p>
+      </div>
+    </div>
+
+    <div class="mt-5 flex justify-end gap-2">
+      <button onclick="closeModal('modal-publish')" class="px-4 py-2 bg-slate-100 text-slate-800 rounded-lg text-sm">Cancel</button>
+      <button id="btn-publish-now" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Publish</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// Publish/Unpublish (audience only) - always present in UI
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function getCurrentDashId(){
+    try { if (typeof wsCurrentId !== 'undefined' && wsCurrentId) return wsCurrentId; } catch(e) {}
+    if (window.wsCurrentId) return window.wsCurrentId;
+    const p = new URLSearchParams(location.search);
+    return p.get('dash');
+  }
+  async function apiJson(url, opt){
+    opt = opt || {};
+    const r = await fetch(url, { credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}, ...opt });
+    const t = await r.text();
+    let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
+    if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+    return j;
+  }
+  function canPublish(){
+    const me = window.twMe || {};
+    if(!me.authenticated) return false;
+    if(me.role === 'admin') return true;
+    return (window.wsCurrentMeta && window.wsCurrentMeta.ownerId && window.wsCurrentMeta.ownerId === me.userId);
+  }
+  function showErr(msg){ const el=qs('publish-err'); const ok=qs('publish-ok'); ok&&ok.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
+  function showOk(msg){ const el=qs('publish-ok'); const er=qs('publish-err'); er&&er.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
+
+  async function openPublish(){
+    qs('publish-err')?.classList.add('hidden');
+    qs('publish-ok')?.classList.add('hidden');
+
+    const dashId = getCurrentDashId();
+    if(!dashId){ showErr('No workspace selected. Please select or create a workspace first.'); qs('modal-publish').classList.add('open'); return; }
+
+    if(!canPublish()){
+      showErr('Forbidden: only owner or admin can publish/unpublish.');
+      qs('modal-publish').classList.add('open');
+      return;
+    }
+
+    try{
+      const data = await apiJson('/api/users/list', { method:'GET' });
+      const users = (data.users||[]).filter(u=>u && u.userId);
+      const me = window.twMe || {};
+      const box = qs('publish-users');
+      if(box){
+        box.innerHTML = users.map(u=>{
+          const isMe = u.userId === me.userId;
+          return `<label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
+            <span class="text-sm text-slate-800 font-mono">${u.userId}</span>
+            <span class="flex items-center gap-2">
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${u.role||''}</span>
+              <input type="checkbox" class="publish-user w-4 h-4" value="${u.userId}" ${isMe?'disabled checked':''}/>
+            </span></label>`;
+        }).join('') || '<div class="p-3 text-sm text-slate-500">No users found.</div>';
+      }
+      const allCb = qs('publish-all');
+      if(allCb){
+        allCb.checked = false;
+        allCb.onchange = ()=>{
+          document.querySelectorAll('.publish-user').forEach(cb=>{ if(cb.disabled) return; cb.checked=false; cb.disabled=allCb.checked; });
+        };
+      }
+    } catch(e){
+      showErr(e.message || String(e));
+    }
+
+    qs('modal-publish').classList.add('open');
+  }
+
+  async function doPublish(){
+    try{
+      const dashId = getCurrentDashId();
+      if(!dashId) return showErr('No workspace selected.');
+      const all = !!qs('publish-all')?.checked;
+      const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb=>cb.checked).map(cb=>cb.value);
+      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&publish=1`, { method:'POST', body: JSON.stringify({ all, users }) });
+      showOk('Published successfully.');
+      setTimeout(()=>closeModal('modal-publish'), 350);
+    } catch(e){
+      showErr(e.message || String(e));
+    }
+  }
+
+  async function doUnpublish(){
+    try{
+      const dashId = getCurrentDashId();
+      if(!dashId) return alert('No workspace selected.');
+      if(!canPublish()) return alert('Forbidden: only owner or admin can unpublish.');
+      if(!confirm('Unpublish this dashboard?')) return;
+      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&unpublish=1`, { method:'POST', body: '{}' });
+      alert('Unpublished successfully.');
+    } catch(e){
+      alert(e.message || String(e));
+    }
+  }
+
+  window.wsOpenPublishModal = openPublish;
+  window.wsUnpublishCurrent = doUnpublish;
+
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const b = document.getElementById('btn-publish-now');
+    if(b) b.addEventListener('click', doPublish);
+  });
+
+  // Workspace menu delegation
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest && e.target.closest('[data-ws-action]');
+    if(!el) return;
+    const action = el.getAttribute('data-ws-action');
+    if(action==='publish'){ e.preventDefault(); openPublish(); }
+    if(action==='unpublish'){ e.preventDefault(); doUnpublish(); }
+  }, true);
+})();
+</script>
+
+</body>
+</html>
+</template>
+
+    <script>
+        // --- GLOBAL & UTILITY FUNCTIONS ---
+        // L3 Data State
+        let l3Data = []; 
+        let activeL3Discipline = null;
+        
+        // UUID Generator for reliable CRUD
+        function generateUUID() {
+            return 'uuid-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Helper: Calculate Business Hours (M-F, 8 hours/day roughly)
+        function calculateBusinessHours(startDate, endDate) {
+            let minutes = 0;
+            // Defensive check
+            if (!startDate || !endDate) return 0;
+            
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            if (start >= end) return 0;
+
+            // If duration is extremely long (e.g. > 1 year), return 0 to prevent browser hang
+            if ((end - start) > 31536000000) return 0; 
+
+            let ptr = new Date(start);
+
+            // Iterate by hour for performance (vs minute)
+            while (ptr < end) {
+                const day = ptr.getDay();
+                const hour = ptr.getHours();
+                
+                // Assume 09:00 to 17:00 is working window (8 hours)
+                // 0=Sun, 6=Sat
+                if (day !== 0 && day !== 6) {
+                    if (hour >= 9 && hour < 18) {
+                        minutes += 60;
+                    }
+                }
+                
+                // Advance 1 hour
+                ptr.setHours(ptr.getHours() + 1);
+                ptr.setMinutes(0);
+                ptr.setSeconds(0);
+            }
+            
+            return parseFloat((minutes / 60).toFixed(2));
+        }
+
+        function showAlert(message) {
+            alert(message);
+        }
+
+        let headerClickTimer = null;
+        function handleHeaderClick(singleFn, toggleId) {
+            if (headerClickTimer) {
+                clearTimeout(headerClickTimer);
+                headerClickTimer = null;
+                if(typeof toggleId === 'function') {
+                    toggleId();
+                } else if(toggleId) {
+                    toggleElement(toggleId);
+                }
+            } else {
+                headerClickTimer = setTimeout(() => {
+                    headerClickTimer = null;
+                    if(singleFn) singleFn();
+                }, 250);
+            }
+        }
+
+        function toggleElement(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('open');
+        }
+
+        // --- GLOBAL VARIABLES (Dashboard) ---
+        let milestones = [];
+        let userStories = [];
+        let bugs = []; // Added for Bugs Tracker
+        let blockers = [];
+        let kpiData = [];
+        let taskDisciplines = [
+            { discipline: 'DMT', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
+            { discipline: 'Tech', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
+            { discipline: 'Content Mgmt.', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
+            { discipline: 'QA', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
+        ];
+        
+        let pendingDisciplineData = []; 
+        let profileToDisciplineMap = {}; 
+        let l2Columns = [{id:'c1',name:'Col 1'}, {id:'c2',name:'Col 2'}, {id:'c3',name:'Col 3'}];
+        let l2Data = {
+            'DMT': [], 'Tech': [], 'Content Mgmt.': [], 'QA': []
+        };
+        
+        let tempAdoTasks = [];
+        let expandedDiscipline = 'ALL';
+        let activeUsStage = 'New';
+        let activeBugStage = 'New'; // Added for Bugs Tracker
+        let bauData = { totalTickets: 0, withinSLA: 0, breachedSLA: 0, slaPercentage: 0 };
+        let showTrackerDetails = false;
+        let showL2Details = false;
+        let discModalTab = 'L1';
+        const usStages = ['New', 'Development', 'Authoring', 'IT UAT', 'Business UAT', 'Closed'];
+        const bugStages = ['New', 'Active', 'Resolved', 'Hold', 'Closed']; // Added for Bugs Tracker
+        let savedSummaryText = null;
+        let adoSyncSource = null;
+
+        // --- REPORTING LOGIC ---
+        const reportSections = [
+            { id: 'summary-section', label: 'Overall Summary' },
+            { id: 'section-milestones', label: 'Project Milestones' },
+            { id: 'section-discipline', label: 'Task Discipline' },
+            { id: 'section-user-stories', label: 'User Stories' },
+            { id: 'section-bugs', label: 'Bugs Tracker' }, // Added to reporting
+            { id: 'section-blockers', label: 'Active Blockers' },
+            { id: 'section-kpi', label: 'KPIs' },
+            { id: 'section-bau', label: 'BAU Update' }
+        ];
+
+        function openReportModal() {
+            const container = document.getElementById('report-toggles');
+            container.innerHTML = reportSections.map(s => {
+                const el = document.getElementById(s.id);
+                const isHidden = el ? el.classList.contains('hidden-by-report') : false;
+                return `
+                    <label class="flex items-center justify-between p-2 rounded hover:bg-gray-50 border border-transparent hover:border-gray-200 cursor-pointer transition">
+                        <span class="text-sm font-medium text-gray-700">${s.label}</span>
+                        <input type="checkbox" id="toggle-${s.id}" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" ${!isHidden ? 'checked' : ''}>
+                    </label>
+                `;
+            }).join('');
+            document.getElementById('modal-report-config').classList.add('open');
+        }
+
+        function selectAllSections(select) {
+            reportSections.forEach(s => {
+                const cb = document.getElementById(`toggle-${s.id}`);
+                if(cb) cb.checked = select;
+            });
+        }
+
+        function applyReportView() {
+            reportSections.forEach(s => {
+                const cb = document.getElementById(`toggle-${s.id}`);
+                const el = document.getElementById(s.id);
+                if (el && cb) {
+                    if (cb.checked) {
+                        el.classList.remove('hidden-by-report');
+                        if (el.classList.contains('hidden') && s.id !== 'summary-section') el.classList.remove('hidden');
+                        if (s.id === 'summary-section') renderSummary(); 
+                    } else {
+                        el.classList.add('hidden-by-report');
+                        el.classList.add('hidden');
+                    }
+                }
+            });
+            closeModal('modal-report-config');
+        }
+
+        async function exportReport() {
+            const btn = document.querySelector('button[onclick="exportReport()"]');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generating...`;
+            lucide.createIcons();
+            try {
+                await new Promise(r => setTimeout(r, 100)); // UI settle
+                const element = document.getElementById('content-build');
+                const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#f9fafb', ignoreElements: (el) => el.tagName === 'BUTTON' || el.classList.contains('no-print') });
+                const link = document.createElement('a');
+                link.download = `Executive_Report_${new Date().toISOString().split('T')[0]}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+            } catch (err) { console.error(err); alert("Failed: " + err.message); } 
+            finally { btn.innerHTML = originalContent; lucide.createIcons(); }
+        }
+
+        // --- DASHBOARD TABS ---
+        function switchTab(t){
+  const build = document.getElementById('content-build');
+  const run = document.getElementById('content-run');
+  if(build) build.classList.toggle('hidden', t!=='build');
+  if(run) run.classList.toggle('hidden', t!=='run');
+  const tb = document.getElementById('tab-build');
+  const tr = document.getElementById('tab-run');
+  if(tb) tb.className = t==='build' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
+  if(tr) tr.className = t==='run' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
+}
         
         function toggleTrackerDetails() {
             showTrackerDetails = !showTrackerDetails;
@@ -1278,7 +1807,7 @@ function twNav(tab) {
         }
 
         function renderMilestoneDetails() {
-            
+            if(!showTrackerDetails) return;
             const container = document.getElementById('milestone-cards');
             container.innerHTML = milestones.map((m, i) => {
                 const { tracker, execLabel, execColor } = calculateStatus(m);
@@ -1594,7 +2123,7 @@ function twNav(tab) {
                             <td class="px-6 py-4"><span class="bg-gray-100 border rounded px-1">${s.type}</span></td>
                             <td class="px-6 py-4 truncate max-w-xs" title="${s.description}">${s.description}</td>
                             <td class="px-6 py-4"><span class="${badgeClass} px-2 py-1 rounded-full">${s.stage}</span></td>
-                            <td class="px-6 py-4">${(s.owner||"-")}</td>
+                            <td class="px-6 py-4">${s.owner}</td>
                             <td class="px-6 py-4">${s.eta}</td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-2">
@@ -1831,7 +2360,7 @@ function renderBlockers() {
             else { ['ms-phase','ms-start','ms-end','ms-act-start','ms-act-end','ms-remark'].forEach(id => document.getElementById(id).value = ''); }
             document.getElementById('modal-milestone').classList.add('open');
         }
-        function saveMilestone() { const idx = document.getElementById('ms-index').value; const item = { phase: document.getElementById('ms-phase').value, startDate: document.getElementById('ms-start').value, endDate: document.getElementById('ms-end').value, actualStartDate: document.getElementById('ms-act-start').value, actualEndDate: document.getElementById('ms-act-end').value, owner: (document.getElementById('ms-owner')?document.getElementById('ms-owner').value.trim():''), remark: document.getElementById('ms-remark').value }; if(!item.phase) return alert('Activity Name required'); if(idx === '') milestones.push(item); else milestones[idx] = item; closeModal('modal-milestone'); renderMilestones(); }
+        function saveMilestone() { const idx = document.getElementById('ms-index').value; const item = { phase: document.getElementById('ms-phase').value, startDate: document.getElementById('ms-start').value, endDate: document.getElementById('ms-end').value, actualStartDate: document.getElementById('ms-act-start').value, actualEndDate: document.getElementById('ms-act-end').value, remark: document.getElementById('ms-remark').value }; if(!item.phase) return alert('Activity Name required'); if(idx === '') milestones.push(item); else milestones[idx] = item; closeModal('modal-milestone'); renderMilestones(); }
         function deleteMilestone() { const idx = document.getElementById('ms-index').value; if(idx !== '') { milestones.splice(idx, 1); closeModal('modal-milestone'); renderMilestones(); } }
         function openDisciplineModal() { switchDiscTab('L1'); document.getElementById('modal-discipline').classList.add('open'); }
         function switchDiscTab(tab) { discModalTab = tab; document.getElementById('tab-l1-btn').className = `px-4 py-2 text-sm font-medium border-b-2 ${tab==='L1'?'border-teal-600 text-teal-600':'border-transparent text-gray-500'}`; document.getElementById('tab-l2-btn').className = `px-4 py-2 text-sm font-medium border-b-2 ${tab==='L2'?'border-teal-600 text-teal-600':'border-transparent text-gray-500'}`; const content = document.getElementById('disc-tab-content'); if (tab === 'L1') { content.innerHTML = `<table class="min-w-full divide-y divide-gray-200 mb-6"><thead class="bg-gray-50"><tr><th>Discipline</th><th>Total</th><th>Open</th><th>Closed</th><th>Hold</th><th>Grand Total</th></tr></thead><tbody>${taskDisciplines.map((d,i) => `<tr><td class="p-2 font-medium">${d.discipline}</td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.totalTasks}" oninput="updateL1(${i},'totalTasks',this.value)"></td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.openTasks}" oninput="updateL1(${i},'openTasks',this.value)"></td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.closedTasks}" oninput="updateL1(${i},'closedTasks',this.value)"></td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.holdTasks}" oninput="updateL1(${i},'holdTasks',this.value)"></td><td class="p-2"><input type="number" id="grand-total-${i}" class="w-full border rounded p-1 text-center font-bold bg-gray-100 text-gray-600 cursor-not-allowed" value="${d.grandTotal}" readonly></td></tr>`).join('')}</tbody></table>`; } else { renderL2EditMode(); } }
