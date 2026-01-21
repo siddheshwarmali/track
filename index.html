@@ -150,7 +150,6 @@
         <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
           <span class="text-base">📋</span><span>Executive Board</span>
         </a>
-
         <button id="tw-logout" type="button" class="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-red-50 border border-red-200 text-red-700 hover:bg-red-100">
           <span class="text-base">⎋</span><span>Logout</span>
         </button>
@@ -1241,42 +1240,48 @@
 
 
 <script>
-// Feature access gate (run/build/user manager/executive board)
+// Feature Access Gate: hides UI elements based on /api/auth/me permissions
 async function twApplyFeatureAccess(){
   try{
-    const r = await fetch('/api/auth/me', { headers: { 'Accept':'application/json' } });
+    const r = await fetch('/api/auth/me', { headers:{'Accept':'application/json'} });
     const me = await r.json().catch(()=>({}));
     if(!me || !me.authenticated) return;
     const perms = me.permissions || {};
 
+    // User Manager link
     const um = document.getElementById('tw-usermgr');
     if(um){
       const allowed = (me.role === 'admin') || !!perms.userManager;
       um.classList.toggle('hidden', !allowed);
     }
 
+    // Executive Board link
     const eb = document.getElementById('tw-execboard');
     if(eb){
       const allowed = (me.role === 'admin') || !!perms.executiveBoard;
       eb.classList.toggle('hidden', !allowed);
     }
 
+    // Run tab
     const runTab = document.getElementById('tab-run');
     const runContent = document.getElementById('content-run');
     if(runTab || runContent){
-      const allowed = (me.role === 'admin') || !!perms.run;
+      const allowed = (me.role === 'admin') || perms.run !== false; // default allow
       if(runTab) runTab.classList.toggle('hidden', !allowed);
       if(runContent) runContent.classList.toggle('hidden', !allowed);
       if(!allowed && typeof switchTab === 'function') switchTab('build');
     }
 
+    // Build tab
     const buildTab = document.getElementById('tab-build');
     const buildContent = document.getElementById('content-build');
     if(buildTab || buildContent){
       const allowed = (me.role === 'admin') || perms.build !== false;
       if(buildTab) buildTab.classList.toggle('hidden', !allowed);
       if(buildContent) buildContent.classList.toggle('hidden', !allowed);
+      if(!allowed && (me.role==='admin' || !!perms.executiveBoard) && typeof switchTab === 'function') switchTab('run');
     }
+
   } catch(e) {}
 }
 window.addEventListener('DOMContentLoaded', twApplyFeatureAccess);
@@ -3847,42 +3852,48 @@ async function wsModalPrimary() {
 
 
 <script>
-// Feature access gate (run/build/user manager/executive board)
+// Feature Access Gate: hides UI elements based on /api/auth/me permissions
 async function twApplyFeatureAccess(){
   try{
-    const r = await fetch('/api/auth/me', { headers: { 'Accept':'application/json' } });
+    const r = await fetch('/api/auth/me', { headers:{'Accept':'application/json'} });
     const me = await r.json().catch(()=>({}));
     if(!me || !me.authenticated) return;
     const perms = me.permissions || {};
 
+    // User Manager link
     const um = document.getElementById('tw-usermgr');
     if(um){
       const allowed = (me.role === 'admin') || !!perms.userManager;
       um.classList.toggle('hidden', !allowed);
     }
 
+    // Executive Board link
     const eb = document.getElementById('tw-execboard');
     if(eb){
       const allowed = (me.role === 'admin') || !!perms.executiveBoard;
       eb.classList.toggle('hidden', !allowed);
     }
 
+    // Run tab
     const runTab = document.getElementById('tab-run');
     const runContent = document.getElementById('content-run');
     if(runTab || runContent){
-      const allowed = (me.role === 'admin') || !!perms.run;
+      const allowed = (me.role === 'admin') || perms.run !== false; // default allow
       if(runTab) runTab.classList.toggle('hidden', !allowed);
       if(runContent) runContent.classList.toggle('hidden', !allowed);
       if(!allowed && typeof switchTab === 'function') switchTab('build');
     }
 
+    // Build tab
     const buildTab = document.getElementById('tab-build');
     const buildContent = document.getElementById('content-build');
     if(buildTab || buildContent){
       const allowed = (me.role === 'admin') || perms.build !== false;
       if(buildTab) buildTab.classList.toggle('hidden', !allowed);
       if(buildContent) buildContent.classList.toggle('hidden', !allowed);
+      if(!allowed && (me.role==='admin' || !!perms.executiveBoard) && typeof switchTab === 'function') switchTab('run');
     }
+
   } catch(e) {}
 }
 window.addEventListener('DOMContentLoaded', twApplyFeatureAccess);
