@@ -136,9 +136,9 @@
         <button type="button" onclick="twNav('build')" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">🛠️</span><span>Build</span>
         </button>
-        <a href="/run-dashboard.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+        <a href=\"run-dashboard.html\" class=\"w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50\">
           <span class="text-base">▶️</span><span>Run</span>
-        </button>
+        </a>
       </div>
 
       <!-- Account -->
@@ -437,9 +437,9 @@
             <!-- END BUILD TAB -->
 
             <!-- RUN TAB CONTENT (IFrame Container) -->
-    <!-- Run dashboard moved to /run-dashboard.html -->
+    <!-- Run dashboard moved to run-dashboard.html -->
+</div>
     </div>
-  </div>
 
     <!-- MODALS -->
 
@@ -561,10 +561,10 @@
     <div id="modal-milestone" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in">
             <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-800" id="milestone-modal-title">Add New Milestone</h3><button onclick="closeModal('modal-milestone')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div>
+            <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div>
 <div>
- <label class=\"block text-sm font-medium text-gray-700 mb-1\">Owner</label>
- <input type=\"text\" id=\"ms-owner\" class=\"w-full border border-gray-300 rounded-lg p-2\" placeholder=\"Owner / Assignee\">
+  <label class="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+  <input type="text" id="ms-owner" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Owner / Assignee">
 </div></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea id="ms-remark" class="w-full border border-gray-300 rounded-lg p-2 h-20"></textarea></div></div>
             <div class="flex justify-end space-x-3 mt-6"><button id="btn-delete-ms" onclick="deleteMilestone()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium mr-auto hidden">Delete</button><button onclick="closeModal('modal-milestone')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button onclick="saveMilestone()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Save</button></div>
         </div>
@@ -812,9 +812,15 @@
         // --- DASHBOARD TABS ---
         function switchTab(t){
   const build = document.getElementById('content-build');
-  if (build) build.classList.toggle('hidden', t !== 'build');
-  // Run moved to /run-dashboard.html
+  const run = document.getElementById('content-run');
+  if(build) build.classList.toggle('hidden', t!=='build');
+  if(run) run.classList.toggle('hidden', t!=='run');
+  const tb = document.getElementById('tab-build');
+  const tr = document.getElementById('tab-run');
+  if(tb) tb.className = t==='build' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
+  if(tr) tr.className = t==='run' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
 }
+        
         function toggleTrackerDetails() {
             showTrackerDetails = !showTrackerDetails;
             const el = document.getElementById('milestone-details');
@@ -1581,10 +1587,10 @@ function renderBlockers() {
             document.getElementById('ms-index').value = isEdit ? idx : '';
             document.getElementById('btn-delete-ms').classList.toggle('hidden', !isEdit);
             if(isEdit) { const m = milestones[idx]; document.getElementById('ms-phase').value = m.phase; document.getElementById('ms-start').value = m.startDate; document.getElementById('ms-end').value = m.endDate; document.getElementById('ms-act-start').value = m.actualStartDate; document.getElementById('ms-act-end').value = m.actualEndDate;
-      const oel = document.getElementById('ms-owner'); if(oel) oel.value = m.owner || '';
+      const oel=document.getElementById('ms-owner'); if(oel) oel.value = m.owner || '';
       document.getElementById('ms-remark').value = m.remark; } 
             else { ['ms-phase','ms-start','ms-end','ms-act-start','ms-act-end','ms-remark'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-      const oel = document.getElementById('ms-owner'); if(oel) oel.value=''; }
+      const oel=document.getElementById('ms-owner'); if(oel) oel.value=''; }
             document.getElementById('modal-milestone').classList.add('open');
         }
         function saveMilestone() { const idx = document.getElementById('ms-index').value; const item = { phase: document.getElementById('ms-phase').value, startDate: document.getElementById('ms-start').value, endDate: document.getElementById('ms-end').value, actualStartDate: document.getElementById('ms-act-start').value, actualEndDate: document.getElementById('ms-act-end').value, owner: (document.getElementById('ms-owner')?document.getElementById('ms-owner').value:''), remark: document.getElementById('ms-remark').value }; if(!item.phase) return alert('Activity Name required'); if(idx === '') milestones.push(item); else milestones[idx] = item; closeModal('modal-milestone'); renderMilestones(); }
