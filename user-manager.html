@@ -9,8 +9,11 @@
 
 // ---- Feature permissions support ----
 let _permTargetRow = null;
+let _permTargetUserId = null;
+
 function openPermModal(userId, row){
   _permTargetRow = row;
+  _permTargetUserId = userId;
   document.getElementById('perm-user').textContent = userId;
   const p = row._perms || { build:true, run:true, executiveBoard:false, userManager:false, publish:false };
   document.getElementById('mBuild').checked = p.build !== false;
@@ -22,13 +25,16 @@ function openPermModal(userId, row){
   m.classList.remove('hidden');
   m.classList.add('flex');
 }
+
 function closePermModal(){
   const m = document.getElementById('perm-modal');
   m.classList.add('hidden');
   m.classList.remove('flex');
 }
+
 document.getElementById('perm-close')?.addEventListener('click', closePermModal);
 document.getElementById('perm-cancel')?.addEventListener('click', closePermModal);
+
 document.getElementById('perm-save')?.addEventListener('click', ()=>{
   if(!_permTargetRow) return;
   _permTargetRow._perms = {
@@ -40,6 +46,7 @@ document.getElementById('perm-save')?.addEventListener('click', ()=>{
   };
   closePermModal();
 });
+
 
 </script>
 </head>
@@ -87,7 +94,7 @@ document.getElementById('perm-save')?.addEventListener('click', ()=>{
     <label class="flex items-center gap-2 text-xs"><input id="permUserMgr" type="checkbox" /> User Manager</label>
     <label class="flex items-center gap-2 text-xs"><input id="permPublish" type="checkbox" /> Publish</label>
   </div>
-  <div class="text-[11px] text-slate-500 mt-1">Admin can grant specific access per user. Admin role always has all permissions.</div>
+  <div class="text-[11px] text-slate-500 mt-1">Admin can grant feature access per user. Admin always has all permissions.</div>
 </div>
 
       <div class="md:col-span-3 flex justify-end">
@@ -136,7 +143,6 @@ document.getElementById('perm-save')?.addEventListener('click', ()=>{
           <option value="creator">creator</option>
           <option value="admin">admin</option>
         </select>
-        <button data-perms class="ml-2 text-xs px-2 py-1 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100">Permissions</button>
       </td>
       <td class="px-4 py-2 text-xs text-slate-500">${u.updatedAt || '-'}</td>
       <td class="px-4 py-2 text-right">
@@ -146,9 +152,6 @@ document.getElementById('perm-save')?.addEventListener('click', ()=>{
       </td>
     `;
     tr.querySelector('[data-role]').value = u.role;
-    tr._perms = u.permissions || { build:true, run:true, executiveBoard:false, userManager:false, publish:false };
-    const pb = tr.querySelector('[data-perms]');
-    if(pb) pb.onclick = ()=> openPermModal(u.userId, tr);
     tr.querySelector('[data-save]').onclick = async ()=>{
       try{ await apiJson('/api/users', { method:'PUT', body: JSON.stringify({ userId:u.userId, role: tr.querySelector('[data-role]').value, permissions: (tr._perms || null) })}); showOk('Role updated'); await load(); }
       catch(e){ showErr(e.message); }
