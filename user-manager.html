@@ -1,110 +1,229 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Executive Board</title>
-<style>
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;background:#0b1220;color:#e2e8f0}
-  .wrap{max-width:1200px;margin:0 auto;padding:14px}
-  .top{position:sticky;top:0;background:rgba(11,18,32,.85);backdrop-filter:blur(10px);border-bottom:1px solid rgba(148,163,184,.15)}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-  .pill{display:flex;gap:8px;align-items:center;border:1px solid rgba(148,163,184,.18);border-radius:999px;padding:8px 10px;background:rgba(15,23,42,.55)}
-  select,input{background:transparent;border:0;outline:none;color:#e2e8f0;font-size:13px}
-  .btn{border:1px solid rgba(148,163,184,.18);background:rgba(15,23,42,.65);color:#e2e8f0;border-radius:12px;padding:10px 12px;font-size:13px;text-decoration:none}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:12px}
-  .card{grid-column:span 12;border:1px solid rgba(148,163,184,.16);border-radius:18px;background:rgba(15,23,42,.72);overflow:hidden}
-  .ch{padding:14px;border-bottom:1px solid rgba(148,163,184,.12);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  .ch h2{margin:0;font-size:16px}
-  .tag{font-size:11px;color:#94a3b8;border:1px solid rgba(148,163,184,.16);border-radius:999px;padding:4px 8px;background:rgba(2,6,23,.3)}
-  .content{padding:14px}
-  .sections{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-  .sec{grid-column:span 12;border:1px solid rgba(148,163,184,.14);border-radius:16px;padding:12px;background:rgba(2,6,23,.25)}
-  .sec h3{margin:0 0 6px 0;font-size:13px;color:#cbd5e1}
-  .sec p{margin:0;color:#94a3b8;font-size:13px;line-height:1.4}
-  @media(min-width:720px){.sec{grid-column:span 6}}
-  @media(min-width:1024px){.sec{grid-column:span 3}}
-</style>
-</head>
-<body>
-<div class="top"><div class="wrap"><div class="row">
-  <div>
-    <div style="font-size:18px;font-weight:800">Executive Board</div>
-    <div style="color:#94a3b8;font-size:12px">Published dashboards in card view (Summary • Milestones • Application • Discipline)</div>
-  </div>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <div class="pill"><span style="color:#94a3b8;font-size:12px">Sort</span>
-      <select id="sort"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name_asc">Name A→Z</option><option value="name_desc">Name Z→A</option></select>
-    </div>
-    <div class="pill"><span style="color:#94a3b8;font-size:12px">Search</span><input id="q" placeholder="Project name"/></div>
-    <a class="btn" href="/index.html">Back</a>
-  </div>
-</div>
-<div id="msg" style="margin-top:10px;color:#94a3b8;font-size:13px">Loading…</div>
-<div id="err" style="display:none;margin-top:10px;padding:12px;border-radius:14px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#fecaca;font-size:13px"></div>
-</div></div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Manager</title>
+  <script src="https://cdn.tailwindcss.com">
 
-<div class="wrap"><div id="grid" class="grid"></div></div>
+// ---- Feature permissions support ----
+let _permTargetRow = null;
+function openPermModal(userId, row){
+  _permTargetRow = row;
+  document.getElementById('perm-user').textContent = userId;
+  const p = row._perms || { build:true, run:true, executiveBoard:false, userManager:false, publish:false };
+  document.getElementById('mBuild').checked = p.build !== false;
+  document.getElementById('mRun').checked = p.run !== false;
+  document.getElementById('mExec').checked = !!p.executiveBoard;
+  document.getElementById('mUM').checked = !!p.userManager;
+  document.getElementById('mPub').checked = !!p.publish;
+  const m = document.getElementById('perm-modal');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+function closePermModal(){
+  const m = document.getElementById('perm-modal');
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+}
+document.getElementById('perm-close')?.addEventListener('click', closePermModal);
+document.getElementById('perm-cancel')?.addEventListener('click', closePermModal);
+document.getElementById('perm-save')?.addEventListener('click', ()=>{
+  if(!_permTargetRow) return;
+  _permTargetRow._perms = {
+    build: document.getElementById('mBuild').checked,
+    run: document.getElementById('mRun').checked,
+    executiveBoard: document.getElementById('mExec').checked,
+    userManager: document.getElementById('mUM').checked,
+    publish: document.getElementById('mPub').checked
+  };
+  closePermModal();
+});
+
+</script>
+</head>
+<body class="min-h-screen bg-slate-50 p-6">
+  <div class="max-w-4xl mx-auto bg-white border border-slate-200 rounded-2xl shadow p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">User Manager</h1>
+        <p class="text-sm text-slate-500">Admin only • Create users with User ID + Password and role</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="me" class="text-xs text-slate-500"></span>
+        <a href="/" class="text-sm text-blue-600 hover:underline">Back</a>
+        <button id="logout" class="text-sm px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700">Logout</button>
+      </div>
+    </div>
+
+    <div id="err" class="hidden mt-4 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
+    <div id="ok" class="hidden mt-4 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3"></div>
+
+    <div class="mt-6 grid md:grid-cols-3 gap-4 items-end">
+      <div>
+        <label class="text-xs text-slate-600">User ID</label>
+        <input id="newUserId" class="w-full border rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-slate-600">Password</label>
+        <input id="newPassword" type="password" class="w-full border rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-slate-600">Role</label>
+        <select id="newRole" class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="viewer">viewer</option>
+          <option value="creator">creator</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+      
+<div class="md:col-span-3">
+  <label class="text-xs text-slate-600">Feature Access</label>
+  <div class="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+    <label class="flex items-center gap-2 text-xs"><input id="permBuild" type="checkbox" checked /> Build</label>
+    <label class="flex items-center gap-2 text-xs"><input id="permRun" type="checkbox" checked /> Run</label>
+    <label class="flex items-center gap-2 text-xs"><input id="permExecBoard" type="checkbox" /> Executive Board</label>
+    <label class="flex items-center gap-2 text-xs"><input id="permUserMgr" type="checkbox" /> User Manager</label>
+    <label class="flex items-center gap-2 text-xs"><input id="permPublish" type="checkbox" /> Publish</label>
+  </div>
+  <div class="text-[11px] text-slate-500 mt-1">Admin can grant specific access per user. Admin role always has all permissions.</div>
+</div>
+
+      <div class="md:col-span-3 flex justify-end">
+        <button id="addUser" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Add / Update User</button>
+      </div>
+    </div>
+
+    <div class="mt-8">
+      <h2 class="text-sm font-semibold text-slate-700">Existing Users</h2>
+      <div class="mt-3 overflow-x-auto border rounded-xl">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="text-left px-4 py-2">User ID</th>
+              <th class="text-left px-4 py-2">Role</th>
+              <th class="text-left px-4 py-2">Updated</th>
+              <th class="text-right px-4 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userRows" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 <script>
-async function jget(url){
-  const r = await fetch(url, { headers:{'Accept':'application/json'} });
-  const t = await r.text();
-  let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
-  if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
-  return j;
-}
-function fmt(iso){ try{return new Date(iso).toLocaleString()}catch{return iso||'—'} }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function card(d){
-  const ms = (d.milestones?.items||[]).map(x=>`<li style="color:#94a3b8;font-size:13px">• ${esc(x)}</li>`).join('');
-  return `
-  <div class="card" data-name="${esc((d.name||'').toLowerCase())}">
-    <div class="ch">
-      <div><h2>${esc(d.name||d.id)}</h2><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap"><span class="tag">Published: ${fmt(d.publishedAt||d.updatedAt)}</span><span class="tag">Owner: ${esc(d.ownerId||'')}</span></div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="tag">Milestones: <b>${d.milestones?.count||0}</b></span><span class="tag">US: <b>${d.application?.userStories||0}</b></span><span class="tag">Bugs: <b>${d.application?.bugs||0}</b></span><span class="tag">Disc: <b>${d.discipline?.disciplines||0}</b></span></div>
-    </div>
-    <div class="content"><div class="sections">
-      <div class="sec"><h3>Overall Summary</h3><p>${esc(d.summary||'No summary')}</p></div>
-      <div class="sec"><h3>Project Milestones</h3><p style="margin-bottom:6px">Top milestones:</p><ul style="margin:0;padding:0;list-style:none">${ms||'<li style="color:#94a3b8;font-size:13px">No milestones</li>'}</ul></div>
-      <div class="sec"><h3>Application Tracker</h3><p>US: <b>${d.application?.userStories||0}</b> (Open ${d.application?.usOpen||0})</p><p>Bugs: <b>${d.application?.bugs||0}</b> (Open ${d.application?.bugsOpen||0})</p></div>
-      <div class="sec"><h3>Task Discipline Tracker</h3><p>Disciplines: <b>${d.discipline?.disciplines||0}</b></p><p>Pending: <b>${d.discipline?.pending||0}</b></p></div>
-    </div>
-    <div style="margin-top:12px"><a class="btn" style="display:inline-block" href="/index.html?dash=${encodeURIComponent(d.id)}">Open Dashboard</a></div>
-    </div>
-  </div>`;
-}
-function applySearch(){
-  const q=(document.getElementById('q').value||'').trim().toLowerCase();
-  document.querySelectorAll('#grid .card').forEach(c=>{
-    const n=c.getAttribute('data-name')||'';
-    c.style.display = (!q||n.includes(q))?'':'none';
-  });
-}
-async function load(){
-  const msg=document.getElementById('msg');
-  const err=document.getElementById('err');
-  err.style.display='none';
-  msg.textContent='Checking access…';
-  const me = await jget('/api/auth/me');
-  if(!me.authenticated){ location.href='/login.html?next='+encodeURIComponent('/executive-board.html'); return; }
-  const perms = me.permissions||{};
-  if(!(me.role==='admin' || perms.executiveBoard)){
-    err.textContent='Access denied: admin has not granted Executive Board access.'; err.style.display='block'; msg.textContent='—'; return;
-  }
-  msg.textContent='Loading…';
-  const sort=document.getElementById('sort').value;
-  const data = await jget('/api/board?sort='+encodeURIComponent(sort));
-  const items = Array.isArray(data.items)?data.items:[];
-  document.getElementById('grid').innerHTML = items.map(card).join('') || '<div style="color:#94a3b8">No published dashboards available.</div>';
-  msg.textContent = `Showing ${items.length} dashboard(s).`;
-  applySearch();
-}
+  const showErr = (t)=>{ const e=document.getElementById('err'); e.textContent=t; e.classList.remove('hidden'); document.getElementById('ok').classList.add('hidden'); };
+  const showOk  = (t)=>{ const e=document.getElementById('ok'); e.textContent=t; e.classList.remove('hidden'); document.getElementById('err').classList.add('hidden'); };
 
-document.getElementById('sort').addEventListener('change', load);
-document.getElementById('q').addEventListener('input', applySearch);
-load().catch(e=>{ const err=document.getElementById('err'); err.textContent=e.message||String(e); err.style.display='block'; document.getElementById('msg').textContent='—'; });
+  async function apiJson(url, options){
+    const r = await fetch(url, Object.assign({ headers:{'Content-Type':'application/json','Accept':'application/json'} }, options||{}));
+    const txt = await r.text();
+    let j={};
+    try{ j=JSON.parse(txt||'{}'); } catch { j={ error: txt }; }
+    if(!r.ok) throw new Error(j.error||j.message||txt||('HTTP '+r.status));
+    return j;
+  }
+
+  function rowTemplate(u){
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td class="px-4 py-2 font-mono text-xs">${u.userId}</td>
+      <td class="px-4 py-2">
+        <select data-role class="border rounded px-2 py-1 text-xs">
+          <option value="viewer">viewer</option>
+          <option value="creator">creator</option>
+          <option value="admin">admin</option>
+        </select>
+        <button data-perms class="ml-2 text-xs px-2 py-1 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100">Permissions</button>
+      </td>
+      <td class="px-4 py-2 text-xs text-slate-500">${u.updatedAt || '-'}</td>
+      <td class="px-4 py-2 text-right">
+        <button data-save class="text-xs px-2 py-1 rounded bg-slate-100 border">Save</button>
+        <button data-reset class="text-xs px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-800">Reset Password</button>
+        <button data-del class="text-xs px-2 py-1 rounded bg-red-50 border border-red-200 text-red-700">Delete</button>
+      </td>
+    `;
+    tr.querySelector('[data-role]').value = u.role;
+    tr._perms = u.permissions || { build:true, run:true, executiveBoard:false, userManager:false, publish:false };
+    const pb = tr.querySelector('[data-perms]');
+    if(pb) pb.onclick = ()=> openPermModal(u.userId, tr);
+    tr.querySelector('[data-save]').onclick = async ()=>{
+      try{ await apiJson('/api/users', { method:'PUT', body: JSON.stringify({ userId:u.userId, role: tr.querySelector('[data-role]').value, permissions: (tr._perms || null) })}); showOk('Role updated'); await load(); }
+      catch(e){ showErr(e.message); }
+    };
+    tr.querySelector('[data-reset]').onclick = async ()=>{
+      const pw = prompt('Enter new password for ' + u.userId);
+      if(!pw) return;
+      try{ await apiJson('/api/users', { method:'PUT', body: JSON.stringify({ userId:u.userId, password: pw })}); showOk('Password reset'); }
+      catch(e){ showErr(e.message); }
+    };
+    tr.querySelector('[data-del]').onclick = async ()=>{
+      if(!confirm('Delete user ' + u.userId + '?')) return;
+      try{ await apiJson('/api/users', { method:'DELETE', body: JSON.stringify({ userId:u.userId })}); showOk('User deleted'); await load(); }
+      catch(e){ showErr(e.message); }
+    };
+    return tr;
+  }
+
+  async function load(){
+    const me = await apiJson('/api/auth/me', { method:'GET' });
+    if(!me.authenticated){ location.href='/login.html?next=' + encodeURIComponent(location.pathname); return; }
+    document.getElementById('me').textContent = (me.userId||'User') + ' • ' + (me.role||'');
+    if((me.role||'') !== 'admin') { showErr('Forbidden: Admin only'); return; }
+
+    const data = await apiJson('/api/users', { method:'GET' });
+    const tbody=document.getElementById('userRows');
+    tbody.innerHTML='';
+    (data.users||[]).forEach(u=>tbody.appendChild(rowTemplate(u)));
+  }
+
+  document.getElementById('addUser').onclick = async ()=>{
+    const userId = document.getElementById('newUserId').value.trim();
+    const password = document.getElementById('newPassword').value;
+    const role = document.getElementById('newRole').value;
+    if(!userId) return showErr('User ID is required');
+    if(!password) return showErr('Password is required');
+    try{
+      await apiJson('/api/users', { method:'POST', body: JSON.stringify({ userId, password, role })});
+      showOk('User saved');
+      document.getElementById('newUserId').value='';
+      document.getElementById('newPassword').value='';
+      document.getElementById('newRole').value='viewer';
+      await load();
+    }catch(e){ showErr(e.message); }
+  };
+
+  document.getElementById('logout').onclick = async ()=>{ try{ await apiJson('/api/auth/logout',{method:'POST'});}catch(e){} location.href='/login.html'; };
+
+  load().catch(e=>showErr(e.message));
 </script>
+
+
+<!-- Permissions Modal -->
+<div id="perm-modal" class="fixed inset-0 hidden items-center justify-center bg-black/50 z-50">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-5">
+    <div class="flex items-center justify-between">
+      <h3 class="font-semibold text-slate-900">Edit Feature Access</h3>
+      <button id="perm-close" class="text-slate-500 hover:text-slate-800">✕</button>
+    </div>
+    <p class="text-sm text-slate-600 mt-1">Set feature access for <span id="perm-user" class="font-mono"></span></p>
+
+    <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+      <label class="flex items-center gap-2"><input id="mBuild" type="checkbox"/> Build</label>
+      <label class="flex items-center gap-2"><input id="mRun" type="checkbox"/> Run</label>
+      <label class="flex items-center gap-2"><input id="mExec" type="checkbox"/> Executive Board</label>
+      <label class="flex items-center gap-2"><input id="mUM" type="checkbox"/> User Manager</label>
+      <label class="flex items-center gap-2"><input id="mPub" type="checkbox"/> Publish</label>
+    </div>
+
+    <div class="mt-5 flex justify-end gap-2">
+      <button id="perm-cancel" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-800 text-sm">Cancel</button>
+      <button id="perm-save" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">Save</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
