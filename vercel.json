@@ -1,12 +1,23 @@
-
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "cleanUrls": false,
-  "trailingSlash": false,
-  "redirects": [
-    { "source": "/index.html", "destination": "/", "permanent": true }
-  ],
-  "functions": {
-    "api/**/*.js": { "maxDuration": 30 }
-  }
+  "version": 2,
+  "routes": [
+    {
+      "src": "/executive-board$",
+      "status": 307,
+      "headers": {
+        "Location": "/executive-board.html"
+      }
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
+    }
+  ]
 }
