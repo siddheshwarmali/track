@@ -1,12 +1,20 @@
+
 const { json } = require('./_lib/http');
 const { getSession } = require('./_lib/cookie');
 const { ghGetFile, decodeContent } = require('./_lib/github');
 
+const USERS_PATH = 'db/users.json';
 const INDEX_PATH = 'db/dashboards/index.json';
 const DASH_DIR = 'db/dashboards';
 
-function parseJsonSafe(txt, fallback){
-  try { return JSON.parse(txt); } catch { return fallback; }
+function parseJsonSafe(txt, fallback){ try{return JSON.parse(txt)}catch{return fallback} }
+function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
+
+async function loadUsers(){
+  const f = await ghGetFile(USERS_PATH);
+  if(!f.exists) return {};
+  const data = parseJsonSafe((decodeContent(f)||'').trim() || '{"users":{}}', {users:{}});
+  return data.users || {};
 }
 
 function isVisibleTo(rec, userId){
@@ -17,17 +25,24 @@ function isVisibleTo(rec, userId){
   return false;
 }
 
-function safeText(s, fallback=''){
-  if(typeof s !== 'string') return fallback;
-  const t=s.trim();
-  return t ? t : fallback;
+async function loadIndex(){
+  const f = await ghGetFile(INDEX_PATH);
+  if(!f.exists) return { dashboards:{} };
+  const data = parseJsonSafe((decodeContent(f)||'').trim() || '{"dashboards":{}}', {dashboards:{}});
+  return { dashboards: data.dashboards || {} };
+}
+
+async function loadDashState(id){
+  const f = await ghGetFile(`${DASH_DIR}/${id}.json`);
+  if(!f.exists) return null;
+  const data = parseJsonSafe((decodeContent(f)||'').trim() || '{}', {});
+  return data.state || null;
 }
 
 function pickMilestones(state){
-  const m = state?.executive?.milestones;
-  const arr = Array.isArray(m) ? m : [];
-  const items = arr.slice(0,3).map(x => {
-    const title = safeText(x?.title || x?.name || x?.milestone || 'Milestone');
+  const arr = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
+  const items = arr.slice(0,3).map(x=>{
+    const title = safeText(x?.title || x?.name || 'Milestone');
     const date = safeText(x?.date || x?.dueDate || '');
     return date ? `${title} — ${date}` : title;
   });
@@ -37,44 +52,22 @@ function pickMilestones(state){
 function pickApplication(state){
   const us = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
   const bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
-  const usOpen = us.filter(x => String(x?.stage || x?.status || '').toLowerCase() !== 'closed').length;
-  const bugsOpen = bugs.filter(x => String(x?.stage || x?.status || '').toLowerCase() !== 'closed').length;
+  const usOpen = us.filter(x => String(x?.stage||x?.status||'').toLowerCase() !== 'closed').length;
+  const bugsOpen = bugs.filter(x => String(x?.stage||x?.status||'').toLowerCase() !== 'closed').length;
   return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen };
 }
 
 function pickDiscipline(state){
   const d = Array.isArray(state?.executive?.taskDisciplines) ? state.executive.taskDisciplines : [];
   const pending = Array.isArray(state?.executive?.pendingDisciplineData) ? state.executive.pendingDisciplineData.length : 0;
-  const top = d.slice(0,3).map(x => {
-    const n = safeText(x?.name || x?.discipline || x?.title || 'Discipline');
-    const c = (x?.count ?? x?.total ?? x?.items ?? null);
-    return (typeof c === 'number') ? `${n} — ${c}` : n;
-  });
-  return { disciplines: d.length, pending, top };
-}
-
-async function loadIndex(){
-  const f = await ghGetFile(INDEX_PATH);
-  if(!f.exists) return { dashboards:{} };
-  const raw = (decodeContent(f) || '').trim();
-  const data = parseJsonSafe(raw || '{"dashboards":{}}', { dashboards:{} });
-  return { dashboards: data.dashboards || {} };
-}
-
-async function loadDashState(id){
-  const path = `${DASH_DIR}/${id}.json`;
-  const f = await ghGetFile(path);
-  if(!f.exists) return null;
-  const raw = (decodeContent(f) || '').trim();
-  const data = parseJsonSafe(raw || '{}', {});
-  return data.state || null;
+  return { disciplines: d.length, pending };
 }
 
 function sortItems(items, mode){
   const m = (mode||'newest');
-  if(m === 'oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
-  if(m === 'name_asc') return items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
-  if(m === 'name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
+  if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
+  if(m==='name_asc') return items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  if(m==='name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
   return items.sort((a,b)=>(b.publishedAt||b.updatedAt||'').localeCompare(a.publishedAt||a.updatedAt||''));
 }
 
@@ -82,27 +75,30 @@ module.exports = async (req, res) => {
   try{
     const s = getSession(req);
     if(!s) return json(res, 401, { error:'Not authenticated' });
-    if(!(s.role === 'admin' || s.role === 'executive')) return json(res, 403, { error:'Forbidden: Executive Board access required' });
+
+    const users = await loadUsers();
+    const u = users[s.userId] || {};
+    const perms = u.permissions || {};
+    const role = u.role || s.role || 'viewer';
+
+    if(!(role === 'admin' || perms.executiveBoard)) return json(res, 403, { error:'Forbidden: Executive Board access required' });
 
     const sort = (req.query && req.query.sort) ? String(req.query.sort) : 'newest';
-
     const idx = await loadIndex();
-    const dashboards = idx.dashboards;
-    const visible = Object.values(dashboards)
-      .filter(d => d && d.published)
-      .filter(d => isVisibleTo(d, s.userId));
+
+    const visible = Object.values(idx.dashboards).filter(d => d && d.published).filter(d => isVisibleTo(d, s.userId));
 
     const items=[];
     for(const d of visible){
       const state = await loadDashState(d.id);
-      const summary = safeText(state?.executive?.savedSummaryText || state?.executive?.summaryText || '');
+      const summary = safeText(state?.executive?.savedSummaryText || state?.executive?.summaryText || '') || 'No summary';
       items.push({
         id: d.id,
         name: d.name,
         ownerId: d.ownerId,
         publishedAt: d.publishedAt || d.updatedAt,
         updatedAt: d.updatedAt,
-        summary: summary || 'No summary',
+        summary,
         milestones: pickMilestones(state),
         application: pickApplication(state),
         discipline: pickDiscipline(state)
@@ -110,7 +106,6 @@ module.exports = async (req, res) => {
     }
 
     sortItems(items, sort);
-
     return json(res, 200, { items });
   } catch(e){
     return json(res, 500, { error: e.message || String(e) });
