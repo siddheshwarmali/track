@@ -146,6 +146,11 @@
         <a id="tw-usermgr" href="/user-manager.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
           <span class="text-base">👥</span><span>User Manager</span>
         </a>
+
+        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
+          <span class="text-base">📋</span><span>Executive Board</span>
+        </a>
+
         <button id="tw-logout" type="button" class="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-red-50 border border-red-200 text-red-700 hover:bg-red-100">
           <span class="text-base">⎋</span><span>Logout</span>
         </button>
@@ -1236,33 +1241,45 @@
 
 
 <script>
-// Executive Board link (visible to admin/executive)
-(function(){
+// Feature access gate (run/build/user manager/executive board)
+async function twApplyFeatureAccess(){
   try{
-    async function me(){
-      const r = await fetch('/api/auth/me');
-      const j = await r.json().catch(()=>({}));
-      return j;
+    const r = await fetch('/api/auth/me', { headers: { 'Accept':'application/json' } });
+    const me = await r.json().catch(()=>({}));
+    if(!me || !me.authenticated) return;
+    const perms = me.permissions || {};
+
+    const um = document.getElementById('tw-usermgr');
+    if(um){
+      const allowed = (me.role === 'admin') || !!perms.userManager;
+      um.classList.toggle('hidden', !allowed);
     }
-    window.addEventListener('DOMContentLoaded', async ()=>{
-      const m = await me();
-      if(!m || !m.authenticated) return;
-      if(!(m.role === 'admin' || m.role === 'executive')) return;
 
-      // Try to place the link near existing header buttons
-      const host = document.querySelector('#topbar-actions') || document.querySelector('header') || document.body;
-      const a = document.createElement('a');
-      a.href = '/executive-board.html';
-      a.textContent = 'Executive Board';
-      a.style.cssText = 'margin-left:8px; padding:8px 10px; border-radius:12px; border:1px solid rgba(99,102,241,.35); background:rgba(99,102,241,.12); color:#c7d2fe; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;';
-      a.onmouseenter = ()=> a.style.background='rgba(99,102,241,.18)';
-      a.onmouseleave = ()=> a.style.background='rgba(99,102,241,.12)';
+    const eb = document.getElementById('tw-execboard');
+    if(eb){
+      const allowed = (me.role === 'admin') || !!perms.executiveBoard;
+      eb.classList.toggle('hidden', !allowed);
+    }
 
-      // best effort insertion
-      host.appendChild(a);
-    });
+    const runTab = document.getElementById('tab-run');
+    const runContent = document.getElementById('content-run');
+    if(runTab || runContent){
+      const allowed = (me.role === 'admin') || !!perms.run;
+      if(runTab) runTab.classList.toggle('hidden', !allowed);
+      if(runContent) runContent.classList.toggle('hidden', !allowed);
+      if(!allowed && typeof switchTab === 'function') switchTab('build');
+    }
+
+    const buildTab = document.getElementById('tab-build');
+    const buildContent = document.getElementById('content-build');
+    if(buildTab || buildContent){
+      const allowed = (me.role === 'admin') || perms.build !== false;
+      if(buildTab) buildTab.classList.toggle('hidden', !allowed);
+      if(buildContent) buildContent.classList.toggle('hidden', !allowed);
+    }
   } catch(e) {}
-})();
+}
+window.addEventListener('DOMContentLoaded', twApplyFeatureAccess);
 </script>
 
 </body>
@@ -3830,33 +3847,45 @@ async function wsModalPrimary() {
 
 
 <script>
-// Executive Board link (visible to admin/executive)
-(function(){
+// Feature access gate (run/build/user manager/executive board)
+async function twApplyFeatureAccess(){
   try{
-    async function me(){
-      const r = await fetch('/api/auth/me');
-      const j = await r.json().catch(()=>({}));
-      return j;
+    const r = await fetch('/api/auth/me', { headers: { 'Accept':'application/json' } });
+    const me = await r.json().catch(()=>({}));
+    if(!me || !me.authenticated) return;
+    const perms = me.permissions || {};
+
+    const um = document.getElementById('tw-usermgr');
+    if(um){
+      const allowed = (me.role === 'admin') || !!perms.userManager;
+      um.classList.toggle('hidden', !allowed);
     }
-    window.addEventListener('DOMContentLoaded', async ()=>{
-      const m = await me();
-      if(!m || !m.authenticated) return;
-      if(!(m.role === 'admin' || m.role === 'executive')) return;
 
-      // Try to place the link near existing header buttons
-      const host = document.querySelector('#topbar-actions') || document.querySelector('header') || document.body;
-      const a = document.createElement('a');
-      a.href = '/executive-board.html';
-      a.textContent = 'Executive Board';
-      a.style.cssText = 'margin-left:8px; padding:8px 10px; border-radius:12px; border:1px solid rgba(99,102,241,.35); background:rgba(99,102,241,.12); color:#c7d2fe; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;';
-      a.onmouseenter = ()=> a.style.background='rgba(99,102,241,.18)';
-      a.onmouseleave = ()=> a.style.background='rgba(99,102,241,.12)';
+    const eb = document.getElementById('tw-execboard');
+    if(eb){
+      const allowed = (me.role === 'admin') || !!perms.executiveBoard;
+      eb.classList.toggle('hidden', !allowed);
+    }
 
-      // best effort insertion
-      host.appendChild(a);
-    });
+    const runTab = document.getElementById('tab-run');
+    const runContent = document.getElementById('content-run');
+    if(runTab || runContent){
+      const allowed = (me.role === 'admin') || !!perms.run;
+      if(runTab) runTab.classList.toggle('hidden', !allowed);
+      if(runContent) runContent.classList.toggle('hidden', !allowed);
+      if(!allowed && typeof switchTab === 'function') switchTab('build');
+    }
+
+    const buildTab = document.getElementById('tab-build');
+    const buildContent = document.getElementById('content-build');
+    if(buildTab || buildContent){
+      const allowed = (me.role === 'admin') || perms.build !== false;
+      if(buildTab) buildTab.classList.toggle('hidden', !allowed);
+      if(buildContent) buildContent.classList.toggle('hidden', !allowed);
+    }
   } catch(e) {}
-})();
+}
+window.addEventListener('DOMContentLoaded', twApplyFeatureAccess);
 </script>
 
 </body>
