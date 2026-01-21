@@ -35,10 +35,12 @@
       </div>
       <div>
         <label class="text-xs text-slate-600">Role</label>
+        <div class="text-[11px] text-slate-500 mt-1">executive: can access Executive Board</div>
         <select id="newRole" class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
           <option value="viewer">viewer</option>
           <option value="creator">creator</option>
           <option value="admin">admin</option>
+          <option value="executive">executive</option>
         </select>
       </div>
       <div class="md:col-span-3 flex justify-end">
@@ -86,6 +88,7 @@
           <option value="viewer">viewer</option>
           <option value="creator">creator</option>
           <option value="admin">admin</option>
+          <option value="executive">executive</option>
         </select>
       </td>
       <td class="px-4 py-2 text-xs text-slate-500">${u.updatedAt || '-'}</td>
