@@ -1,4 +1,3 @@
-
 const { json } = require('./_lib/http');
 const { getSession } = require('./_lib/cookie');
 const { ghGetFile, decodeContent } = require('./_lib/github');
@@ -7,28 +6,28 @@ const USERS_PATH = 'db/users.json';
 const INDEX_PATH = 'db/dashboards/index.json';
 const DASH_DIR = 'db/dashboards';
 
-function parseJsonSafe(txt, fallback){ try{return JSON.parse(txt)}catch{return fallback} }
+function parseJsonSafe(txt, fallback){ try { return JSON.parse(txt); } catch { return fallback; } }
 function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
 
 async function loadUsers(){
   const f = await ghGetFile(USERS_PATH);
-  if(!f.exists) return {};
-  const data = parseJsonSafe((decodeContent(f)||'').trim() || '{"users":{}}', {users:{}});
-  return data.users || {};
+  if(!f.exists) return { users:{} };
+  const data = parseJsonSafe((decodeContent(f)||'').trim() || '{"users":{}}', { users:{} });
+  return { users: data.users || {} };
 }
 
-function isVisibleTo(rec, userId){
-  if(!rec) return false;
-  if(rec.ownerId === userId) return true;
-  if(rec.publishedToAll) return true;
-  if(Array.isArray(rec.allowedUsers) && rec.allowedUsers.includes(userId)) return true;
+function isVisibleTo(d, userId){
+  if(!d) return false;
+  if(d.ownerId === userId) return true;
+  if(d.publishedToAll) return true;
+  if(Array.isArray(d.allowedUsers) && d.allowedUsers.includes(userId)) return true;
   return false;
 }
 
 async function loadIndex(){
   const f = await ghGetFile(INDEX_PATH);
   if(!f.exists) return { dashboards:{} };
-  const data = parseJsonSafe((decodeContent(f)||'').trim() || '{"dashboards":{}}', {dashboards:{}});
+  const data = parseJsonSafe((decodeContent(f)||'').trim() || '{"dashboards":{}}', { dashboards:{} });
   return { dashboards: data.dashboards || {} };
 }
 
@@ -72,21 +71,22 @@ function sortItems(items, mode){
 }
 
 module.exports = async (req, res) => {
-  try{
-    const s = getSession(req);
-    if(!s) return json(res, 401, { error:'Not authenticated' });
+  try {
+    const sess = getSession(req);
+    if(!sess) return json(res, 401, { error:'Not authenticated' });
 
-    const users = await loadUsers();
-    const u = users[s.userId] || {};
-    const perms = u.permissions || {};
-    const role = u.role || s.role || 'viewer';
+    const { users } = await loadUsers();
+    const me = users[sess.userId] || { role: sess.role || 'viewer', permissions:{} };
 
-    if(!(role === 'admin' || perms.executiveBoard)) return json(res, 403, { error:'Forbidden: Executive Board access required' });
+    const allowed = (me.role === 'admin') || !!(me.permissions && me.permissions.executiveBoard);
+    if(!allowed) return json(res, 403, { error:'Forbidden: Executive Board access required' });
 
     const sort = (req.query && req.query.sort) ? String(req.query.sort) : 'newest';
-    const idx = await loadIndex();
 
-    const visible = Object.values(idx.dashboards).filter(d => d && d.published).filter(d => isVisibleTo(d, s.userId));
+    const idx = await loadIndex();
+    const visible = Object.values(idx.dashboards)
+      .filter(d => d && d.published)
+      .filter(d => isVisibleTo(d, sess.userId));
 
     const items=[];
     for(const d of visible){
