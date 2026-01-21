@@ -278,7 +278,7 @@
                             <i id="tracker-arrow" data-lucide="chevron-down" class="w-5 h-5"></i>
                         </button>
                     </div>
-                    <div id="milestone-details" class="mt-4 pt-4 border-t-2 border-blue-200 animate-fade-in hidden">
+                    <div id=\"milestone-details\" class="mt-4 pt-4 border-t-2 border-blue-200 animate-fade-in ">
                          <p class="text-sm font-semibold text-gray-700 mb-4">Application Tracker Status (Auto-calculated):</p>
                          <div class="overflow-x-auto custom-scroll">
                              <div id="milestone-cards" class="flex gap-3 pb-2" style="min-width: max-content"></div>
@@ -566,8 +566,8 @@
             <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-800" id="milestone-modal-title">Add New Milestone</h3><button onclick="closeModal('modal-milestone')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
             <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div>
 <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Owner</label>
- <input type="text" id="ms-owner" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Owner / Assignee">
+ <label class=\"block text-sm font-medium text-gray-700 mb-1\">Owner</label>
+ <input type=\"text\" id=\"ms-owner\" class=\"w-full border border-gray-300 rounded-lg p-2\" placeholder=\"Owner / Assignee\">
 </div></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea id="ms-remark" class="w-full border border-gray-300 rounded-lg p-2 h-20"></textarea></div></div>
             <div class="flex justify-end space-x-3 mt-6"><button id="btn-delete-ms" onclick="deleteMilestone()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium mr-auto hidden">Delete</button><button onclick="closeModal('modal-milestone')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button onclick="saveMilestone()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Save</button></div>
         </div>
@@ -1506,7 +1506,7 @@
         let activeUsStage = 'New';
         let activeBugStage = 'New'; // Added for Bugs Tracker
         let bauData = { totalTickets: 0, withinSLA: 0, breachedSLA: 0, slaPercentage: 0 };
-        let showTrackerDetails = false;
+        let showTrackerDetails = true;
         let showL2Details = false;
         let discModalTab = 'L1';
         const usStages = ['New', 'Development', 'Authoring', 'IT UAT', 'Business UAT', 'Closed'];
@@ -1619,7 +1619,7 @@
                             startDate: parseXlsDate(r['Start Date']||r.startDate), 
                             endDate: parseXlsDate(r['End Date']||r.endDate),
                             actualStartDate: parseXlsDate(r['Actual Start Date']||r.actualStartDate), 
-                            actualEndDate: parseXlsDate(r['Actual End Date']||r.actualEndDate),
+                            actualEndDate: parseXlsDate(r['Actual End Date']||r.actualEndDate), 
                             owner: r.Owner || r.owner || r['Owner'] || r['Assigned To'] || r['Assignee'] || '',
                             remark: r.Remark||r.remark||''
                         }));
@@ -1793,7 +1793,14 @@
             renderKPIs();
             renderBauStats();
             renderSummary(); 
-        }
+  try {
+    const el = document.getElementById('milestone-details');
+    const icon = document.getElementById('tracker-arrow');
+    if (icon) icon.classList.toggle('rotate-180', !!showTrackerDetails);
+    if (el) el.classList.toggle('hidden', !showTrackerDetails);
+  } catch (e) {}
+
+}
 
         function renderMilestones() {
             const container = document.getElementById('milestone-container');
@@ -1812,14 +1819,13 @@
         }
 
         function renderMilestoneDetails() {
-            if(!showTrackerDetails) return;
             const container = document.getElementById('milestone-cards');
             container.innerHTML = milestones.map((m, i) => {
                 const { tracker, execLabel, execColor } = calculateStatus(m);
                 let badgeColor = 'bg-gray-100 text-gray-800';
                 if(tracker === 'On Track') badgeColor = 'bg-green-100 text-green-800 border-green-200';
                 if(tracker === 'Delayed') badgeColor = 'bg-red-100 text-red-800 border-red-200';
-                return `<div class="bg-white rounded-lg p-3 border border-gray-200 flex flex-col min-w-[160px] max-w-[180px] shadow-sm hover:border-blue-400 cursor-pointer" onclick="openMilestoneModal(${i})"><p class="text-xs font-bold text-gray-800 mb-2 text-center h-8 flex items-center justify-center break-words">${m.phase}</p><div class="flex-1 space-y-2 mb-2"><div class="bg-blue-50 p-1.5 rounded text-[10px]"><p class="font-bold text-blue-700">Planned</p><p>S: ${m.startDate || '-'}</p><p>E: ${m.endDate || '-'}</p></div><div class="bg-green-50 p-1.5 rounded text-[10px]"><p class="font-bold text-green-700">Actual</p><p>S: ${m.actualStartDate || '-'}</p><p>E: ${m.actualEndDate || '-'}</p></div></div><div class="mb-2 px-1 border-t border-gray-50 pt-1">${m.owner ? `<div class="bg-slate-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600">Owner: ${esc(m.owner)}</p></div>` : ''}${m.remark ? `<div class="bg-gray-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600 line-clamp-2" title="${m.remark}">R: ${m.remark}</p></div>` : ''}<div class="flex justify-between items-center"><span class="text-[10px] text-gray-500 font-medium">Status:</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${execColor}">${execLabel}</span></div></div><div class="mt-auto pt-2 border-t border-gray-100"><span class="block text-center text-[10px] px-2 py-1 rounded-full font-bold border ${badgeColor}">${tracker}</span></div></div>`;
+                return `<div class="bg-white rounded-lg p-3 border border-gray-200 flex flex-col min-w-[160px] max-w-[180px] shadow-sm hover:border-blue-400 cursor-pointer" onclick="openMilestoneModal(${i})"><p class="text-xs font-bold text-gray-800 mb-2 text-center h-8 flex items-center justify-center break-words">${m.phase}</p><div class="flex-1 space-y-2 mb-2"><div class="bg-blue-50 p-1.5 rounded text-[10px]"><p class="font-bold text-blue-700">Planned</p><p>S: ${m.startDate || '-'}</p><p>E: ${m.endDate || '-'}</p></div><div class="bg-green-50 p-1.5 rounded text-[10px]"><p class="font-bold text-green-700">Actual</p><p>S: ${m.actualStartDate || '-'}</p><p>E: ${m.actualEndDate || '-'}</p></div></div><div class="mb-2 px-1 border-t border-gray-50 pt-1">${m.remark ? `<div class="bg-gray-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600 line-clamp-2" title="${m.remark}">R: ${m.remark}</p></div>` : ''}<div class="flex justify-between items-center"><span class="text-[10px] text-gray-500 font-medium">Status:</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${execColor}">${execLabel}</span></div></div><div class="mt-auto pt-2 border-t border-gray-100"><span class="block text-center text-[10px] px-2 py-1 rounded-full font-bold border ${badgeColor}">${tracker}</span></div></div>`;
             }).join('');
         }
 
@@ -2362,8 +2368,8 @@ function renderBlockers() {
             document.getElementById('ms-index').value = isEdit ? idx : '';
             document.getElementById('btn-delete-ms').classList.toggle('hidden', !isEdit);
             if(isEdit) { const m = milestones[idx]; document.getElementById('ms-phase').value = m.phase; document.getElementById('ms-start').value = m.startDate; document.getElementById('ms-end').value = m.endDate; document.getElementById('ms-act-start').value = m.actualStartDate; document.getElementById('ms-act-end').value = m.actualEndDate;
-      document.getElementById('ms-owner').value = m.owner || '';
-      document.getElementById('ms-remark').value = m.remark; } 
+ document.getElementById('ms-owner').value = m.owner || '';
+ document.getElementById('ms-remark').value = m.remark; } 
             else { ['ms-phase','ms-start','ms-end','ms-act-start','ms-act-end','ms-owner','ms-remark'].forEach(id => document.getElementById(id).value = ''); }
             document.getElementById('modal-milestone').classList.add('open');
         }
