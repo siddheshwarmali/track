@@ -114,14 +114,7 @@
   window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
 </script>
 
-
-<style>
-  body{ background:#ffffff !important; color:#0f172a !important; }
-  .bg-\[\#0f172a\], .bg-slate-950, .bg-slate-900, .bg-slate-800{ background:#ffffff !important; }
-  .text-white{ color:#0f172a !important; }
-  canvas{ background:transparent; }
-</style>
-
+<style>body{background:#fff!important;color:#0f172a!important;} .text-white{color:#0f172a!important;}</style>
 </head>
 <body>
 
@@ -145,7 +138,6 @@
   </div>
 </div>
 
-<!-- Run report modal -->
 <div id='rd-modal' class='fixed inset-0 hidden items-center justify-center bg-black/50 z-50'>
   <div class='bg-white w-[min(680px,92vw)] rounded-2xl shadow-2xl border border-slate-200 p-5'>
     <div class='flex items-center justify-between'>
@@ -157,11 +149,9 @@
       <button id='rd-ado' class='px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm font-medium'>Sync from ADO</button>
       <button id='rd-generate' class='px-4 py-3 rounded-xl bg-slate-900 text-white text-sm font-medium sm:col-span-2'>Generate report</button>
     </div>
-    <div class='mt-4 text-xs text-slate-500'>Note: ADO uses PAT from your browser session; keep it secure.</div>
   </div>
 </div>
 
-<!-- ADO config modal -->
 <div id='rd-ado-modal' class='fixed inset-0 hidden items-center justify-center bg-black/50 z-50'>
   <div class='bg-white w-[min(720px,92vw)] rounded-2xl shadow-2xl border border-slate-200 p-5'>
     <div class='flex items-center justify-between'>
@@ -169,22 +159,10 @@
       <button id='rd-ado-close' class='text-slate-500 hover:text-slate-900'>✕</button>
     </div>
     <div class='mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3'>
-      <div>
-        <label class='text-xs text-slate-600'>Organization</label>
-        <input id='rd-ado-org' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' placeholder='org name' />
-      </div>
-      <div>
-        <label class='text-xs text-slate-600'>Project</label>
-        <input id='rd-ado-project' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' placeholder='project name' />
-      </div>
-      <div>
-        <label class='text-xs text-slate-600'>WIQL Query Id</label>
-        <input id='rd-ado-query' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' placeholder='query id' />
-      </div>
-      <div>
-        <label class='text-xs text-slate-600'>PAT</label>
-        <input id='rd-ado-pat' type='password' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' placeholder='personal access token' />
-      </div>
+      <div><label class='text-xs text-slate-600'>Organization</label><input id='rd-ado-org' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' /></div>
+      <div><label class='text-xs text-slate-600'>Project</label><input id='rd-ado-project' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' /></div>
+      <div><label class='text-xs text-slate-600'>WIQL Query Id</label><input id='rd-ado-query' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' /></div>
+      <div><label class='text-xs text-slate-600'>PAT</label><input id='rd-ado-pat' type='password' class='w-full border border-slate-300 rounded-xl px-3 py-2 text-sm' /></div>
     </div>
     <div class='mt-4 flex justify-end gap-2'>
       <button id='rd-ado-cancel' class='px-4 py-2 rounded-xl border border-slate-200'>Cancel</button>
@@ -312,9 +290,9 @@
         function deleteTicket(index) { if(confirm("Are you sure?")) { loadedTicketData.splice(index, 1); generateDashboard(loadedTicketData); openTicketList('all'); } }
         function closeEditModal() { document.getElementById('editModal').classList.remove('active'); if(loadedTicketData && loadedTicketData.length > 0) openTicketList('all'); }
 
-        function requestAdoSync(){ document.getElementById('rd-ado-modal').classList.remove('hidden'); document.getElementById('rd-ado-modal').classList.add('flex'); }
+        function requestAdoSync() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Connecting...`; lucide.createIcons(); // standalone: parent messaging disabled }
 
-        // standalone: parent messaging removed
+        // standalone: message listener disabled
 
         function resetSyncBtn() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="cloud-lightning" class="w-4 h-4"></i> Sync from ADO`; lucide.createIcons(); }
 
@@ -391,8 +369,7 @@
             const onTime = ticketData.filter(t => t.actualTime <= t.threshold).length;
             const breached = total - onTime;
             const slaPercentage = ((onTime / total) * 100).toFixed(1);
-            // standalone: update local BAU data
-            window.bauData = { totalTickets: total, withinSLA: onTime, breachedSLA: breached, slaPercentage: slaPercentage };//, payload: { totalTickets: total, withinSLA: onTime, breachedSLA: breached, slaPercentage: slaPercentage } }, '*');
+            // standalone: parent messaging disabled
             document.getElementById('totalTickets').textContent = total;
             document.getElementById('onTimeTickets').textContent = onTime;
             document.getElementById('breachedTickets').textContent = breached;
@@ -834,61 +811,41 @@
 
 <script>
 (async function(){
-  // --- actions menu ---
-  const btn = document.getElementById('rd-actions-btn');
-  const menu = document.getElementById('rd-actions-menu');
   const wsSel = document.getElementById('rd-workspace');
+  const actionsBtn = document.getElementById('rd-actions-btn');
+  const actionsMenu = document.getElementById('rd-actions-menu');
   let currentDash = null;
 
   function openMenu(open){
-    if(!menu) return;
-    const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
-    menu.classList.toggle('hidden', !next);
+    const next = (typeof open === 'boolean') ? open : actionsMenu.classList.contains('hidden');
+    actionsMenu.classList.toggle('hidden', !next);
   }
-  if(btn) btn.onclick = (e)=>{ e.stopPropagation(); openMenu(); };
+  actionsBtn.onclick = (e)=>{ e.stopPropagation(); openMenu(); };
   document.addEventListener('click', ()=>openMenu(false));
 
-  // --- modals ---
   const modal = document.getElementById('rd-modal');
-  const mclose = document.getElementById('rd-modal-close');
-  document.getElementById('rd-runreport').onclick = (e)=>{ e.stopPropagation(); openMenu(false); modal.classList.remove('hidden'); modal.classList.add('flex'); };
-  if(mclose) mclose.onclick = ()=>{ modal.classList.add('hidden'); modal.classList.remove('flex'); };
-  if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); } });
-
   const adoModal = document.getElementById('rd-ado-modal');
-  const adoClose = document.getElementById('rd-ado-close');
-  const adoCancel = document.getElementById('rd-ado-cancel');
+  document.getElementById('rd-runreport').onclick = (e)=>{ e.stopPropagation(); openMenu(false); modal.classList.remove('hidden'); modal.classList.add('flex'); };
+  document.getElementById('rd-modal-close').onclick = ()=>{ modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  modal.addEventListener('click', (e)=>{ if(e.target===modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); } });
+
   function closeAdo(){ adoModal.classList.add('hidden'); adoModal.classList.remove('flex'); }
-  if(adoClose) adoClose.onclick = closeAdo;
-  if(adoCancel) adoCancel.onclick = closeAdo;
+  document.getElementById('rd-ado-close').onclick = closeAdo;
+  document.getElementById('rd-ado-cancel').onclick = closeAdo;
 
-  document.getElementById('rd-upload').onclick = ()=>{
-    // click existing file input from Run UI
-    const fi = document.getElementById('fileInput') || document.querySelector('input[type=file]');
-    if(fi) fi.click();
-  };
+  document.getElementById('rd-upload').onclick = ()=>{ const fi=document.getElementById('fileInput')||document.querySelector('input[type=file]'); if(fi) fi.click(); };
   document.getElementById('rd-ado').onclick = ()=>{ adoModal.classList.remove('hidden'); adoModal.classList.add('flex'); };
-  document.getElementById('rd-generate').onclick = ()=>{
-    // Use existing generate report button if present
-    const b = document.getElementById('downloadReportBtn') || document.getElementById('downloadBtn') || document.querySelector('[data-download]');
-    if(b) b.click();
-  };
+  document.getElementById('rd-generate').onclick = ()=>{ const b=document.getElementById('downloadReportBtn')||document.getElementById('downloadBtn'); if(b) b.click(); };
 
-  // --- simple publish/unpublish (publish-all) ---
   async function apiJson(url, opt){
     opt = opt || {};
-    const r = await fetch(url, { headers: { 'Accept':'application/json','Content-Type':'application/json' }, credentials:'include', ...opt });
+    const r = await fetch(url, { headers:{'Accept':'application/json','Content-Type':'application/json'}, credentials:'include', ...opt });
     const t = await r.text();
     let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={error:t}; }
     if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
     return j;
   }
-  async function publish(){ if(!currentDash) return alert('Select workspace first'); await apiJson(`/api/state?dash=${encodeURIComponent(currentDash)}&publish=1`, {method:'POST', body: JSON.stringify({ all:true, users:[] })}); alert('Published'); }
-  async function unpublish(){ if(!currentDash) return alert('Select workspace first'); await apiJson(`/api/state?dash=${encodeURIComponent(currentDash)}&unpublish=1`, {method:'POST', body:'{}'}); alert('Unpublished'); }
-  document.getElementById('rd-publish').onclick = async (e)=>{ e.stopPropagation(); openMenu(false); try{ await publish(); }catch(err){ alert(err.message||String(err)); } };
-  document.getElementById('rd-unpublish').onclick = async (e)=>{ e.stopPropagation(); openMenu(false); try{ await unpublish(); }catch(err){ alert(err.message||String(err)); } };
 
-  // --- load workspaces list from /api/state?list=1 ---
   async function listWorkspaces(){
     const r = await apiJson('/api/state?list=1', { method:'GET' });
     return r.list || r.dashboards || r.workspaces || r.items || [];
@@ -898,81 +855,61 @@
     return r.state || (r.data && r.data.state) || r;
   }
 
-  async function load(){
-    let items = [];
-    try{ items = await listWorkspaces(); }catch(e){ console.error(e); }
-    wsSel.innerHTML = '';
-    items.forEach(it=>{
-      const id = it.id || it.dashId || it.name;
-      const name = it.name || it.title || id;
-      if(!id) return;
-      const opt = document.createElement('option');
-      opt.value = id; opt.textContent = name;
-      wsSel.appendChild(opt);
-    });
-    currentDash = wsSel.value || null;
-    if(currentDash) await loadWorkspace(currentDash);
-  }
-
   async function loadWorkspace(id){
     currentDash = id;
-    try{
-      const st = await getState(id);
-      // Run state is saved by main dashboard under headless.loadedTicketData
-      const tickets = (st && st.headless && st.headless.loadedTicketData) ? st.headless.loadedTicketData : null;
-      if(tickets && Array.isArray(tickets)){
-        window.loadedTicketData = tickets;
-        try{ if(typeof processData==='function') processData(); }catch(e){}
-      }
-    }catch(e){ console.error(e); }
+    const st = await getState(id);
+    const tickets = (st && st.headless && st.headless.loadedTicketData) ? st.headless.loadedTicketData : null;
+    if(tickets && Array.isArray(tickets)){
+      window.loadedTicketData = tickets;
+      try{ if(typeof processData==='function') processData(); }catch(e){}
+    }
   }
 
-  wsSel.addEventListener('change', async ()=>{ await loadWorkspace(wsSel.value); });
+  wsSel.addEventListener('change', ()=>loadWorkspace(wsSel.value));
 
-  // --- ADO Sync implementation (client-side WIQL) ---
+  document.getElementById('rd-publish').onclick = async ()=>{ openMenu(false); if(!currentDash) return alert('Select workspace'); await apiJson(`/api/state?dash=${encodeURIComponent(currentDash)}&publish=1`, { method:'POST', body: JSON.stringify({ all:true, users:[] })}); alert('Published'); };
+  document.getElementById('rd-unpublish').onclick = async ()=>{ openMenu(false); if(!currentDash) return alert('Select workspace'); await apiJson(`/api/state?dash=${encodeURIComponent(currentDash)}&unpublish=1`, { method:'POST', body: '{}' }); alert('Unpublished'); };
+
   async function adoSync(){
     const org = document.getElementById('rd-ado-org').value.trim();
     const project = document.getElementById('rd-ado-project').value.trim();
     const queryId = document.getElementById('rd-ado-query').value.trim();
     const pat = document.getElementById('rd-ado-pat').value;
-    if(!org||!project||!queryId||!pat){ alert('All ADO fields are required'); return; }
-    const authHeader = 'Basic ' + btoa(':' + pat);
-    const baseUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis`;
-    const qres = await fetch(`${baseUrl}/wit/wiql/${queryId}?api-version=6.0`, { method:'GET', headers:{ 'Authorization': authHeader, 'Content-Type':'application/json' } });
-    if(!qres.ok) throw new Error('Query failed: ' + qres.status);
-    const qdata = await qres.json();
-    if(!qdata.workItems || qdata.workItems.length===0) throw new Error('0 work items');
-    const ids = qdata.workItems.slice(0,200).map(w=>w.id).join(',');
-    const dres = await fetch(`${baseUrl}/wit/workitems?ids=${ids}&api-version=6.0`, { method:'GET', headers:{ 'Authorization': authHeader, 'Content-Type':'application/json' } });
-    if(!dres.ok) throw new Error('Details failed: ' + dres.status);
-    const ddata = await dres.json();
-    const items = (ddata.value||[]).map(w=>{
-      const f = w.fields || {};
-      const created = f['System.CreatedDate'];
-      const closed = f['Microsoft.VSTS.Common.ClosedDate'] || f['System.ChangedDate'];
-      const pri = String(f['Microsoft.VSTS.Common.Priority']||'');
-      const type = f['System.WorkItemType'] || 'Ticket';
-      // threshold heuristic
-      let threshold = 48;
-      if(pri==='1') threshold = 4; else if(pri==='2') threshold = 8; else if(pri==='3') threshold = 24;
-      // actualTime in hours (simple) - use existing calculateBusinessHours if available
-      let actualTime = 0;
-      try{
-        if(typeof calculateBusinessHours==='function') actualTime = calculateBusinessHours(new Date(created), closed? new Date(closed): new Date())/60;
-        else actualTime = ((new Date(closed||Date.now()) - new Date(created))/3600000);
-      }catch(e){ actualTime = 0; }
-      return { id: w.id, title: f['System.Title']||'Untitled', type, actualTime: Math.round(actualTime), threshold };
+    if(!org||!project||!queryId||!pat) throw new Error('All ADO fields required');
+    const auth = 'Basic ' + btoa(':' + pat);
+    const base = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis`;
+    const q = await fetch(`${base}/wit/wiql/${queryId}?api-version=6.0`, { headers:{ 'Authorization': auth, 'Content-Type':'application/json' } });
+    if(!q.ok) throw new Error('Query failed: '+q.status);
+    const qd = await q.json();
+    if(!qd.workItems || qd.workItems.length===0) throw new Error('0 work items');
+    const ids = qd.workItems.slice(0,200).map(x=>x.id).join(',');
+    const d = await fetch(`${base}/wit/workitems?ids=${ids}&api-version=6.0`, { headers:{ 'Authorization': auth, 'Content-Type':'application/json' } });
+    if(!d.ok) throw new Error('Details failed: '+d.status);
+    const dd = await d.json();
+    const items = (dd.value||[]).map(w=>{
+      const f=w.fields||{};
+      const created=f['System.CreatedDate'];
+      const closed=f['Microsoft.VSTS.Common.ClosedDate'] || f['System.ChangedDate'];
+      const pri=String(f['Microsoft.VSTS.Common.Priority']||'');
+      let threshold=48; if(pri==='1') threshold=4; else if(pri==='2') threshold=8; else if(pri==='3') threshold=24;
+      let actual=0; try{ actual = (typeof calculateBusinessHours==='function') ? calculateBusinessHours(new Date(created), closed? new Date(closed): new Date())/60 : ((new Date(closed||Date.now())-new Date(created))/3600000); }catch(e){}
+      return { id:w.id, title:f['System.Title']||'Untitled', type:f['System.WorkItemType']||'Ticket', actualTime: Math.round(actual), threshold };
     });
     window.loadedTicketData = items;
-    document.getElementById('fileName').textContent = 'Synced from Azure DevOps';
-    const pb = document.getElementById('processBtn');
-    if(pb){ pb.disabled = false; pb.style.opacity = 1; }
+    const pb=document.getElementById('processBtn');
+    if(pb){ pb.disabled=false; pb.style.opacity=1; }
     closeAdo();
     try{ if(typeof processData==='function') processData(); }catch(e){}
   }
   document.getElementById('rd-ado-sync').onclick = async ()=>{ try{ await adoSync(); }catch(err){ alert(err.message||String(err)); } };
 
-  await load();
+  try{
+    const items = await listWorkspaces();
+    wsSel.innerHTML='';
+    items.forEach(it=>{ const id=it.id||it.dashId||it.name; const name=it.name||it.title||id; if(!id) return; const o=document.createElement('option'); o.value=id; o.textContent=name; wsSel.appendChild(o); });
+    currentDash = wsSel.value || null;
+    if(currentDash) await loadWorkspace(currentDash);
+  }catch(e){ console.error(e); }
 })();
 </script>
 
