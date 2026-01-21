@@ -1,191 +1,217 @@
-<!DOCTYPE html>
-<html lang="en">
+
+<!DOCTYPE html><html lang='en'>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Executive Board</title>
-  <style>
-    :root{
-      --bg:#0b1220;--card:#0f172a;--muted:#94a3b8;--text:#e2e8f0;--line:rgba(148,163,184,.16);
-      --accent:#6366f1;--danger:#ef4444;--ok:#10b981;
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Board</title>
+<!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    
+    <!-- html2canvas for Report Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .modal { display: none; }
+        .modal.open { display: flex; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms; }
+        .hidden-by-report { display: none !important; }
+        
+        .clickable-cell:hover { text-decoration: underline; cursor: pointer; color: #2563eb; font-weight: 600; }
+        [contenteditable] { padding: 4px 8px; border-radius: 4px; transition: all 0.2s; border: 1px solid transparent; }
+        [contenteditable]:hover { background-color: #f8fafc; border-color: #e2e8f0; }
+        [contenteditable]:focus { outline: none; background-color: #eff6ff; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .l3-row:hover { background-color: #f8fafc; }
+        .l3-row:hover .delete-btn { opacity: 1; pointer-events: auto; }
+        .delete-btn { opacity: 0; transition: opacity 0.2s; }
+    </style>
+
+    <style>
+      @keyframes ghspin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+      /* Hide Clear Storage button */
+      button[onclick^="wsClearLocalStorage"], button[onclick="wsClearLocalStorage()"] { display:none !important; }
+    </style>
+
+<script>
+  async function twJson(url, opt){
+    const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
+    const t = await r.text();
+    let j={};
+    try{ j=JSON.parse(t||'{}'); }catch{ j={error:t}; }
+    if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
+    return j;
+  }
+
+  async function twInit(){
+    const pill=document.getElementById('tw-userpill');
+    const mgr=document.getElementById('tw-usermgr');
+    const lo=document.getElementById('tw-logout');
+    try{
+      const me = await twJson('/api/auth/me');
+      if(!me || !me.authenticated){
+        const next=encodeURIComponent(location.pathname+location.search+location.hash);
+        location.replace('/login.html?next='+next);
+        return;
+      }
+      const role = me.role || 'viewer';
+      document.body.classList.remove('role-admin','role-creator','role-viewer');
+      document.body.classList.add('role-'+role);
+      if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
+      if(mgr) mgr.classList.toggle('hidden', role!=='admin');
+      if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
+    }catch(e){
+      const next=encodeURIComponent(location.pathname+location.search+location.hash);
+      location.replace('/login.html?next='+next);
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:radial-gradient(1200px 600px at 10% -10%, rgba(99,102,241,.25), transparent 55%),
-         radial-gradient(1000px 600px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-         linear-gradient(180deg,#070b15,#0b1220 40%,#0b1220);color:var(--text)}
+  }
+  window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
+</script>
 
-    .top{position:sticky;top:0;z-index:40;background:rgba(11,18,32,.82);backdrop-filter:blur(10px);border-bottom:1px solid rgba(148,163,184,.15)}
-    .wrap{max-width:1200px;margin:0 auto;padding:14px 16px}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-    .h1{margin:0;font-size:18px;font-weight:800;letter-spacing:.2px}
-    .sub{margin:2px 0 0 0;color:var(--muted);font-size:12px}
-    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(148,163,184,.18);border-radius:999px;background:rgba(15,23,42,.55)}
-    select,input{background:transparent;border:0;outline:none;color:var(--text);font-size:13px;min-width:140px}
-    input{min-width:180px}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);background:rgba(15,23,42,.65);color:var(--text);text-decoration:none;font-size:13px}
-    .btn:hover{border-color:rgba(99,102,241,.55)}
-
-    .status{margin-top:10px;color:var(--muted);font-size:13px}
-    .error{display:none;margin-top:12px;padding:12px 14px;border-radius:14px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#fecaca;font-size:13px}
-
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:14px}
-    .card{grid-column:span 12;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(15,23,42,.82),rgba(15,23,42,.62));overflow:hidden}
-    .ch{padding:14px;border-bottom:1px solid rgba(148,163,184,.12);display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}
-    .ch h2{margin:0;font-size:16px}
-    .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-    .tag{font-size:11px;color:var(--muted);border:1px solid rgba(148,163,184,.16);border-radius:999px;padding:4px 8px;background:rgba(2,6,23,.3)}
-    .tag.accent{border-color:rgba(99,102,241,.35);color:#c7d2fe}
-    .content{padding:14px}
-    .sections{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-    .sec{grid-column:span 12;border:1px solid rgba(148,163,184,.14);border-radius:16px;padding:12px;background:rgba(2,6,23,.25)}
-    .sec h3{margin:0 0 6px 0;font-size:13px;color:#cbd5e1;letter-spacing:.2px}
-    .sec p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
-    .list{margin:6px 0 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
-    .li{display:flex;gap:8px;align-items:flex-start}
-    .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);margin-top:6px;flex:0 0 auto}
-    .li span{color:var(--muted);font-size:13px;line-height:1.35}
-    .actions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}
-
-    @media (min-width: 720px){
-      .sec{grid-column:span 6}
-      input{min-width:220px}
-    }
-    @media (min-width: 1024px){
-      .sec{grid-column:span 3}
-    }
-  </style>
 </head>
-<body>
-  <div class="top">
-    <div class="wrap">
-      <div class="row">
-        <div>
-          <h1 class="h1">Executive Board</h1>
-          <p class="sub">Cards view of all dashboards that are <b>published</b> and visible to you</p>
-        </div>
-        <div class="controls">
-          <div class="pill"><span style="color:var(--muted);font-size:12px">Sort</span>
-            <select id="sort">
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="name_asc">Name A → Z</option>
-              <option value="name_desc">Name Z → A</option>
-            </select>
-          </div>
-          <div class="pill"><span style="color:var(--muted);font-size:12px">Search</span>
-            <input id="q" placeholder="Project name…" />
-          </div>
-          <a class="btn" href="/index.html">← Back</a>
-        </div>
+<body class='bg-slate-950 text-slate-100'>
+  <div class='sticky top-0 z-40 bg-slate-950/70 backdrop-blur border-b border-white/10'>
+    <div class='max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between'>
+      <div>
+        <div class='text-lg font-extrabold'>Executive Board</div>
+        <div class='text-xs text-slate-400'>All published dashboards you can access — card view</div>
       </div>
-      <div id="status" class="status">Loading…</div>
-      <div id="err" class="error"></div>
+      <div class='flex flex-wrap gap-2 items-center'>
+        <div class='flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm'>
+          <span class='text-slate-400 text-xs'>Sort</span>
+          <select id='sort' class='bg-transparent outline-none text-sm'>
+            <option value='newest'>Newest</option>
+            <option value='oldest'>Oldest</option>
+            <option value='name_asc'>Name A→Z</option>
+            <option value='name_desc'>Name Z→A</option>
+          </select>
+        </div>
+        <div class='flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm'>
+          <span class='text-slate-400 text-xs'>Search</span>
+          <input id='q' placeholder='Project name…' class='bg-transparent outline-none text-sm w-44' />
+        </div>
+        <a href='/index.html' class='px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Back</a>
+      </div>
     </div>
   </div>
 
-  <div class="wrap">
-    <div id="grid" class="grid"></div>
+  <div class='max-w-6xl mx-auto px-4 py-4'>
+    <div id='status' class='text-sm text-slate-400'>Loading…</div>
+    <div id='err' class='hidden mt-3 p-3 rounded-xl border border-red-400/30 bg-red-400/10 text-red-200 text-sm'></div>
+    <div id='grid' class='mt-4 grid grid-cols-1 gap-4'></div>
   </div>
 
 <script>
-  async function jget(url){
-    const r = await fetch(url, { headers:{'Accept':'application/json'} });
-    const t = await r.text();
-    let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
-    if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
-    return j;
-  }
-  function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
-  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function jget(url){
+  const r = await fetch(url, { headers:{'Accept':'application/json'} });
+  const t = await r.text();
+  let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
+  if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+  return j;
+}
+function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  function card(d){
-    const mItems = (d.milestones?.items||[]).map(x=>`<li class="li"><span class="dot"></span><span>${esc(x)}</span></li>`).join('');
-    return `
-    <div class="card" data-name="${esc((d.name||'').toLowerCase())}">
-      <div class="ch">
-        <div>
-          <h2>${esc(d.name||d.id)}</h2>
-          <div class="meta" style="margin-top:6px;justify-content:flex-start">
-            <span class="tag accent">Published: ${fmt(d.publishedAt||d.updatedAt)}</span>
-            <span class="tag">Owner: ${esc(d.ownerId||'')}</span>
-          </div>
-        </div>
-        <div class="meta">
-          <span class="tag">Milestones: <b>${d.milestones?.count||0}</b></span>
-          <span class="tag">US: <b>${d.application?.userStories||0}</b></span>
-          <span class="tag">Bugs: <b>${d.application?.bugs||0}</b></span>
-          <span class="tag">Disciplines: <b>${d.discipline?.disciplines||0}</b></span>
+function card(d){
+  const ms = (d.milestones?.items||[]).map(x=>`<li class='text-sm text-slate-300'>• ${esc(x)}</li>`).join('');
+  return `
+  <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
+    <div class='p-4 flex flex-wrap gap-3 items-start justify-between border-b border-white/10'>
+      <div>
+        <div class='text-base font-bold'>${esc(d.name||d.id)}</div>
+        <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
+          <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${fmt(d.publishedAt||d.updatedAt)}</span>
+          <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${esc(d.ownerId||'')}</span>
         </div>
       </div>
-      <div class="content">
-        <div class="sections">
-          <div class="sec"><h3>Overall Summary</h3><p>${esc(d.summary||'No summary')}</p></div>
-          <div class="sec"><h3>Project Milestones</h3><p>${d.milestones?.count? 'Top milestones:' : 'No milestones found.'}</p><ul class="list">${mItems}</ul></div>
-          <div class="sec"><h3>Application Tracker</h3>
-            <p>User Stories: <b>${d.application?.userStories||0}</b> (Open ${d.application?.usOpen||0})</p>
-            <p style="margin-top:6px">Bugs: <b>${d.application?.bugs||0}</b> (Open ${d.application?.bugsOpen||0})</p>
-          </div>
-          <div class="sec"><h3>Task Discipline Tracker</h3>
-            <p>Disciplines: <b>${d.discipline?.disciplines||0}</b></p>
-            <p style="margin-top:6px">Pending: <b>${d.discipline?.pending||0}</b></p>
-          </div>
-        </div>
-        <div class="actions"><a class="btn" href="/index.html?dash=${encodeURIComponent(d.id)}">Open Dashboard</a></div>
+      <div class='flex flex-wrap gap-2 text-xs text-slate-300'>
+        <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Milestones: <b>${d.milestones?.count||0}</b></span>
+        <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>US: <b>${d.application?.userStories||0}</b></span>
+        <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Bugs: <b>${d.application?.bugs||0}</b></span>
+        <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Disciplines: <b>${d.discipline?.disciplines||0}</b></span>
       </div>
-    </div>`;
-  }
+    </div>
 
-  function applySearch(){
-    const q=(document.getElementById('q').value||'').trim().toLowerCase();
-    document.querySelectorAll('#grid .card').forEach(c=>{
-      const n=c.getAttribute('data-name')||'';
-      c.style.display = (!q || n.includes(q)) ? '' : 'none';
-    });
-  }
+    <div class='p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3'>
+      <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+        <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Overall Summary</div>
+        <div class='mt-2 text-sm text-slate-200 leading-relaxed'>${esc(d.summary||'No summary')}</div>
+      </div>
+      <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+        <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Milestones</div>
+        <ul class='mt-2 space-y-1'>${ms || "<li class='text-sm text-slate-300'>No milestones</li>"}</ul>
+      </div>
+      <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+        <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Application</div>
+        <div class='mt-2 text-sm text-slate-200'>US: <b>${d.application?.userStories||0}</b> (Open ${d.application?.usOpen||0})</div>
+        <div class='mt-1 text-sm text-slate-200'>Bugs: <b>${d.application?.bugs||0}</b> (Open ${d.application?.bugsOpen||0})</div>
+      </div>
+      <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+        <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Task Discipline</div>
+        <div class='mt-2 text-sm text-slate-200'>Disciplines: <b>${d.discipline?.disciplines||0}</b></div>
+        <div class='mt-1 text-sm text-slate-200'>Pending: <b>${d.discipline?.pending||0}</b></div>
+      </div>
+    </div>
 
-  async function load(){
-    const status = document.getElementById('status');
-    const err = document.getElementById('err');
-    err.style.display='none';
-    status.textContent='Checking access…';
+    <div class='px-4 pb-4'>
+      <a href='/index.html?dash=${encodeURIComponent(d.id)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open Dashboard</a>
+    </div>
+  </div>`;
+}
 
-    const me = await jget('/api/auth/me');
-    if(!me.authenticated){
-      location.href = '/login.html?next=' + encodeURIComponent('/executive-board.html');
-      return;
-    }
-
-    const perms = me.permissions || {};
-    if(!(me.role==='admin' || perms.executiveBoard)){
-      err.textContent = 'Access denied: Admin has not granted you Executive Board access.';
-      err.style.display='block';
-      status.textContent='—';
-      return;
-    }
-
-    status.textContent='Loading published dashboards…';
-    const sort = document.getElementById('sort').value;
-
-    const data = await jget('/api/board?sort=' + encodeURIComponent(sort));
-    const items = Array.isArray(data.items) ? data.items : [];
-
-    const grid = document.getElementById('grid');
-    grid.innerHTML = items.map(card).join('') || '<div class="status">No published dashboards available.</div>';
-
-    status.textContent = `Showing ${items.length} dashboard(s).`;
-    applySearch();
-  }
-
-  document.getElementById('sort').addEventListener('change', load);
-  document.getElementById('q').addEventListener('input', applySearch);
-
-  load().catch(e=>{
-    const err = document.getElementById('err');
-    err.textContent = e.message || String(e);
-    err.style.display='block';
-    document.getElementById('status').textContent='—';
+function applySearch(){
+  const q = (document.getElementById('q').value||'').trim().toLowerCase();
+  document.querySelectorAll('#grid [data-name]').forEach(el=>{
+    const n = el.getAttribute('data-name')||'';
+    el.style.display = (!q || n.includes(q)) ? '' : 'none';
   });
+}
+
+async function load(){
+  const status=document.getElementById('status');
+  const err=document.getElementById('err');
+  err.classList.add('hidden');
+  status.textContent='Checking access…';
+  const me = await jget('/api/auth/me');
+  if(!me.authenticated){ location.href='/login.html?next='+encodeURIComponent('/executive-board.html'); return; }
+  const perms = me.permissions || {};
+  if(!(me.role==='admin' || perms.executiveBoard)){
+    err.textContent='Access denied: Admin has not granted Executive Board access.';
+    err.classList.remove('hidden');
+    status.textContent='—';
+    return;
+  }
+  status.textContent='Loading…';
+  const sort=document.getElementById('sort').value;
+  const data = await jget('/api/board?sort='+encodeURIComponent(sort));
+  const items = Array.isArray(data.items)?data.items:[];
+  const grid=document.getElementById('grid');
+  grid.innerHTML = items.map(d=>`<div data-name='${esc((d.name||'').toLowerCase())}'>${card(d)}</div>`).join('') || "<div class='text-slate-400 text-sm'>No published dashboards available.</div>";
+  status.textContent = `Showing ${items.length} dashboard(s).`;
+  applySearch();
+}
+
+document.getElementById('sort').addEventListener('change', load);
+document.getElementById('q').addEventListener('input', applySearch);
+load().catch(e=>{ const err=document.getElementById('err'); err.textContent=e.message||String(e); err.classList.remove('hidden'); document.getElementById('status').textContent='—'; });
 </script>
-</body>
-</html>
+
+</body></html>
