@@ -75,6 +75,7 @@
       const role = me.role || 'viewer';
       document.body.classList.remove('role-admin','role-creator','role-viewer');
       document.body.classList.add('role-'+role);
+      window.twMe = me;
       if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
       if(mgr) mgr.classList.toggle('hidden', role!=='admin');
       if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
@@ -146,10 +147,6 @@
         <a id="tw-usermgr" href="/user-manager.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
           <span class="text-base">👥</span><span>User Manager</span>
         </a>
-        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
-          <span class="text-base">📋</span><span>Executive Board</span>
-        </a>
-
         <button id="tw-logout" type="button" class="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-red-50 border border-red-200 text-red-700 hover:bg-red-100">
           <span class="text-base">⎋</span><span>Logout</span>
         </button>
@@ -192,6 +189,8 @@
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem">Publish</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem">Unpublish</button>
     </div>
     <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
   </div>
@@ -1239,35 +1238,159 @@
 </script>
 
 
+<!-- Publish Modal -->
+<div id="modal-publish" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl animate-fade-in">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-slate-900">Publish Dashboard</h3>
+      <button onclick="closeModal('modal-publish')" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
+    </div>
+    <p class="text-sm text-slate-600">Choose <b>who</b> can see this dashboard. (All sections will be visible to published users.)</p>
+
+    <div id="publish-err" class="hidden mt-3 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
+    <div id="publish-ok" class="hidden mt-3 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3"></div>
+
+    <div class="mt-4 grid md:grid-cols-2 gap-4">
+      <div class="border border-slate-200 rounded-xl p-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Audience</div>
+        <label class="flex items-center gap-2 mt-2 p-2 rounded border border-slate-200 bg-slate-50">
+          <input id="publish-all" type="checkbox" class="w-4 h-4" />
+          <span class="text-sm font-medium text-slate-800">Publish to <b>All users</b></span>
+        </label>
+        <div class="mt-3">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Or select specific users</div>
+          <div id="publish-users" class="mt-2 max-h-56 overflow-auto border border-slate-200 rounded-lg"></div>
+        </div>
+      </div>
+      <div class="border border-slate-200 rounded-xl p-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note</div>
+        <p class="mt-2 text-sm text-slate-600">Only the <b>owner</b> of the dashboard or an <b>admin</b> can publish/unpublish.</p>
+      </div>
+    </div>
+
+    <div class="mt-5 flex justify-end gap-2">
+      <button onclick="closeModal('modal-publish')" class="px-4 py-2 bg-slate-100 text-slate-800 rounded-lg text-sm">Cancel</button>
+      <button id="btn-publish-now" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Publish</button>
+    </div>
+  </div>
+</div>
+
+
+
 <script>
-// twFeatureLinksGate: show/hide hamburger links and publish actions based on /api/auth/me permissions.
-async function twFeatureLinksGate(){
-  try{
-    const r = await fetch('/api/auth/me', { headers:{'Accept':'application/json'} });
-    const me = await r.json().catch(()=>({}));
-    if(!me || !me.authenticated) return;
-    const perms = me.permissions || {};
+// Publish/Unpublish (audience only) - always present in UI
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function getCurrentDashId(){
+    try { if (typeof wsCurrentId !== 'undefined' && wsCurrentId) return wsCurrentId; } catch(e) {}
+    if (window.wsCurrentId) return window.wsCurrentId;
+    const p = new URLSearchParams(location.search);
+    return p.get('dash');
+  }
+  async function apiJson(url, opt){
+    opt = opt || {};
+    const r = await fetch(url, { credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}, ...opt });
+    const t = await r.text();
+    let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
+    if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+    return j;
+  }
+  function canPublish(){
+    const me = window.twMe || {};
+    if(!me.authenticated) return false;
+    if(me.role === 'admin') return true;
+    return (window.wsCurrentMeta && window.wsCurrentMeta.ownerId && window.wsCurrentMeta.ownerId === me.userId);
+  }
+  function showErr(msg){ const el=qs('publish-err'); const ok=qs('publish-ok'); ok&&ok.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
+  function showOk(msg){ const el=qs('publish-ok'); const er=qs('publish-err'); er&&er.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
 
-    const userMgr = document.getElementById('tw-usermgr');
-    if(userMgr){
-      const ok = (me.role === 'admin') || !!perms.userManager;
-      userMgr.classList.toggle('hidden', !ok);
+  async function openPublish(){
+    qs('publish-err')?.classList.add('hidden');
+    qs('publish-ok')?.classList.add('hidden');
+
+    const dashId = getCurrentDashId();
+    if(!dashId){ showErr('No workspace selected. Please select or create a workspace first.'); qs('modal-publish').classList.add('open'); return; }
+
+    if(!canPublish()){
+      showErr('Forbidden: only owner or admin can publish/unpublish.');
+      qs('modal-publish').classList.add('open');
+      return;
     }
 
-    const execBoard = document.getElementById('tw-execboard');
-    if(execBoard){
-      const ok = (me.role === 'admin') || !!perms.executiveBoard;
-      execBoard.classList.toggle('hidden', !ok);
+    try{
+      const data = await apiJson('/api/users/list', { method:'GET' });
+      const users = (data.users||[]).filter(u=>u && u.userId);
+      const me = window.twMe || {};
+      const box = qs('publish-users');
+      if(box){
+        box.innerHTML = users.map(u=>{
+          const isMe = u.userId === me.userId;
+          return `<label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
+            <span class="text-sm text-slate-800 font-mono">${u.userId}</span>
+            <span class="flex items-center gap-2">
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${u.role||''}</span>
+              <input type="checkbox" class="publish-user w-4 h-4" value="${u.userId}" ${isMe?'disabled checked':''}/>
+            </span></label>`;
+        }).join('') || '<div class="p-3 text-sm text-slate-500">No users found.</div>';
+      }
+      const allCb = qs('publish-all');
+      if(allCb){
+        allCb.checked = false;
+        allCb.onchange = ()=>{
+          document.querySelectorAll('.publish-user').forEach(cb=>{ if(cb.disabled) return; cb.checked=false; cb.disabled=allCb.checked; });
+        };
+      }
+    } catch(e){
+      showErr(e.message || String(e));
     }
 
-    // Publish/Unpublish actions in workspace menu
-    const canPub = (me.role === 'admin') || !!perms.publish;
-    document.querySelectorAll('[data-ws-action="publish"],[data-ws-action="unpublish"]').forEach(btn=>{
-      btn.style.display = canPub ? '' : 'none';
-    });
-  } catch(e) {}
-}
-window.addEventListener('DOMContentLoaded', twFeatureLinksGate);
+    qs('modal-publish').classList.add('open');
+  }
+
+  async function doPublish(){
+    try{
+      const dashId = getCurrentDashId();
+      if(!dashId) return showErr('No workspace selected.');
+      const all = !!qs('publish-all')?.checked;
+      const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb=>cb.checked).map(cb=>cb.value);
+      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&publish=1`, { method:'POST', body: JSON.stringify({ all, users }) });
+      showOk('Published successfully.');
+      setTimeout(()=>closeModal('modal-publish'), 350);
+    } catch(e){
+      showErr(e.message || String(e));
+    }
+  }
+
+  async function doUnpublish(){
+    try{
+      const dashId = getCurrentDashId();
+      if(!dashId) return alert('No workspace selected.');
+      if(!canPublish()) return alert('Forbidden: only owner or admin can unpublish.');
+      if(!confirm('Unpublish this dashboard?')) return;
+      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&unpublish=1`, { method:'POST', body: '{}' });
+      alert('Unpublished successfully.');
+    } catch(e){
+      alert(e.message || String(e));
+    }
+  }
+
+  window.wsOpenPublishModal = openPublish;
+  window.wsUnpublishCurrent = doUnpublish;
+
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const b = document.getElementById('btn-publish-now');
+    if(b) b.addEventListener('click', doPublish);
+  });
+
+  // Workspace menu delegation
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest && e.target.closest('[data-ws-action]');
+    if(!el) return;
+    const action = el.getAttribute('data-ws-action');
+    if(action==='publish'){ e.preventDefault(); openPublish(); }
+    if(action==='unpublish'){ e.preventDefault(); doUnpublish(); }
+  }, true);
+})();
 </script>
 
 </body>
@@ -3320,7 +3443,10 @@ async function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
     try {
         gh6Overlay(true, 'Fetching from GitHub...');
         const data = await gh6Get(id);
-        if (seq !== gh6LoadSeq || wsCurrentId !== id) return; // ignore stale response
+        if (seq !== gh6LoadSeq || wsCurrentId !== id) return;
+
+        try { window.wsCurrentMeta = data.meta || {}; } catch(e) {}
+ // ignore stale response
 
         const state = data.state ? gh6SanitizeState(data.state) : null;
         if (state) {
@@ -3834,35 +3960,159 @@ async function wsModalPrimary() {
 </script>
 
 
+<!-- Publish Modal -->
+<div id="modal-publish" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl animate-fade-in">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-slate-900">Publish Dashboard</h3>
+      <button onclick="closeModal('modal-publish')" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
+    </div>
+    <p class="text-sm text-slate-600">Choose <b>who</b> can see this dashboard. (All sections will be visible to published users.)</p>
+
+    <div id="publish-err" class="hidden mt-3 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
+    <div id="publish-ok" class="hidden mt-3 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3"></div>
+
+    <div class="mt-4 grid md:grid-cols-2 gap-4">
+      <div class="border border-slate-200 rounded-xl p-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Audience</div>
+        <label class="flex items-center gap-2 mt-2 p-2 rounded border border-slate-200 bg-slate-50">
+          <input id="publish-all" type="checkbox" class="w-4 h-4" />
+          <span class="text-sm font-medium text-slate-800">Publish to <b>All users</b></span>
+        </label>
+        <div class="mt-3">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Or select specific users</div>
+          <div id="publish-users" class="mt-2 max-h-56 overflow-auto border border-slate-200 rounded-lg"></div>
+        </div>
+      </div>
+      <div class="border border-slate-200 rounded-xl p-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note</div>
+        <p class="mt-2 text-sm text-slate-600">Only the <b>owner</b> of the dashboard or an <b>admin</b> can publish/unpublish.</p>
+      </div>
+    </div>
+
+    <div class="mt-5 flex justify-end gap-2">
+      <button onclick="closeModal('modal-publish')" class="px-4 py-2 bg-slate-100 text-slate-800 rounded-lg text-sm">Cancel</button>
+      <button id="btn-publish-now" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Publish</button>
+    </div>
+  </div>
+</div>
+
+
+
 <script>
-// twFeatureLinksGate: show/hide hamburger links and publish actions based on /api/auth/me permissions.
-async function twFeatureLinksGate(){
-  try{
-    const r = await fetch('/api/auth/me', { headers:{'Accept':'application/json'} });
-    const me = await r.json().catch(()=>({}));
-    if(!me || !me.authenticated) return;
-    const perms = me.permissions || {};
+// Publish/Unpublish (audience only) - always present in UI
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function getCurrentDashId(){
+    try { if (typeof wsCurrentId !== 'undefined' && wsCurrentId) return wsCurrentId; } catch(e) {}
+    if (window.wsCurrentId) return window.wsCurrentId;
+    const p = new URLSearchParams(location.search);
+    return p.get('dash');
+  }
+  async function apiJson(url, opt){
+    opt = opt || {};
+    const r = await fetch(url, { credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}, ...opt });
+    const t = await r.text();
+    let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
+    if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+    return j;
+  }
+  function canPublish(){
+    const me = window.twMe || {};
+    if(!me.authenticated) return false;
+    if(me.role === 'admin') return true;
+    return (window.wsCurrentMeta && window.wsCurrentMeta.ownerId && window.wsCurrentMeta.ownerId === me.userId);
+  }
+  function showErr(msg){ const el=qs('publish-err'); const ok=qs('publish-ok'); ok&&ok.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
+  function showOk(msg){ const el=qs('publish-ok'); const er=qs('publish-err'); er&&er.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
 
-    const userMgr = document.getElementById('tw-usermgr');
-    if(userMgr){
-      const ok = (me.role === 'admin') || !!perms.userManager;
-      userMgr.classList.toggle('hidden', !ok);
+  async function openPublish(){
+    qs('publish-err')?.classList.add('hidden');
+    qs('publish-ok')?.classList.add('hidden');
+
+    const dashId = getCurrentDashId();
+    if(!dashId){ showErr('No workspace selected. Please select or create a workspace first.'); qs('modal-publish').classList.add('open'); return; }
+
+    if(!canPublish()){
+      showErr('Forbidden: only owner or admin can publish/unpublish.');
+      qs('modal-publish').classList.add('open');
+      return;
     }
 
-    const execBoard = document.getElementById('tw-execboard');
-    if(execBoard){
-      const ok = (me.role === 'admin') || !!perms.executiveBoard;
-      execBoard.classList.toggle('hidden', !ok);
+    try{
+      const data = await apiJson('/api/users/list', { method:'GET' });
+      const users = (data.users||[]).filter(u=>u && u.userId);
+      const me = window.twMe || {};
+      const box = qs('publish-users');
+      if(box){
+        box.innerHTML = users.map(u=>{
+          const isMe = u.userId === me.userId;
+          return `<label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
+            <span class="text-sm text-slate-800 font-mono">${u.userId}</span>
+            <span class="flex items-center gap-2">
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${u.role||''}</span>
+              <input type="checkbox" class="publish-user w-4 h-4" value="${u.userId}" ${isMe?'disabled checked':''}/>
+            </span></label>`;
+        }).join('') || '<div class="p-3 text-sm text-slate-500">No users found.</div>';
+      }
+      const allCb = qs('publish-all');
+      if(allCb){
+        allCb.checked = false;
+        allCb.onchange = ()=>{
+          document.querySelectorAll('.publish-user').forEach(cb=>{ if(cb.disabled) return; cb.checked=false; cb.disabled=allCb.checked; });
+        };
+      }
+    } catch(e){
+      showErr(e.message || String(e));
     }
 
-    // Publish/Unpublish actions in workspace menu
-    const canPub = (me.role === 'admin') || !!perms.publish;
-    document.querySelectorAll('[data-ws-action="publish"],[data-ws-action="unpublish"]').forEach(btn=>{
-      btn.style.display = canPub ? '' : 'none';
-    });
-  } catch(e) {}
-}
-window.addEventListener('DOMContentLoaded', twFeatureLinksGate);
+    qs('modal-publish').classList.add('open');
+  }
+
+  async function doPublish(){
+    try{
+      const dashId = getCurrentDashId();
+      if(!dashId) return showErr('No workspace selected.');
+      const all = !!qs('publish-all')?.checked;
+      const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb=>cb.checked).map(cb=>cb.value);
+      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&publish=1`, { method:'POST', body: JSON.stringify({ all, users }) });
+      showOk('Published successfully.');
+      setTimeout(()=>closeModal('modal-publish'), 350);
+    } catch(e){
+      showErr(e.message || String(e));
+    }
+  }
+
+  async function doUnpublish(){
+    try{
+      const dashId = getCurrentDashId();
+      if(!dashId) return alert('No workspace selected.');
+      if(!canPublish()) return alert('Forbidden: only owner or admin can unpublish.');
+      if(!confirm('Unpublish this dashboard?')) return;
+      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&unpublish=1`, { method:'POST', body: '{}' });
+      alert('Unpublished successfully.');
+    } catch(e){
+      alert(e.message || String(e));
+    }
+  }
+
+  window.wsOpenPublishModal = openPublish;
+  window.wsUnpublishCurrent = doUnpublish;
+
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const b = document.getElementById('btn-publish-now');
+    if(b) b.addEventListener('click', doPublish);
+  });
+
+  // Workspace menu delegation
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest && e.target.closest('[data-ws-action]');
+    if(!el) return;
+    const action = el.getAttribute('data-ws-action');
+    if(action==='publish'){ e.preventDefault(); openPublish(); }
+    if(action==='unpublish'){ e.preventDefault(); doUnpublish(); }
+  }, true);
+})();
 </script>
 
 </body>
