@@ -29,13 +29,11 @@
 <script>
   const err = (t)=>{ const e=document.getElementById('err'); e.textContent=t; e.classList.remove('hidden'); };
   function nextUrl(){
-  const u = new URL(location.href);
-  const n = u.searchParams.get('next');
-  if (n && typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') && !n.includes('://')) return n;
-  return '/';
-}
+    const u = new URL(location.href);
+    return u.searchParams.get('next') || '/';
+  }
 
-async function login(){
+  async function login(){
     document.getElementById('err').classList.add('hidden');
     const userId = document.getElementById('userId').value.trim();
     const password = document.getElementById('password').value;
