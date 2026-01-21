@@ -1,10 +1,8 @@
-
 module.exports.json = function json(res, status, obj){
   res.statusCode = status;
   res.setHeader('Content-Type','application/json');
   res.end(JSON.stringify(obj));
 };
-
 module.exports.readBody = async function readBody(req){
   const chunks=[];
   for await (const c of req) chunks.push(c);
