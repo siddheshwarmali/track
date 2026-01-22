@@ -189,10 +189,10 @@
         return new Date(yy, mo-1, dd, hh, mm, ss, 0);
       }
 
-      // M/D/YYYY h:mm:ss am/pm  OR M/D/YYYY h:mm am/pm
+      // D/M/YYYY h:mm:ss am/pm (Indian format from your CSV)
       m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
       if(m){
-        let mo=+m[1], dd=+m[2], yy=+m[3];
+        let dd=+m[1], mo=+m[2], yy=+m[3];
         let hh=+m[4], mm=+m[5], ss=+(m[6]||0);
         const ap=(m[7]||'').toLowerCase();
         if(ap){
@@ -572,7 +572,7 @@
       function parseRows(rows){
         const out = [];
         for(const r of (rows||[])){
-          const id = r.ID || r.Id || r.id || r['Work Item Id'] || r['System.Id'] || (''+Math.floor(Math.random()*1000000));
+          const id = r.ID || r.Id || r.id || r['\ufeffID'] || r['Work Item Id'] || r['System.Id'] || (''+Math.floor(Math.random()*1000000));
           const title = r.Title || r.title || 'Untitled';
           // Your CSV uses Tags like: "Rollout; small" or "large" (case-insensitive)
           const type = typeFromTags(r.Tags || r.tags, 'Medium');
@@ -761,12 +761,28 @@
       }
 
       function applyTickets(list, label){
-        tickets = Array.isArray(list) ? list : [];
+        tickets = normalizeTickets(Array.isArray(list) ? list : []);
         qs('filePill').textContent = tickets.length ? `${label} (${tickets.length} tickets)` : 'No data loaded';
         renderAll();
       }
 
-      async function loadFromWorkspace(id){
+      function normalizeTickets(list){
+        // Recompute business hours when start/end are present (fixes old saved/cached data)
+        return (Array.isArray(list)?list:[]).map(t=>{
+          const tt = Object.assign({}, t||{});
+          if(tt.startAt && tt.endAt){
+            const h = businessHoursDiff(tt.startAt, tt.endAt, {workStart:9, workEnd:18, weekendOff:true});
+            tt.actualTime = isFinite(h) ? h : (Number(tt.actualTime)||0);
+          }
+          if(tt.type){
+            const tm = {Small:4, Medium:6, Large:8};
+            if(tt.threshold===undefined || tt.threshold===null || !isFinite(Number(tt.threshold))) tt.threshold = tm[tt.type] ?? 6;
+          }
+          return tt;
+        });
+      }
+
+async function loadFromWorkspace(id){
         const d = id || dashId();
         const token = ++loadToken;
 
