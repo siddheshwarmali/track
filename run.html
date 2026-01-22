@@ -5,12 +5,88 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Executive Dashboard - Run</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <style>body{margin:0;}</style>
+  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Headless CMS Authoring Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%); min-height: 100vh; padding: 20px; color: white; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { margin-bottom: 40px; text-align: center; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; font-weight: 700; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: #93c5fd; font-size: 1.1rem; }
+        .controls-container { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; margin-bottom: 40px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .file-input { display: none; }
+        .btn { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: all 0.3s ease; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(59, 130, 246, 0.4); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-generate { background: linear-gradient(135deg, #10b981, #059669); }
+        .btn-sync { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+        .btn-download { background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 20px; padding: 15px 30px; font-size: 1.1rem; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.4); display: inline-block; }
+        .btn-download:hover { box-shadow: 0 12px 40px rgba(245, 158, 11, 0.6); }
+        .download-section { text-align: center; margin: 40px 0; }
+        .status-text { color: #93c5fd; font-size: 1rem; font-family: monospace; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .kpi-card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.3s ease; cursor: pointer; }
+        .kpi-card:hover { transform: translateY(-5px); }
+        .kpi-card.blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .kpi-card.green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .kpi-card.red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .kpi-card.purple { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); }
+        .kpi-label { font-size: 0.9rem; opacity: 0.9; margin-bottom: 10px; }
+        .kpi-value { font-size: 3rem; font-weight: 700; }
+        .charts-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-bottom: 40px; }
+        .chart-card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .chart-container { position: relative; height: 350px; }
+        .full-width { grid-column: 1 / -1; }
+        .table-container { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); overflow-x: auto; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; }
+        th { background: rgba(255, 255, 255, 0.1); font-weight: 600; border-bottom: 2px solid rgba(255, 255, 255, 0.2); }
+        tr:hover { background: rgba(255, 255, 255, 0.05); cursor: pointer; }
+        .badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
+        .badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+        .badge-red { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        .badge-yellow { background: rgba(251, 191, 36, 0.2); color: #fde047; }
+        .footer { text-align: center; color: #93c5fd; margin-top: 40px; padding: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        #dashboard { display: none; }
+        #dashboard.active { display: block; }
+        .alert { padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .alert-error { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 30px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); position: relative; color: white; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .modal-title { font-size: 1.5rem; font-weight: 700; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; transition: color 0.3s; }
+        .close-btn:hover { color: white; }
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #93c5fd; }
+        .form-input { width: 100%; padding: 10px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 1rem; outline: none; }
+        .form-input:focus { border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2); }
+        .form-select { width: 100%; padding: 10px 15px; background: #0f172a; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 1rem; outline: none; }
+        .action-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .edit-btn { padding: 5px 10px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-right: 5px; }
+        .edit-btn:hover { background: rgba(59, 130, 246, 0.4); }
+        .delete-btn { padding: 5px 10px; background: rgba(239, 68, 68, 0.2); color: #f87171; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .delete-btn:hover { background: rgba(239, 68, 68, 0.4); }
+    </style>
+
+    <style>
+      @keyframes ghspin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+      /* Hide Clear Storage button */
+      button[onclick^="wsClearLocalStorage"], button[onclick="wsClearLocalStorage()"] { display:none !important; }
+    </style>
+
+
+
+
   <script>
   async function twJson(url, opt){
     const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
@@ -49,31 +125,31 @@
   window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
 </script>
 </head>
-<body class="bg-[#0f172a] text-white">
-  <div class="max-w-7xl mx-auto p-6 min-h-screen">
-    
-<div class="mb-4 flex items-center justify-end">
+<body>
+  
+<!-- App Menu (fixed) -->
+<div class="fixed top-4 right-4 z-[9999]">
   <div class="relative">
     <button id="tw-menu-btn" type="button"
-      class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50"
+      class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/90 border border-white/20 shadow hover:bg-white"
       aria-label="Open menu">
       <span class="sr-only">Menu</span>
-      <span class="text-slate-700 text-xl leading-none">☰</span>
+      <span class="text-slate-900 text-xl leading-none">☰</span>
     </button>
-    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
       <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
         <div class="text-xs text-slate-500">Signed in as</div>
         <div id="tw-userpill" class="mt-1 text-sm font-semibold text-slate-900">Checking login…</div>
       </div>
       <div class="p-2">
         <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-        <a id="nav-build" href="/build.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+        <a id="nav-build" href="/build.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50 text-slate-800">
           <span class="text-base">🛠️</span><span>Build</span>
         </a>
-        <a id="nav-run" href="/run.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+        <a id="nav-run" href="/run.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50 text-slate-800">
           <span class="text-base">▶️</span><span>Run</span>
         </a>
-        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50 text-slate-800">
           <span class="text-base">🗂️</span><span>Executive Board</span>
         </a>
       </div>
@@ -90,7 +166,6 @@
   </div>
 </div>
 <script>
-// hamburger interactions + keep dash param across pages
 (function(){
   function menuOpen(open){
     const menu=document.getElementById('tw-menu');
@@ -108,7 +183,7 @@
       if(!inside) menuOpen(false);
     });
     document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') menuOpen(false); });
-    // preserve ?dash= across build/run links
+    // preserve ?dash=
     try{
       const dash = new URL(location.href).searchParams.get('dash');
       const qs = dash ? ('?dash='+encodeURIComponent(dash)) : '';
@@ -121,8 +196,7 @@
 })();
 </script>
 
-    <!-- Run dashboard content (formerly iframe template) -->
-    <div id="run-root">
+  
 
 <div id="gh-reset-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);">
   <div style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);background:#0b1220; color:#fff; padding:18px 20px;border-radius:14px; width:min(520px,92vw); border:1px solid rgba(255,255,255,0.12); box-shadow:0 12px 40px rgba(0,0,0,0.35);">
@@ -242,7 +316,32 @@
         function deleteTicket(index) { if(confirm("Are you sure?")) { loadedTicketData.splice(index, 1); generateDashboard(loadedTicketData); openTicketList('all'); } }
         function closeEditModal() { document.getElementById('editModal').classList.remove('active'); if(loadedTicketData && loadedTicketData.length > 0) openTicketList('all'); }
 
-        function requestAdoSync() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Connecting...`; lucide.createIcons(); window.parent.postMessage({ type: 'REQUEST_ADO_SYNC_RUN' }, '*'); }
+        function requestAdoSync(){
+  // Standalone Run page: call your backend endpoint for ADO sync.
+  const btn = document.getElementById('syncAdoBtn');
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Connecting...`;
+  lucide.createIcons();
+  const dash = (new URL(location.href)).searchParams.get('dash') || '';
+  fetch('/api/ado/run-tickets?dash='+encodeURIComponent(dash), { headers: { 'Accept':'application/json' } })
+    .then(async r=>{
+      const t = await r.text();
+      let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={error:t}; }
+      if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
+      return j;
+    })
+    .then(data=>{
+      const tickets = (data && (data.tickets||data.payload||data.items||data)) || [];
+      if(!Array.isArray(tickets) || tickets.length===0){ showAlert('❌ No valid tickets found.'); resetSyncBtn(); return; }
+      loadedTicketData = tickets;
+      document.getElementById('fileName').textContent = 'Synced from Azure DevOps';
+      document.getElementById('processBtn').disabled = false;
+      document.getElementById('processBtn').style.opacity = 1;
+      resetSyncBtn();
+      processData();
+    })
+    .catch(err=>{ showAlert('❌ ADO sync failed: '+(err.message||String(err))); resetSyncBtn(); });
+}
+
 
         function resetSyncBtn() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="cloud-lightning" class="w-4 h-4"></i> Sync from ADO`; lucide.createIcons(); }
 
@@ -764,7 +863,6 @@
 })();
 </script>
 
-</div>
-  </div>
+
 </body>
 </html>
