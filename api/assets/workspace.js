@@ -99,7 +99,7 @@ module.exports = async (req, res) => {
     var id=dashId(); try{ await window.StateApi.unpublish(id); toast('Unpublished','ok'); updateIndicator(id); }
     catch(e){ toast('Unpublish failed: '+(e.message||String(e)),'error'); }
   }
-  function wireWsMenu(){
+  function wireMenu(){
     var btn=qs('ws-actions-btn');
     var menu=qs('ws-actions-menu');
     var back=qs('ws-actions-backdrop');
@@ -114,6 +114,8 @@ module.exports = async (req, res) => {
       e.preventDefault();
       close();
       var act = it.getAttribute('data-ws-action');
+      if(act==='generate') { if(window.RunApp && window.RunApp.openGenerate) return window.RunApp.openGenerate(); return; }
+      if(act==='downloadJpg') { if(window.RunApp && window.RunApp.download) return window.RunApp.download(); return; }
       if(act==='new') return createWorkspace();
       if(act==='rename') return renameWorkspace();
       if(act==='save') { if(window.RunApp && window.RunApp.saveNow) return window.RunApp.saveNow(true); }
@@ -128,24 +130,21 @@ module.exports = async (req, res) => {
     if(!window.StateApi) return;
     var current = dashId();
     var sel=qs('ws-select');
-    var twSel=qs('tw-ws-select');
-    try{
-      var list = await window.StateApi.list();
-      fillSelect(sel, list, current);
-      fillSelect(twSel, list, current);
-      var chosen = (sel && sel.value) ? sel.value : current;
+    try{ var list = await window.StateApi.list(); fillSelect(sel, list, current);
+      var chosen=(sel && sel.value)?sel.value:current;
       if(!current && chosen){ setDashInUrl(chosen); return; }
       updateIndicator(chosen);
     }catch(e){ toast('Failed to load workspaces','error'); }
     if(sel) sel.addEventListener('change', function(e){ switchWorkspace(e.target.value); });
-    if(twSel) twSel.addEventListener('change', function(e){ switchWorkspace(e.target.value); });
     var imp=qs('ws-import-file');
     if(imp) imp.addEventListener('change', function(e){ var f=e.target.files && e.target.files[0]; if(f) importWorkspace(f); e.target.value=''; });
+    // publish modal
     var pc=qs('publishClose'); if(pc) pc.addEventListener('click', closePublishModal);
     var pc2=qs('publishCancel'); if(pc2) pc2.addEventListener('click', closePublishModal);
     var pb=qs('publishDo'); if(pb) pb.addEventListener('click', doPublish);
-    var qn=qs('ws-new-btn'); if(qn) qn.addEventListener('click', createWorkspace);
-    wireWsMenu();
+    // new
+    var nb=qs('ws-new-btn'); if(nb) nb.addEventListener('click', createWorkspace);
+    wireMenu();
   }
   window.addEventListener('DOMContentLoaded', init);
 })();`);
