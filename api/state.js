@@ -1,5 +1,4 @@
 
-// api/state.js
 const { json, readBody } = require('./_lib/http');
 const { getSession } = require('./_lib/cookie');
 const { ghGetFile, ghPutFileRetry, ghDeleteFile, decodeContent } = require('./_lib/github');
@@ -17,7 +16,7 @@ function isVisibleTo(d, userId) {
   return false;
 }
 
-// ✅ Deep merge helper so Run can patch part of state without destroying Build
+// ✅ deep merge helpers (for merge=1)
 function isPlainObject(x) {
   return x && typeof x === 'object' && !Array.isArray(x);
 }
@@ -28,7 +27,7 @@ function deepMerge(target, patch) {
     const pv = patch[k];
     const tv = out[k];
     if (isPlainObject(tv) && isPlainObject(pv)) out[k] = deepMerge(tv, pv);
-    else out[k] = pv; // arrays and primitives replace
+    else out[k] = pv; // arrays/primitives replace
   });
   return out;
 }
@@ -65,10 +64,10 @@ module.exports = async (req, res) => {
     const publish = req.query.publish !== undefined;
     const unpublish = req.query.unpublish !== undefined;
 
-    // ✅ NEW: merge mode flag
+    // ✅ new merge flag
     const merge = req.query.merge !== undefined;
 
-    // LIST
+    // LIST dashboards visible to user
     if (req.method === 'GET' && list) {
       const idx = await loadIndex();
       const arr = Object.values(idx.dashboards)
@@ -84,7 +83,7 @@ module.exports = async (req, res) => {
       return json(res, 200, { dashboards: arr });
     }
 
-    // GET DASH
+    // GET dashboard state
     if (req.method === 'GET' && dash) {
       const idx = await loadIndex();
       const rec = idx.dashboards[dash];
@@ -104,7 +103,42 @@ module.exports = async (req, res) => {
       return json(res, 200, { id: rec.id, name: rec.name, meta, state: d.data.state });
     }
 
-    // SAVE FULL STATE (existing behavior)
+    // ✅ MERGE/PATCH save (Run uses this so it doesn't overwrite Build)
+    if (req.method === 'POST' && dash && merge) {
+      const body = await readBody(req);
+      const patch = body.patch;
+      if (!patch) return json(res, 400, { error: 'patch required' });
+
+      const idx = await loadIndex();
+      const dashboards = idx.dashboards;
+      const existing = dashboards[dash];
+      if (!existing) return json(res, 404, { error: 'Not found' });
+
+      // only owner/admin can update
+      if (existing.ownerId !== s.userId && s.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
+
+      const d = await loadDash(dash);
+      if (!d.exists) return json(res, 404, { error: 'Not found' });
+
+      const curState = (d.data && d.data.state) ? d.data.state : {};
+      const nextState = deepMerge(curState, patch);
+
+      const name = existing.name || dash;
+      const now = new Date().toISOString();
+      existing.updatedAt = now;
+      dashboards[dash] = existing;
+
+      await ghPutFileRetry(
+        d.path,
+        JSON.stringify({ id: dash, name, state: nextState }, null, 2),
+        `merge dashboard ${name}`,
+        d.sha
+      );
+      await saveIndex(dashboards);
+      return json(res, 200, { ok: true, mode: 'merge' });
+    }
+
+    // SAVE full state (existing behavior)
     if (req.method === 'POST' && dash && !publish && !unpublish && !merge) {
       const body = await readBody(req);
       const state = body.state;
@@ -114,9 +148,7 @@ module.exports = async (req, res) => {
       const idx = await loadIndex();
       const dashboards = idx.dashboards;
       const existing = dashboards[dash];
-
-      if (existing && existing.ownerId !== s.userId && s.role !== 'admin')
-        return json(res, 403, { error: 'Forbidden' });
+      if (existing && existing.ownerId !== s.userId && s.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
 
       const now = new Date().toISOString();
       const rec = existing || {
@@ -142,38 +174,6 @@ module.exports = async (req, res) => {
       return json(res, 200, { ok: true, mode: 'replace' });
     }
 
-    // ✅ NEW: MERGE/PATCH SAVE (for Run page partial updates)
-    if (req.method === 'POST' && dash && merge) {
-      const body = await readBody(req);
-      const patch = body.patch;
-      if (!patch) return json(res, 400, { error: 'patch required' });
-
-      const idx = await loadIndex();
-      const dashboards = idx.dashboards;
-      const existing = dashboards[dash];
-      if (!existing) return json(res, 404, { error: 'Not found' });
-
-      // Only owner or admin can patch
-      if (existing.ownerId !== s.userId && s.role !== 'admin')
-        return json(res, 403, { error: 'Forbidden' });
-
-      // Load current state file
-      const d = await loadDash(dash);
-      if (!d.exists) return json(res, 404, { error: 'Not found' });
-
-      const curState = d.data.state || {};
-      const nextState = deepMerge(curState, patch);
-
-      const name = existing.name || dash;
-      const now = new Date().toISOString();
-      existing.updatedAt = now;
-      dashboards[dash] = existing;
-
-      await ghPutFileRetry(d.path, JSON.stringify({ id: dash, name, state: nextState }, null, 2), `merge dashboard ${name}`, d.sha);
-      await saveIndex(dashboards);
-      return json(res, 200, { ok: true, mode: 'merge' });
-    }
-
     // PUBLISH
     if (req.method === 'POST' && dash && publish) {
       const body = await readBody(req);
@@ -183,7 +183,6 @@ module.exports = async (req, res) => {
       const idx = await loadIndex();
       const dashboards = idx.dashboards;
       const rec = dashboards[dash];
-
       if (!rec) return json(res, 404, { error: 'Not found' });
       if (rec.ownerId !== s.userId && s.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
 
@@ -204,7 +203,6 @@ module.exports = async (req, res) => {
       const idx = await loadIndex();
       const dashboards = idx.dashboards;
       const rec = dashboards[dash];
-
       if (!rec) return json(res, 404, { error: 'Not found' });
       if (rec.ownerId !== s.userId && s.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
 
@@ -223,7 +221,6 @@ module.exports = async (req, res) => {
       const idx = await loadIndex();
       const dashboards = idx.dashboards;
       const rec = dashboards[dash];
-
       if (!rec) return json(res, 404, { error: 'Not found' });
       if (rec.ownerId !== s.userId && s.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
 
@@ -231,7 +228,6 @@ module.exports = async (req, res) => {
       if (d.exists) await ghDeleteFile(d.path, `delete dashboard ${dash}`, d.sha);
       delete dashboards[dash];
       await saveIndex(dashboards);
-
       return json(res, 200, { ok: true });
     }
 
