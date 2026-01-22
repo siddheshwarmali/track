@@ -23,10 +23,10 @@ module.exports = async (req, res) => {
 
   function downloadJpg(){toast('Generating image…','info');html2canvas(qs('captureRegion'),{backgroundColor:'#ffffff',scale:2}).then(function(canvas){var a=document.createElement('a');a.download='Run_Report_'+new Date().toISOString().slice(0,10)+'.jpg';a.href=canvas.toDataURL('image/jpeg',0.95);a.click();toast('Downloaded','ok');}).catch(function(){toast('Download failed','error');});}
 
-  function openModal(){qs('runModal').classList.remove('hidden');qs('runModal').classList.add('flex');}
-  function closeModal(){qs('runModal').classList.add('hidden');qs('runModal').classList.remove('flex');}
-  function openAdoForm(){qs('adoFormWrap').classList.remove('hidden');}
-  function closeAdoForm(){qs('adoFormWrap').classList.add('hidden');}
+  function openModal(){var m=qs('runModal'); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex');}
+  function closeModal(){var m=qs('runModal'); if(!m) return; m.classList.add('hidden'); m.classList.remove('flex');}
+  function openAdoForm(){var a=qs('adoFormWrap'); if(a) a.classList.remove('hidden');}
+  function closeAdoForm(){var a=qs('adoFormWrap'); if(a) a.classList.add('hidden');}
 
   function parseRows(rows){var out=[];for(var i=0;i<rows.length;i++){var r=rows[i]||{};var id=r.ID||r.Id||r.id||(''+Math.floor(Math.random()*1000000));var title=r.Title||r.title||'Untitled';var type=r['Ticket type']||r.Type||r.type||'Medium';var time=Number(r['Actual time']||r['Actual Time']||r.actualTime||0);var thr=Number(r.Threshold||r.threshold||thresholds[type]||6);out.push({id:String(id),title:String(title),type:String(type),actualTime:time,threshold:thr});}return out;}
   function uploadFile(file){if(!file)return;toast('Reading file…','info');var reader=new FileReader();reader.onload=function(e){try{var data=new Uint8Array(e.target.result);var wb=XLSX.read(data,{type:'array'});var sheet=wb.Sheets[wb.SheetNames[0]];var rows=XLSX.utils.sheet_to_json(sheet);tickets=parseRows(rows);closeModal();generateAndSave();}catch(err){toast('Upload failed','error');}};reader.readAsArrayBuffer(file);} 
@@ -37,7 +37,11 @@ module.exports = async (req, res) => {
 
   function init(){
     window.RunApp={ saveNow:function(){return saveToWorkspace();}, download:downloadJpg, openGenerate: openModal };
+    // fallback open
+    window.addEventListener('tw:openGenerate', openModal);
+
     if(window.lucide&&window.lucide.createIcons) window.lucide.createIcons();
+
     // modal wiring
     qs('runModalClose').addEventListener('click',closeModal);
     qs('runModalCancel').addEventListener('click',closeModal);
