@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Run Dashboard</title>
 
-  <!-- CDN deps (same as your original) -->
+  <!-- CDN dependencies -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -29,9 +28,7 @@
     function qsa(sel){ return document.querySelectorAll(sel); }
 
     function esc(s){
-      return String(s||'').replace(/[&<>"']/g, c => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-      })[c]);
+      return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
     }
 
     function toast(msg, kind){
@@ -62,7 +59,7 @@
     }
 
     /* =========================================================
-       Auth (kept compatible with your setup)
+       Auth helpers (optional, compatible with your app)
     ========================================================= */
     async function twJson(url, opt){
       opt = opt || {};
@@ -112,7 +109,7 @@
     }
 
     /* =========================================================
-       StateApi (inline client)
+       StateApi (inline)
     ========================================================= */
     (function(global){
       function toQS(p){
@@ -158,9 +155,70 @@
     })(window);
 
     /* =========================================================
+       Robust datetime parser
+       - Supports:
+         * datetime-local: YYYY-MM-DDTHH:mm[:ss]
+         * ISO strings
+         * CSV values like: 8/12/2025 3:13:00 pm
+         * DD/MM/YYYY HH:mm[:ss]
+         * Excel serial numbers
+    ========================================================= */
+    function parseDateTimeAny(v){
+      if(v === null || v === undefined || v === '') return null;
+      if(v instanceof Date) return isFinite(v.getTime()) ? v : null;
+
+      // Excel date serial
+      if(typeof v === 'number' && isFinite(v)){
+        if(window.XLSX && XLSX.SSF && XLSX.SSF.parse_date_code){
+          const dc = XLSX.SSF.parse_date_code(v);
+          if(dc){
+            return new Date(dc.y, dc.m-1, dc.d, dc.H||0, dc.M||0, dc.S||0, 0);
+          }
+        }
+        const excelEpoch = new Date(1899,11,30);
+        return new Date(excelEpoch.getTime() + v*86400000);
+      }
+
+      const s = String(v).trim();
+      if(!s) return null;
+
+      // datetime-local / ISO without timezone
+      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?$/);
+      if(m){
+        const yy=+m[1], mo=+m[2], dd=+m[3], hh=+m[4], mm=+m[5], ss=+(m[6]||0);
+        return new Date(yy, mo-1, dd, hh, mm, ss, 0);
+      }
+
+      // M/D/YYYY h:mm:ss am/pm  OR M/D/YYYY h:mm am/pm
+      m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
+      if(m){
+        let mo=+m[1], dd=+m[2], yy=+m[3];
+        let hh=+m[4], mm=+m[5], ss=+(m[6]||0);
+        const ap=(m[7]||'').toLowerCase();
+        if(ap){
+          if(ap==='pm' && hh<12) hh += 12;
+          if(ap==='am' && hh===12) hh = 0;
+        }
+        return new Date(yy, mo-1, dd, hh, mm, ss, 0);
+      }
+
+      // DD/MM/YYYY HH:mm[:ss]
+      m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if(m){
+        const dd=+m[1], mo=+m[2], yy=+m[3];
+        const hh=+(m[4]||0), mm=+(m[5]||0), ss=+(m[6]||0);
+        return new Date(yy, mo-1, dd, hh, mm, ss, 0);
+      }
+
+      // Last resort
+      const d = new Date(s);
+      return isFinite(d.getTime()) ? d : null;
+    }
+
+    /* =========================================================
        Business hours calculator
        - Working hours: 09:00–18:00
-       - Weekends off (Sat/Sun)
+       - Weekends off
     ========================================================= */
     function businessHoursDiff(start, end, opts){
       opts = opts || {};
@@ -168,97 +226,79 @@
       const workEnd   = opts.workEnd   ?? 18;
       const weekendOff = opts.weekendOff ?? true;
 
-      const s = new Date(start);
-      const e = new Date(end);
-      if(!isFinite(s) || !isFinite(e) || e <= s) return 0;
-
-      function workWindow(d){
-        const ds = new Date(d); ds.setHours(workStart,0,0,0);
-        const de = new Date(d); de.setHours(workEnd,0,0,0);
-        return {ds, de};
-      }
-
-      let totalMs = 0;
-      let cur = new Date(s);
+      const s = parseDateTimeAny(start);
+      const e = parseDateTimeAny(end);
+      if(!s || !e || e <= s) return 0;
 
       function isWeekend(d){
         const dow = d.getDay();
-        return dow === 0 || dow === 6;
+        return (dow===0 || dow===6);
+      }
+      function dayWindow(d){
+        const ds = new Date(d.getFullYear(), d.getMonth(), d.getDate(), workStart, 0,0,0);
+        const de = new Date(d.getFullYear(), d.getMonth(), d.getDate(), workEnd, 0,0,0);
+        return {ds,de};
       }
 
-      // loop day-by-day until last day
+      let totalMs = 0;
+      let cur = new Date(s.getFullYear(), s.getMonth(), s.getDate(), s.getHours(), s.getMinutes(), s.getSeconds(), 0);
+
       while(cur.toDateString() !== e.toDateString()){
-        const {ds,de} = workWindow(cur);
         if(!(weekendOff && isWeekend(cur))){
+          const {ds,de} = dayWindow(cur);
           const from = new Date(Math.max(cur.getTime(), ds.getTime()));
           const to   = new Date(de.getTime());
           if(to > from) totalMs += (to - from);
         }
-        cur = new Date(cur);
-        cur.setDate(cur.getDate()+1);
-        cur.setHours(0,0,0,0);
+        cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1, 0,0,0,0);
       }
 
-      // last day
-      {
-        const {ds,de} = workWindow(e);
-        if(!(weekendOff && isWeekend(e))){
-          const from = new Date(Math.max(ds.getTime(), s.getTime()));
-          const to   = new Date(Math.min(e.getTime(), de.getTime()));
-          if(to > from) totalMs += (to - from);
-        }
+      if(!(weekendOff && isWeekend(e))){
+        const {ds,de} = dayWindow(e);
+        const from = new Date(Math.max(ds.getTime(), s.getTime()));
+        const to   = new Date(Math.min(e.getTime(), de.getTime()));
+        if(to > from) totalMs += (to - from);
       }
 
       return +(totalMs/36e5).toFixed(2);
     }
 
     /* =========================================================
-       Fast cache helpers (instant UI on refresh/switch)
+       Fast cache for instant render
     ========================================================= */
     const Cache = {
       keyDashIndex: 'tw_dash_index_v1',
       keyTickets: (dash)=> `tw_run_tickets_${dash}`,
-      keyStateMeta: (dash)=> `tw_run_meta_${dash}`,
 
       saveTickets(dash, tickets, runUpdatedAt){
-        try{
-          localStorage.setItem(this.keyTickets(dash), JSON.stringify({tickets, runUpdatedAt: runUpdatedAt||null, cachedAt: Date.now()}));
-        }catch(e){}
+        try{ localStorage.setItem(this.keyTickets(dash), JSON.stringify({tickets, runUpdatedAt: runUpdatedAt||null, cachedAt: Date.now()})); }catch(e){}
       },
-
       loadTickets(dash){
-        try{
-          const raw = localStorage.getItem(this.keyTickets(dash));
-          if(!raw) return null;
-          return JSON.parse(raw);
-        }catch(e){ return null; }
+        try{ const raw = localStorage.getItem(this.keyTickets(dash)); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
       },
-
       saveIndex(list){
-        try{
-          localStorage.setItem(this.keyDashIndex, JSON.stringify({list, cachedAt: Date.now()}));
-        }catch(e){}
+        try{ localStorage.setItem(this.keyDashIndex, JSON.stringify({list, cachedAt: Date.now()})); }catch(e){}
       },
-
       loadIndex(){
-        try{
-          const raw = localStorage.getItem(this.keyDashIndex);
-          if(!raw) return null;
-          return JSON.parse(raw);
-        }catch(e){ return null; }
+        try{ const raw = localStorage.getItem(this.keyDashIndex); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
       }
     };
 
     /* =========================================================
-       RunApp (NO AUTO-SAVE, CRUD tickets, upload, ADO, charts)
+       Run App
+       - NO AUTO SAVE
+       - CRUD tickets
+       - Upload CSV/XLSX
+       - ADO sync (client-side)
+       - Responsive summary cards
     ========================================================= */
     (function(){
       let tickets = [];
       let pieChart=null, barChart=null;
       const thresholds = {Small:4, Medium:6, Large:8};
-
       let dirty = false;
-      let activeLoadToken = 0; // abort/dedupe
+      let loadToken = 0;
+
       function markDirty(){
         dirty = true;
         const ind = qs('ws-indicator');
@@ -267,7 +307,15 @@
           ind.className = 'text-xs text-amber-800 px-2 py-1 rounded-full bg-amber-50 border border-amber-200';
         }
       }
-      function clearDirtyFlag(){ dirty = false; }
+      function clearDirty(){ dirty = false; }
+
+      function typeFromTags(tags, fallback){
+        const t = String(tags||'').toLowerCase();
+        if(t.includes('small')) return 'Small';
+        if(t.includes('medium')) return 'Medium';
+        if(t.includes('large')) return 'Large';
+        return fallback || 'Medium';
+      }
 
       function computeTotals(){
         const total = tickets.length;
@@ -277,7 +325,7 @@
         }
         const breached = total - onTime;
         const sla = total ? ((onTime/total)*100).toFixed(1) : '0.0';
-        return {total, onTime, breached, sla};
+        return {total,onTime,breached,sla};
       }
 
       function buildBarData(){
@@ -304,7 +352,7 @@
       }
 
       function renderCharts(totals, barData){
-        if(typeof Chart === 'undefined') { toast('Chart.js not loaded','error'); return; }
+        if(typeof Chart === 'undefined'){ toast('Chart.js not loaded','error'); return; }
         if(typeof ChartDataLabels !== 'undefined'){ try{ Chart.register(ChartDataLabels); }catch(e){} }
 
         const pie = qs('pieChart');
@@ -315,11 +363,7 @@
         pieChart = new Chart(pie.getContext('2d'), {
           type:'doughnut',
           data:{ labels:['On Time','Breached'], datasets:[{ data:[totals.onTime, totals.breached], backgroundColor:['#10b981','#ef4444'], borderWidth:0 }]},
-          options:{ responsive:true, maintainAspectRatio:false,
-            plugins:{ legend:{position:'bottom'},
-              datalabels:{ color:'#111', font:{weight:'bold'}, formatter:v=>v }
-            }
-          }
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom'}, datalabels:{color:'#111',font:{weight:'bold'},formatter:v=>v} } }
         });
 
         if(barChart) barChart.destroy();
@@ -332,14 +376,10 @@
               {label:'Breached', data:barData.map(d=>d.breached), backgroundColor:'#ef4444'}
             ]
           },
-          options:{ responsive:true, maintainAspectRatio:false,
-            scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-            plugins:{ legend:{position:'bottom'} }
-          }
+          options:{ responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}, plugins:{legend:{position:'bottom'}} }
         });
       }
 
-      // Desktop table + mobile cards
       function renderSummary(barData){
         const body = qs('tableBody');
         const cards = qs('summaryCards');
@@ -352,9 +392,7 @@
             let badgeClass='badge-green';
             if(Number(sla)<70) badgeClass='badge-red';
             else if(Number(sla)<90) badgeClass='badge-yellow';
-
             const thr = (thresholds[d.type]!==undefined) ? thresholds[d.type] : '-';
-
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td class="py-2"><strong>${esc(d.type)}</strong></td>
@@ -377,7 +415,6 @@
             let badgeClass='badge-green';
             if(Number(sla)<70) badgeClass='badge-red';
             else if(Number(sla)<90) badgeClass='badge-yellow';
-
             const thr = (thresholds[d.type]!==undefined) ? thresholds[d.type] : '-';
 
             const div = document.createElement('div');
@@ -403,7 +440,6 @@
       function renderTickets(){
         const tb = qs('ticketTbody');
         if(!tb) return;
-
         const q = (qs('searchBox')?.value || '').toLowerCase().trim();
         tb.innerHTML = '';
 
@@ -415,7 +451,7 @@
           tr.className = 'border-b hover:bg-slate-50';
           tr.innerHTML = `
             <td class="py-2 pr-3 font-mono text-slate-700 whitespace-nowrap">${esc(t.id)}</td>
-            <td class="py-2 pr-3 text-slate-800 min-w-[220px]">${esc(t.title)}</td>
+            <td class="py-2 pr-3 text-slate-800 min-w-[260px]">${esc(t.title)}</td>
             <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">${esc(t.type)}</td>
             <td class="py-2 pr-3 text-right text-slate-700 whitespace-nowrap">${Number(t.actualTime||0).toFixed(2)}</td>
             <td class="py-2 pr-3 text-right text-slate-700 whitespace-nowrap">${Number(t.threshold||0).toFixed(2)}</td>
@@ -438,24 +474,12 @@
         renderTickets();
       }
 
-      function openModal(){
-        const m = qs('runModal');
-        if(!m) return;
-        m.classList.remove('hidden');
-        m.classList.add('flex');
-      }
-      function closeModal(){
-        const m = qs('runModal');
-        if(!m) return;
-        m.classList.add('hidden');
-        m.classList.remove('flex');
-      }
+      /* ---------- Modals ---------- */
+      function openModal(){ const m=qs('runModal'); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex'); }
+      function closeModal(){ const m=qs('runModal'); if(!m) return; m.classList.add('hidden'); m.classList.remove('flex'); }
       function openAdoForm(){ qs('adoFormWrap')?.classList.remove('hidden'); }
       function closeAdoForm(){ qs('adoFormWrap')?.classList.add('hidden'); }
 
-      /* -------------------------
-         Ticket CRUD Modal
-      ------------------------- */
       function openTicketModal(mode, idx){
         const m = qs('ticketModal');
         if(!m) return;
@@ -469,27 +493,26 @@
         qs('tId').value = t.id || '';
         qs('tTitle').value = t.title || '';
         qs('tType').value = t.type || 'Medium';
-        qs('tStart').value = t.startAt ? toDatetimeLocal(t.startAt) : '';
-        qs('tEnd').value = t.endAt ? toDatetimeLocal(t.endAt) : '';
+        qs('tStart').value = toDatetimeLocal(t.startAt);
+        qs('tEnd').value = toDatetimeLocal(t.endAt);
         qs('tThr').value = String(t.threshold ?? (thresholds[t.type]||6));
-        qs('tActual').value = String(Number(t.actualTime||0).toFixed(2));
+        qs('tActual').value = Number(t.actualTime||0).toFixed(2);
 
-        qs('ticketModalTitle').textContent = mode==='edit' ? 'Edit Ticket' : 'Add Ticket';
-        m.classList.remove('hidden'); m.classList.add('flex');
+        qs('ticketModalTitle').textContent = (mode==='edit') ? 'Edit Ticket' : 'Add Ticket';
 
+        m.classList.remove('hidden');
+        m.classList.add('flex');
         recalcHoursPreview();
       }
-
       function closeTicketModal(){
-        const m = qs('ticketModal'); if(!m) return;
+        const m=qs('ticketModal'); if(!m) return;
         m.classList.add('hidden'); m.classList.remove('flex');
       }
 
       function toDatetimeLocal(v){
-        // Accept ISO / date string; normalize to "YYYY-MM-DDTHH:mm"
-        const d = new Date(v);
-        if(!isFinite(d)) return '';
-        const pad = (n)=> String(n).padStart(2,'0');
+        const d = parseDateTimeAny(v);
+        if(!d) return '';
+        const pad = n => String(n).padStart(2,'0');
         return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
 
@@ -497,7 +520,7 @@
         const startAt = qs('tStart')?.value || '';
         const endAt = qs('tEnd')?.value || '';
         const hrs = (startAt && endAt) ? businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true}) : 0;
-        qs('tActual').value = String(hrs.toFixed(2));
+        qs('tActual').value = Number(hrs||0).toFixed(2);
       }
 
       function saveTicketFromModal(){
@@ -511,9 +534,7 @@
         const startAt = String(qs('tStart').value||'').trim();
         const endAt = String(qs('tEnd').value||'').trim();
         const threshold = Number(qs('tThr').value || thresholds[type] || 6);
-        const actualTime = (startAt && endAt)
-          ? businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true})
-          : 0;
+        const actualTime = (startAt && endAt) ? businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true}) : 0;
 
         const ticket = {
           id, title, type,
@@ -523,11 +544,8 @@
           threshold: isFinite(threshold) ? threshold : (thresholds[type]||6)
         };
 
-        if(mode==='edit' && idx!==null && tickets[idx]){
-          tickets[idx] = ticket;
-        }else{
-          tickets.unshift(ticket);
-        }
+        if(mode==='edit' && idx!==null && tickets[idx]) tickets[idx] = ticket;
+        else tickets.unshift(ticket);
 
         markDirty();
         closeTicketModal();
@@ -550,37 +568,32 @@
         renderAll();
       }
 
-      /* -------------------------
-         Upload Excel/CSV
-      ------------------------- */
+      /* ---------- Upload CSV/XLSX ---------- */
       function parseRows(rows){
         const out = [];
         for(const r of (rows||[])){
-          const id = r.ID || r.Id || r.id || (''+Math.floor(Math.random()*1000000));
+          const id = r.ID || r.Id || r.id || r['Work Item Id'] || r['System.Id'] || (''+Math.floor(Math.random()*1000000));
           const title = r.Title || r.title || 'Untitled';
-          const type = r['Ticket type'] || r['Ticket Type'] || r.Type || r.type || 'Medium';
+          // Your CSV uses Tags like: "Rollout; small" or "large" (case-insensitive)
+          const type = typeFromTags(r.Tags || r.tags, 'Medium');
 
-          const startAt = r.Start || r['Start Date'] || r['Start DateTime'] || r.startAt || '';
-          const endAt   = r.End   || r['End Date']   || r['End DateTime']   || r.endAt   || '';
+          const startAt = r['Actual Start date'] || r['Actual Start Date'] || r['Actual Start'] || r.Start || r.startAt || '';
+          const endAt = r['Actual End date'] || r['Actual End Date'] || r['Actual End'] || r.End || r.endAt || '';
 
-          let actualTime = 0;
-          if(startAt && endAt){
-            actualTime = businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true});
-          }else{
-            const at = Number(r['Actual time'] || r['Actual Time'] || r.actualTime || 0);
-            actualTime = isFinite(at) ? at : 0;
-          }
+          const actualTime = (startAt && endAt)
+            ? businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true})
+            : 0;
 
-          const thr = Number(r.Threshold || r.threshold || thresholds[type] || 6);
+          const threshold = thresholds[type] ?? 6;
 
           out.push({
-            id:String(id),
-            title:String(title),
-            type:String(type),
+            id: String(id),
+            title: String(title),
+            type: String(type),
             startAt: startAt ? String(startAt) : '',
             endAt: endAt ? String(endAt) : '',
             actualTime: isFinite(actualTime) ? actualTime : 0,
-            threshold: isFinite(thr) ? thr : (thresholds[type]||6)
+            threshold
           });
         }
         return out;
@@ -620,10 +633,7 @@
         else reader.readAsArrayBuffer(file);
       }
 
-      /* -------------------------
-         ADO Sync (client-side merged)
-         NOTE: may be blocked by CORS in some environments.
-      ------------------------- */
+      /* ---------- ADO sync (client-side) ---------- */
       function normalizeOrg(org){
         org = String(org||'').trim();
         org = org.replace(/^https?:\/\//i,'');
@@ -649,7 +659,6 @@
 
       async function adoSubmit(){
         toast('Querying ADO…','info');
-
         const org = normalizeOrg(qs('adoOrg')?.value||'');
         const project = String(qs('adoProject')?.value||'').trim();
         const queryId = String(qs('adoQueryId')?.value||'').trim();
@@ -668,7 +677,6 @@
             'Authorization': authHeaderFromPat(pat)
           };
 
-          // get WIQL from query
           const qUrl = `${baseUrl}/_apis/wit/queries/${encodeURIComponent(queryId)}?$expand=wiql&api-version=7.1`;
           const qResp = await fetch(qUrl, {method:'GET', headers});
           const qText = await qResp.text();
@@ -678,7 +686,6 @@
           const wiql = String(qJson.wiql||'').trim();
           if(!wiql) throw new Error('No WIQL found for queryId');
 
-          // execute WIQL -> ids
           const wiqlUrl = `${baseUrl}/_apis/wit/wiql?api-version=7.1`;
           const wiqlResp = await fetch(wiqlUrl, {method:'POST', headers, body: JSON.stringify({query: wiql})});
           const wiqlText = await wiqlResp.text();
@@ -686,12 +693,8 @@
           if(!wiqlResp.ok) throw new Error(wiqlJson.error || wiqlJson.message || wiqlText || 'WIQL execution failed');
 
           const ids = (wiqlJson.workItems||[]).map(x=>x.id).filter(Boolean);
-          if(!ids.length){
-            toast('No tickets returned','error');
-            return;
-          }
+          if(!ids.length){ toast('No tickets returned','error'); return; }
 
-          // batch fetch (chunk 200)
           const batchUrl = `${baseUrl}/_apis/wit/workitemsbatch?api-version=7.1`;
           const fields = [
             'System.Id','System.Title','System.WorkItemType','System.Tags',
@@ -708,12 +711,11 @@
             if(Array.isArray(bJson.value)) items.push(...bJson.value);
           }
 
-          const thresholdMap = {Small:4, Medium:6, Large:8};
-
           tickets = items.map(wi=>{
             const f = wi.fields || {};
             const type = mapTypeFromWorkItem(wi);
             const actualTime = num(f['Microsoft.VSTS.Scheduling.CompletedWork'] || f['Microsoft.VSTS.Scheduling.OriginalEstimate']);
+            const threshold = thresholds[type] ?? 6;
             return {
               id: String(f['System.Id'] || wi.id || ''),
               title: String(f['System.Title'] || ''),
@@ -721,7 +723,7 @@
               startAt: '',
               endAt: '',
               actualTime,
-              threshold: thresholdMap[type] || 6
+              threshold
             };
           });
 
@@ -737,93 +739,71 @@
         }
       }
 
-      /* -------------------------
-         Save/Load (manual save only)
-         + Fast cache render on load/switch
-      ------------------------- */
+      /* ---------- Save/Load (manual) + fast cache ---------- */
       async function saveToWorkspace(){
         const d = dashId();
-        if(!d){
-          toast('Select/Create a workspace first','error');
-          throw new Error('No workspace selected');
-        }
+        if(!d){ toast('Select/Create a workspace first','error'); throw new Error('No workspace selected'); }
         toast('Saving…','info');
 
         const totals = computeTotals();
         const bau = { totalTickets: totals.total, withinSLA: totals.onTime, breachedSLA: totals.breached, slaPercentage: totals.sla };
-
-        // IMPORTANT: we set run.updatedAt to support cache comparisons
         const runUpdatedAt = new Date().toISOString();
+
         await window.StateApi.merge(d, {
           run:{ tickets, updatedAt: runUpdatedAt },
           executive:{ bauData: bau }
         });
 
-        // update local cache right away
         Cache.saveTickets(d, tickets, runUpdatedAt);
-
-        clearDirtyFlag();
+        clearDirty();
         toast('Saved','ok');
-
-        // refresh indicator (Private/Published)
         window.dispatchEvent(new CustomEvent('tw:refreshIndicator', {detail:{dash:d}}));
       }
 
-      function applyTickets(newTickets, originLabel){
-        tickets = Array.isArray(newTickets) ? newTickets : [];
-        qs('filePill').textContent = tickets.length ? `${originLabel} (${tickets.length} tickets)` : 'No data loaded';
+      function applyTickets(list, label){
+        tickets = Array.isArray(list) ? list : [];
+        qs('filePill').textContent = tickets.length ? `${label} (${tickets.length} tickets)` : 'No data loaded';
         renderAll();
       }
 
-      async function loadFromWorkspace(d, opts){
-        opts = opts || {};
-        const token = ++activeLoadToken;
+      async function loadFromWorkspace(id){
+        const d = id || dashId();
+        const token = ++loadToken;
 
-        if(!d){
-          applyTickets([], 'Workspace');
-          return;
-        }
+        if(!d){ applyTickets([], 'Workspace'); return; }
 
-        // 1) FAST: render cached immediately
         const cached = Cache.loadTickets(d);
         if(cached && Array.isArray(cached.tickets)){
           applyTickets(cached.tickets, 'Cached');
         }else{
-          // show skeleton-ish data
           qs('filePill').textContent = 'Loading…';
         }
 
-        // 2) Background: fetch latest state (dedup/abort by token)
         try{
           const resp = await window.StateApi.get(d);
-          if(token !== activeLoadToken) return; // superseded
+          if(token !== loadToken) return;
           const st = resp && resp.state ? resp.state : {};
           const run = st.run || {};
           const serverTickets = Array.isArray(run.tickets) ? run.tickets : [];
           const runUpdatedAt = run.updatedAt || null;
 
-          // avoid rerender if same as cache version
           const cachedUpdatedAt = cached ? cached.runUpdatedAt : null;
-          const same = cachedUpdatedAt && runUpdatedAt && (String(cachedUpdatedAt) === String(runUpdatedAt));
+          const same = cachedUpdatedAt && runUpdatedAt && String(cachedUpdatedAt) === String(runUpdatedAt);
 
           if(!same){
             applyTickets(serverTickets, 'Workspace');
             Cache.saveTickets(d, serverTickets, runUpdatedAt);
           }else{
-            // keep cached render but update label
             qs('filePill').textContent = `Workspace (${serverTickets.length} tickets)`;
           }
 
-          clearDirtyFlag();
+          clearDirty();
         }catch(e){
-          if(token !== activeLoadToken) return;
+          if(token !== loadToken) return;
           toast('Failed to load workspace: '+(e.message||String(e)),'error');
         }
       }
 
-      /* -------------------------
-         JPG download
-      ------------------------- */
       function downloadJpg(){
         const region = qs('captureRegion');
         if(!region){ toast('Capture region not found','error'); return; }
@@ -843,7 +823,7 @@
         window.RunApp = {
           openGenerate: openModal,
           download: downloadJpg,
-          saveNow: saveToWorkspace,     // manual only
+          saveNow: saveToWorkspace,
           loadWorkspace: loadFromWorkspace,
           isDirty: ()=>dirty,
           getTickets: ()=>tickets
@@ -867,17 +847,17 @@
         // tickets
         qs('searchBox')?.addEventListener('input', renderTickets);
         qs('toggleTicketsBtn')?.addEventListener('click', ()=>{
-          const sec = qs('ticketsSection'); if(!sec) return;
+          const sec = qs('ticketsSection');
+          if(!sec) return;
           sec.classList.toggle('hidden');
           qs('toggleTicketsBtn').textContent = sec.classList.contains('hidden') ? 'Show Tickets' : 'Hide Tickets';
         });
         qs('ticketsSection')?.classList.add('hidden');
 
-        // CRUD buttons
+        // CRUD
         qs('addTicketBtn')?.addEventListener('click', ()=>openTicketModal('add'));
         qs('clearTicketsBtn')?.addEventListener('click', clearTickets);
 
-        // ticket table delegation
         qs('ticketTbody')?.addEventListener('click', (e)=>{
           const edit = e.target.closest?.('.ticketEdit');
           const del = e.target.closest?.('.ticketDel');
@@ -885,20 +865,18 @@
           if(del) deleteTicket(Number(del.dataset.idx));
         });
 
-        // ticket modal wiring
         qs('ticketModalClose')?.addEventListener('click', closeTicketModal);
         qs('ticketCancel')?.addEventListener('click', closeTicketModal);
         qs('ticketSave')?.addEventListener('click', saveTicketFromModal);
         qs('tStart')?.addEventListener('input', recalcHoursPreview);
         qs('tEnd')?.addEventListener('input', recalcHoursPreview);
 
-        // initial empty render
         renderAll();
 
-        // listen for workspace changes from workspace module
+        // workspace changed event
         window.addEventListener('tw:workspaceChanged', (e)=>{
           const d = e.detail?.dash || dashId();
-          loadFromWorkspace(d, {fast:true});
+          loadFromWorkspace(d);
         });
 
         if(window.lucide?.createIcons) window.lucide.createIcons();
@@ -909,8 +887,6 @@
 
     /* =========================================================
        Workspace manager (NO auto-save on switch)
-       - Fast list load using cached index
-       - Switch workspace without full page reload
     ========================================================= */
     (function(){
       async function updateIndicator(id){
@@ -927,9 +903,7 @@
             ind.textContent = 'Private';
             ind.className = 'text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200';
           }
-        }catch(e){
-          ind.textContent = '';
-        }
+        }catch(e){ ind.textContent=''; }
       }
 
       function fillSelect(sel, list, current){
@@ -948,13 +922,12 @@
         const dp = qs('dashPill');
         if(dp) dp.textContent = current || '—';
 
-        // FAST: use cached list immediately
-        const cachedIndex = Cache.loadIndex();
-        if(cachedIndex && Array.isArray(cachedIndex.list) && cachedIndex.list.length){
-          fillSelect(sel, cachedIndex.list, current);
+        // fast from cache
+        const cached = Cache.loadIndex();
+        if(cached && Array.isArray(cached.list) && cached.list.length){
+          fillSelect(sel, cached.list, current);
         }
 
-        // Background refresh list
         try{
           const list = await window.StateApi.list();
           Cache.saveIndex(list);
@@ -963,14 +936,11 @@
           let chosen = sel.value || current;
           if(!chosen && list.length) chosen = list[0].id;
 
-          if(chosen && chosen !== current){
-            setDashInUrlNoReload(chosen);
-          }
+          if(chosen && chosen !== current) setDashInUrlNoReload(chosen);
           if(dp) dp.textContent = chosen || '—';
 
           await updateIndicator(chosen);
 
-          // trigger data load
           window.dispatchEvent(new CustomEvent('tw:workspaceChanged', {detail:{dash: chosen}}));
         }catch(e){
           toast('Failed to load workspaces: '+(e.message||String(e)),'error');
@@ -978,12 +948,7 @@
 
         sel?.addEventListener('change', async (e)=>{
           const id = e.target.value;
-
-          // NO AUTO-SAVE. Just warn if dirty.
-          if(window.RunApp?.isDirty?.()){
-            toast('Unsaved changes. Click Save if needed.','warn');
-          }
-
+          if(window.RunApp?.isDirty?.()) toast('Unsaved changes. Click Save if needed.','warn');
           setDashInUrlNoReload(id);
           await updateIndicator(id);
           window.dispatchEvent(new CustomEvent('tw:workspaceChanged', {detail:{dash:id}}));
@@ -1000,9 +965,7 @@
           toast('Workspace created','ok');
           setDashInUrlNoReload(id);
           await initWorkspaces();
-        }catch(e){
-          toast('Create failed: '+(e.message||String(e)),'error');
-        }
+        }catch(e){ toast('Create failed: '+(e.message||String(e)),'error'); }
       }
 
       async function renameWorkspace(){
@@ -1013,17 +976,13 @@
           const current = resp?.name || id;
           const name = prompt('Rename workspace:', current);
           if(!name || name===current) return;
-
           const st = resp?.state || {};
           st.__meta ||= {};
           st.__meta.name = name;
-
           await window.StateApi.save(id, st, name);
           toast('Renamed','ok');
           await initWorkspaces();
-        }catch(e){
-          toast('Rename failed: '+(e.message||String(e)),'error');
-        }
+        }catch(e){ toast('Rename failed: '+(e.message||String(e)),'error'); }
       }
 
       async function deleteWorkspace(){
@@ -1035,17 +994,14 @@
           toast('Deleted','ok');
           setDashInUrlNoReload('');
           await initWorkspaces();
-        }catch(e){
-          toast('Delete failed: '+(e.message||String(e)),'error');
-        }
+        }catch(e){ toast('Delete failed: '+(e.message||String(e)),'error'); }
       }
 
       function downloadText(filename, text){
         const blob = new Blob([text], {type:'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
+        a.href = url; a.download = filename;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -1059,9 +1015,7 @@
           const resp = await window.StateApi.get(id);
           downloadText((resp.name||id)+'-workspace.json', JSON.stringify(resp,null,2));
           toast('Exported','ok');
-        }catch(e){
-          toast('Export failed: '+(e.message||String(e)),'error');
-        }
+        }catch(e){ toast('Export failed: '+(e.message||String(e)),'error'); }
       }
 
       async function importWorkspace(file){
@@ -1075,9 +1029,7 @@
           toast('Imported','ok');
           setDashInUrlNoReload(id);
           await initWorkspaces();
-        }catch(e){
-          toast('Import failed: '+(e.message||String(e)),'error');
-        }
+        }catch(e){ toast('Import failed: '+(e.message||String(e)),'error'); }
       }
 
       async function openPublishModal(){
@@ -1086,10 +1038,8 @@
         const modal = qs('publishModal');
         const box = qs('publishUsers');
         const all = qs('publishAll');
-        if(!modal || !box || !all){
-          toast('Publish UI missing','error');
-          return;
-        }
+        if(!modal || !box || !all){ toast('Publish UI missing','error'); return; }
+
         box.innerHTML = 'Loading…';
         all.checked = false;
         modal.classList.remove('hidden');
@@ -1128,9 +1078,7 @@
           toast('Published','ok');
           closePublishModal();
           await updateIndicator(id);
-        }catch(e){
-          toast('Publish failed: '+(e.message||String(e)),'error');
-        }
+        }catch(e){ toast('Publish failed: '+(e.message||String(e)),'error'); }
       }
 
       async function doUnpublish(){
@@ -1139,9 +1087,7 @@
           await window.StateApi.unpublish(id);
           toast('Unpublished','ok');
           await updateIndicator(id);
-        }catch(e){
-          toast('Unpublish failed: '+(e.message||String(e)),'error');
-        }
+        }catch(e){ toast('Unpublish failed: '+(e.message||String(e)),'error'); }
       }
 
       function wireMenu(){
@@ -1154,8 +1100,7 @@
 
         btn?.addEventListener('click', (e)=>{
           e.preventDefault(); e.stopPropagation();
-          if(menu?.classList.contains('hidden')) open();
-          else close();
+          if(menu?.classList.contains('hidden')) open(); else close();
         });
         back?.addEventListener('click', close);
         document.addEventListener('click', (e)=>{
@@ -1186,14 +1131,12 @@
       }
 
       function init(){
-        // import file
         qs('ws-import-file')?.addEventListener('change', (e)=>{
           const f = e.target.files && e.target.files[0];
           if(f) importWorkspace(f);
           e.target.value='';
         });
 
-        // publish modal
         qs('publishClose')?.addEventListener('click', closePublishModal);
         qs('publishCancel')?.addEventListener('click', closePublishModal);
         qs('publishDo')?.addEventListener('click', doPublish);
@@ -1209,13 +1152,13 @@
 
       window.addEventListener('DOMContentLoaded', init);
     })();
+
   </script>
 </head>
 
 <body class="bg-white text-slate-900">
   <div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
 
-  <!-- Header -->
   <div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
       <div class="min-w-0">
@@ -1233,11 +1176,8 @@
         <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
 
         <div class="relative">
-          <button id="ws-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 flex items-center gap-2">
-            Actions
-          </button>
+          <button id="ws-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 flex items-center gap-2">Actions</button>
           <div id="ws-actions-backdrop" class="hidden fixed inset-0 z-40"></div>
-
           <div id="ws-actions-menu" class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
             <div class="p-2">
               <button data-ws-action="generate" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Generate Report</button>
@@ -1259,7 +1199,6 @@
 
         <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
 
-        <!-- User menu -->
         <div class="relative">
           <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
           <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
@@ -1269,8 +1208,8 @@
             </div>
             <div class="p-2">
               <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-              <a href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
-              <a href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
+              <a id="nav-build" href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
+              <a id="nav-run" href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
               <a id="tw-execboard" href="/executive-board.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
             </div>
             <div class="p-2 border-t">
@@ -1286,9 +1225,7 @@
     </div>
   </div>
 
-  <!-- Main content -->
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6" id="captureRegion">
-    <!-- KPIs -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <div class="text-xs text-slate-500">Total Tickets</div>
@@ -1308,7 +1245,6 @@
       </div>
     </div>
 
-    <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <div class="text-sm font-semibold mb-2">📊 SLA Overview</div>
@@ -1320,19 +1256,14 @@
       </div>
     </div>
 
-    <!-- Summary -->
     <div class="rounded-2xl border border-slate-200 bg-white p-4" id="summaryTableSection">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="text-sm font-semibold">📋 Ticket Type Summary</div>
-        <button id="toggleTicketsBtn" type="button" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100">
-          Show Tickets
-        </button>
+        <button id="toggleTicketsBtn" type="button" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100">Show Tickets</button>
       </div>
 
-      <!-- Mobile cards -->
       <div id="summaryCards" class="grid grid-cols-1 gap-3 md:hidden mt-3"></div>
 
-      <!-- Desktop table -->
       <div class="mt-3 overflow-x-auto hidden md:block">
         <table class="min-w-[720px] w-full text-sm">
           <thead class="text-slate-600">
@@ -1351,7 +1282,6 @@
       </div>
     </div>
 
-    <!-- Tickets -->
     <div id="ticketsSection" class="hidden">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -1364,7 +1294,7 @@
         </div>
 
         <div class="mt-3 overflow-auto">
-          <table class="min-w-[820px] w-full text-sm">
+          <table class="min-w-[900px] w-full text-sm">
             <thead class="text-slate-600">
               <tr class="border-b">
                 <th class="py-2 pr-3 text-left">ID</th>
@@ -1443,9 +1373,7 @@
           <button id="adoCancel" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-sm">Cancel</button>
           <button id="adoSubmit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Sync & Load</button>
         </div>
-        <div class="mt-2 text-[11px] text-slate-500">
-          Note: ADO sync runs in the browser and may fail if CORS is blocked.
-        </div>
+        <div class="mt-2 text-[11px] text-slate-500">Note: ADO runs in browser and may fail if CORS is blocked.</div>
       </div>
 
       <div class="mt-5 flex justify-end gap-2">
@@ -1508,13 +1436,12 @@
     </div>
   </div>
 
-  <!-- User menu toggle + auth init -->
   <script>
+    // User menu toggle + auth init
     (function(){
       function toggle(el){ if(el) el.classList.toggle('hidden'); }
       window.addEventListener('DOMContentLoaded', async function(){
         await twInit();
-
         const hb=qs('tw-menu-btn');
         const hm=qs('tw-menu');
         if(hb) hb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); toggle(hm); });
