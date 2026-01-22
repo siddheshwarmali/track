@@ -76,6 +76,14 @@
       document.body.classList.remove('role-admin','role-creator','role-viewer');
       document.body.classList.add('role-'+role);
       window.twMe = me;
+    // Show Executive Board link only when allowed (admin or executiveBoard permission)
+    const execLink = document.getElementById('tw-execboard');
+    if (execLink) {
+      const perms = me.permissions || {};
+      const allowed = (me.role === 'admin') || !!perms.executiveBoard;
+      execLink.classList.toggle('hidden', !allowed);
+    }
+
       if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
       if(mgr) mgr.classList.toggle('hidden', role!=='admin');
       if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
@@ -124,7 +132,9 @@
       <span class="text-slate-700 text-xl leading-none">☰</span>
     </button>
 
-    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+    <!-- Mobile backdrop for hamburger menu -->
+<div id="tw-menu-backdrop" class="hidden fixed inset-0 bg-black/30 z-40" aria-hidden="true"></div>
+<div id="tw-menu" class="hidden fixed right-4 top-16 sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[min(92vw,20rem)] sm:w-80 max-h-[80vh] overflow-auto bg-white border border-slate-200 rounded-2xl shadow-xl z-50">
       <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
         <div class="text-xs text-slate-500">Signed in as</div>
         <div id="tw-userpill" class="mt-1 text-sm font-semibold text-slate-900">Checking login…</div>
@@ -139,6 +149,10 @@
         <button type="button" onclick="twNav('run')" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">▶️</span><span>Run</span>
         </button>
+  <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+    <span class="text-base">🏛️</span><span>Executive Board</span>
+  </a>
+
       </div>
 
       <!-- Account -->
@@ -1028,13 +1042,19 @@
 
   // ---------- Advanced Hamburger ----------
   function twMenuOpen(open) {
-    const menu = document.getElementById('tw-menu');
-    if (!menu) return;
-    const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
-    menu.classList.toggle('hidden', !next);
-  }
+  const menu = document.getElementById('tw-menu');
+  const back = document.getElementById('tw-menu-backdrop');
+  const btn = document.getElementById('tw-menu-btn');
+  if (!menu) return;
+  const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !next);
+  if (back) back.classList.toggle('hidden', !next);
+  if (btn) btn.setAttribute('aria-expanded', String(next));
+  // Prevent background scroll on mobile when menu is open
+  document.body.classList.toggle('overflow-hidden', next);
+}
 
-  function twNav(tab) {
+function twNav(tab) {
     try {
       if (typeof switchTab === 'function') switchTab(tab);
     } finally {
@@ -1164,7 +1184,9 @@
   window.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('tw-menu-btn');
     const menu = document.getElementById('tw-menu');
-    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); twMenuOpen(); });
+  const back = document.getElementById('tw-menu-backdrop');
+    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation();
+  if (back) back.addEventListener('click', (e) => { e.stopPropagation(); twMenuOpen(false); }); twMenuOpen(); });
     document.addEventListener('click', (e) => {
       if (!menu) return;
       const inside = menu.contains(e.target) || (btn && btn.contains(e.target));
@@ -3886,7 +3908,9 @@ async function wsModalPrimary() {
   window.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('tw-menu-btn');
     const menu = document.getElementById('tw-menu');
-    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); twMenuOpen(); });
+  const back = document.getElementById('tw-menu-backdrop');
+    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation();
+  if (back) back.addEventListener('click', (e) => { e.stopPropagation(); twMenuOpen(false); }); twMenuOpen(); });
     document.addEventListener('click', (e) => {
       if (!menu) return;
       const inside = menu.contains(e.target) || (btn && btn.contains(e.target));
