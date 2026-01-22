@@ -87,6 +87,11 @@
 
 
 
+<style>
+.controls-container{display:none !important;}
+#downloadSection{display:none !important;}
+</style>
+
   <script>
   async function twJson(url, opt){
     const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
@@ -126,33 +131,56 @@
 </script>
 </head>
 <body>
-  
-<!-- App Menu (fixed) -->
-<div class="fixed top-4 right-4 z-[9999]">
-  <div class="relative">
-    <button id="tw-menu-btn" type="button"
-      class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/90 border border-white/20 shadow hover:bg-white"
+  <div class="container">
+    
+<div class="mb-4 flex items-center justify-between gap-3">
+  <div class="text-white/80 text-sm font-semibold">Run Dashboard</div>
+  <div class="flex items-center gap-2">
+    <span id="fileName" class="text-xs text-white/70 font-mono">No file chosen</span>
+    
+<div class="relative">
+  <button id="run-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 shadow-sm">
+    <span class="text-base">⚙️</span><span>Actions</span>
+  </button>
+  <div id="run-actions-menu" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+    <div class="p-2">
+      <button type="button" data-run-action="upload" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50">Upload Excel/CSV</button>
+      <button type="button" data-run-action="ado" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50">Sync from ADO</button>
+      <button type="button" data-run-action="generate" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50">Generate Report</button>
+      <button type="button" data-run-action="download" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50">Download Report (JPG)</button>
+    </div>
+  </div>
+</div>
+
+    <div class="relative"><button id="tw-menu-btn" type="button"
+      class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50"
       aria-label="Open menu">
       <span class="sr-only">Menu</span>
-      <span class="text-slate-900 text-xl leading-none">☰</span>
+      <span class="text-slate-700 text-xl leading-none">☰</span>
     </button>
-    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+
+    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
       <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
         <div class="text-xs text-slate-500">Signed in as</div>
         <div id="tw-userpill" class="mt-1 text-sm font-semibold text-slate-900">Checking login…</div>
       </div>
+
+      <!-- Navigation -->
       <div class="p-2">
         <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-        <a id="nav-build" href="/build.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50 text-slate-800">
+        <a id="nav-build" href="/build.html"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">🛠️</span><span>Build</span>
         </a>
-        <a id="nav-run" href="/run.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50 text-slate-800">
+        <a id="nav-run" href="/run.html"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">▶️</span><span>Run</span>
         </a>
-        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50 text-slate-800">
+      
+        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">🗂️</span><span>Executive Board</span>
         </a>
-      </div>
+</div>
+
+      <!-- Account -->
       <div class="p-2 border-t border-slate-100">
         <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
         <a id="tw-usermgr" href="/user-manager.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
@@ -163,8 +191,12 @@
         </button>
       </div>
     </div>
+  </div></div>
   </div>
 </div>
+
+  </div>
+  
 <script>
 (function(){
   function menuOpen(open){
@@ -173,17 +205,31 @@
     const next = (typeof open==='boolean') ? open : menu.classList.contains('hidden');
     menu.classList.toggle('hidden', !next);
   }
+  function actionsOpen(open){
+    const menu=document.getElementById('run-actions-menu');
+    if(!menu) return;
+    const next = (typeof open==='boolean') ? open : menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !next);
+  }
   window.addEventListener('DOMContentLoaded', ()=>{
+    // Hamburger
     const btn=document.getElementById('tw-menu-btn');
     const menu=document.getElementById('tw-menu');
     if(btn) btn.addEventListener('click', (e)=>{e.preventDefault();e.stopPropagation();menuOpen();});
+    // Run Actions
+    const ab=document.getElementById('run-actions-btn');
+    const am=document.getElementById('run-actions-menu');
+    if(ab) ab.addEventListener('click', (e)=>{e.preventDefault();e.stopPropagation();actionsOpen();});
+
     document.addEventListener('click', (e)=>{
-      if(!menu) return;
-      const inside = menu.contains(e.target) || (btn && btn.contains(e.target));
-      if(!inside) menuOpen(false);
+      const insideHamb = menu && (menu.contains(e.target) || (btn && btn.contains(e.target)));
+      if(menu && !insideHamb) menuOpen(false);
+      const insideAct = am && (am.contains(e.target) || (ab && ab.contains(e.target)));
+      if(am && !insideAct) actionsOpen(false);
     });
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') menuOpen(false); });
-    // preserve ?dash=
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ menuOpen(false); actionsOpen(false);} });
+
+    // Preserve dash on Build/Run links
     try{
       const dash = new URL(location.href).searchParams.get('dash');
       const qs = dash ? ('?dash='+encodeURIComponent(dash)) : '';
@@ -192,6 +238,37 @@
       if(b) b.href='/build.html'+qs;
       if(r) r.href='/run.html'+qs;
     }catch(e){}
+
+    // Actions handlers
+    if(am){
+      am.addEventListener('click', (e)=>{
+        const btn = e.target.closest && e.target.closest('[data-run-action]');
+        if(!btn) return;
+        e.preventDefault();
+        actionsOpen(false);
+        const act = btn.getAttribute('data-run-action');
+        if(act==='upload'){
+          const fi=document.getElementById('fileInput');
+          if(fi) fi.click();
+        }else if(act==='ado'){
+          if(typeof requestAdoSync==='function') requestAdoSync();
+          else alert('ADO sync not available');
+        }else if(act==='generate'){
+          // prefer processData() if available
+          if(typeof processData==='function') processData();
+          else {
+            const pb=document.getElementById('processBtn');
+            if(pb) pb.click();
+          }
+        }else if(act==='download'){
+          if(typeof downloadReportAsJPG==='function') downloadReportAsJPG();
+          else {
+            const db=document.getElementById('downloadBtn');
+            if(db) db.click();
+          }
+        }
+      });
+    }
   });
 })();
 </script>
@@ -219,7 +296,7 @@
             <button class="btn btn-sync" id="syncAdoBtn" onclick="requestAdoSync()">
                 <i data-lucide="cloud-lightning" class="w-4 h-4"></i> Sync from ADO
             </button>
-            <span id="fileName" class="status-text">No file chosen</span>
+            
             <button class="btn btn-generate" id="processBtn" onclick="processData()" disabled>🚀 Generate Report</button>
         </div>
 
@@ -317,10 +394,8 @@
         function closeEditModal() { document.getElementById('editModal').classList.remove('active'); if(loadedTicketData && loadedTicketData.length > 0) openTicketList('all'); }
 
         function requestAdoSync(){
-  // Standalone Run page: call your backend endpoint for ADO sync.
   const btn = document.getElementById('syncAdoBtn');
-  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Connecting...`;
-  lucide.createIcons();
+  if(btn){ btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Connecting...`; lucide.createIcons(); }
   const dash = (new URL(location.href)).searchParams.get('dash') || '';
   fetch('/api/ado/run-tickets?dash='+encodeURIComponent(dash), { headers: { 'Accept':'application/json' } })
     .then(async r=>{
@@ -331,17 +406,19 @@
     })
     .then(data=>{
       const tickets = (data && (data.tickets||data.payload||data.items||data)) || [];
-      if(!Array.isArray(tickets) || tickets.length===0){ showAlert('❌ No valid tickets found.'); resetSyncBtn(); return; }
+      if(!Array.isArray(tickets) || tickets.length===0){ showAlert('❌ No valid tickets found from ADO endpoint.'); resetSyncBtn(); return; }
       loadedTicketData = tickets;
       document.getElementById('fileName').textContent = 'Synced from Azure DevOps';
-      document.getElementById('processBtn').disabled = false;
-      document.getElementById('processBtn').style.opacity = 1;
+      const pb = document.getElementById('processBtn');
+      if(pb){ pb.disabled = false; pb.style.opacity = 1; }
       resetSyncBtn();
       processData();
     })
     .catch(err=>{ showAlert('❌ ADO sync failed: '+(err.message||String(err))); resetSyncBtn(); });
 }
 
+
+        
 
         function resetSyncBtn() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="cloud-lightning" class="w-4 h-4"></i> Sync from ADO`; lucide.createIcons(); }
 
