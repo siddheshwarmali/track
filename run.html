@@ -87,10 +87,7 @@
 
 
 
-<style>
-.controls-container{display:none !important;}
-#downloadSection{display:none !important;}
-</style>
+<style>.controls-container{display:none !important;}#downloadSection{display:none !important;}</style>
 
   <script>
   async function twJson(url, opt){
@@ -131,18 +128,16 @@
 </script>
 </head>
 <body>
-  <div class="container">
-    
-<div class="mb-4 flex items-center justify-between gap-3">
-  <div class="text-white/80 text-sm font-semibold">Run Dashboard</div>
-  <div class="flex items-center gap-2">
-    <span id="fileName" class="text-xs text-white/70 font-mono">No file chosen</span>
+
+<div class="max-w-7xl mx-auto p-6">
+  <div class="flex items-center justify-end gap-2">
+    <span id="fileName" class="text-xs text-white/70 font-mono mr-2">No file chosen</span>
     
 <div class="relative">
-  <button id="run-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 shadow-sm">
+  <button id="run-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 active:scale-[0.99] transition">
     <span class="text-base">⚙️</span><span>Actions</span>
   </button>
-  <div id="run-actions-menu" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+  <div id="run-actions-menu" class="hidden z-50 absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
     <div class="p-2">
       <button type="button" data-run-action="upload" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50">Upload Excel/CSV</button>
       <button type="button" data-run-action="ado" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50">Sync from ADO</button>
@@ -152,7 +147,10 @@
   </div>
 </div>
 
-    <div class="relative"><button id="tw-menu-btn" type="button"
+  </div>
+  <div class="mb-4 flex items-center justify-end">
+  <div class="relative">
+    <button id="tw-menu-btn" type="button"
       class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50"
       aria-label="Open menu">
       <span class="sr-only">Menu</span>
@@ -168,12 +166,12 @@
       <!-- Navigation -->
       <div class="p-2">
         <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-        <a id="nav-build" href="/build.html"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+        <button type="button"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">🛠️</span><span>Build</span>
-        </a>
-        <a id="nav-run" href="/run.html"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+        </button>
+        <button type="button"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">▶️</span><span>Run</span>
-        </a>
+        </button>
       
         <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">🗂️</span><span>Executive Board</span>
@@ -191,89 +189,59 @@
         </button>
       </div>
     </div>
-  </div></div>
   </div>
 </div>
+</div>
 
-  </div>
-  
+
 <script>
 (function(){
-  function menuOpen(open){
-    const menu=document.getElementById('tw-menu');
-    if(!menu) return;
-    const next = (typeof open==='boolean') ? open : menu.classList.contains('hidden');
-    menu.classList.toggle('hidden', !next);
-  }
-  function actionsOpen(open){
-    const menu=document.getElementById('run-actions-menu');
-    if(!menu) return;
-    const next = (typeof open==='boolean') ? open : menu.classList.contains('hidden');
-    menu.classList.toggle('hidden', !next);
-  }
+  function toggle(el, show){ if(!el) return; const next = (typeof show==='boolean')?show:el.classList.contains('hidden'); el.classList.toggle('hidden', !next); }
   window.addEventListener('DOMContentLoaded', ()=>{
-    // Hamburger
     const btn=document.getElementById('tw-menu-btn');
     const menu=document.getElementById('tw-menu');
-    if(btn) btn.addEventListener('click', (e)=>{e.preventDefault();e.stopPropagation();menuOpen();});
-    // Run Actions
+    if(btn) btn.addEventListener('click', (e)=>{e.preventDefault();e.stopPropagation();toggle(menu);});
     const ab=document.getElementById('run-actions-btn');
     const am=document.getElementById('run-actions-menu');
-    if(ab) ab.addEventListener('click', (e)=>{e.preventDefault();e.stopPropagation();actionsOpen();});
-
+    if(ab) ab.addEventListener('click', (e)=>{e.preventDefault();e.stopPropagation();toggle(am);});
     document.addEventListener('click', (e)=>{
-      const insideHamb = menu && (menu.contains(e.target) || (btn && btn.contains(e.target)));
-      if(menu && !insideHamb) menuOpen(false);
-      const insideAct = am && (am.contains(e.target) || (ab && ab.contains(e.target)));
-      if(am && !insideAct) actionsOpen(false);
+      if(menu){ const inside = menu.contains(e.target) || (btn && btn.contains(e.target)); if(!inside) toggle(menu,false);} 
+      if(am){ const inside2 = am.contains(e.target) || (ab && ab.contains(e.target)); if(!inside2) toggle(am,false);} 
     });
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ menuOpen(false); actionsOpen(false);} });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ toggle(menu,false); toggle(am,false);} });
 
-    // Preserve dash on Build/Run links
+    // preserve dash in build/run nav links if present
     try{
       const dash = new URL(location.href).searchParams.get('dash');
       const qs = dash ? ('?dash='+encodeURIComponent(dash)) : '';
+      const links = document.querySelectorAll('#tw-menu a[href]');
+      links.forEach(a=>{
+        if(a.getAttribute('href')==='/index.html') a.setAttribute('href','/build.html'+qs);
+      });
       const b=document.getElementById('nav-build');
       const r=document.getElementById('nav-run');
       if(b) b.href='/build.html'+qs;
       if(r) r.href='/run.html'+qs;
     }catch(e){}
 
-    // Actions handlers
     if(am){
       am.addEventListener('click', (e)=>{
-        const btn = e.target.closest && e.target.closest('[data-run-action]');
-        if(!btn) return;
+        const it = e.target.closest && e.target.closest('[data-run-action]');
+        if(!it) return;
         e.preventDefault();
-        actionsOpen(false);
-        const act = btn.getAttribute('data-run-action');
-        if(act==='upload'){
-          const fi=document.getElementById('fileInput');
-          if(fi) fi.click();
-        }else if(act==='ado'){
-          if(typeof requestAdoSync==='function') requestAdoSync();
-          else alert('ADO sync not available');
-        }else if(act==='generate'){
-          // prefer processData() if available
-          if(typeof processData==='function') processData();
-          else {
-            const pb=document.getElementById('processBtn');
-            if(pb) pb.click();
-          }
-        }else if(act==='download'){
-          if(typeof downloadReportAsJPG==='function') downloadReportAsJPG();
-          else {
-            const db=document.getElementById('downloadBtn');
-            if(db) db.click();
-          }
-        }
+        toggle(am,false);
+        const act = it.getAttribute('data-run-action');
+        if(act==='upload'){ const fi=document.getElementById('fileInput'); if(fi) fi.click(); }
+        if(act==='ado'){ if(typeof requestAdoSync==='function') requestAdoSync(); }
+        if(act==='generate'){ if(typeof processData==='function') processData(); else { const pb=document.getElementById('processBtn'); if(pb) pb.click(); } }
+        if(act==='download'){ if(typeof downloadReportAsJPG==='function') downloadReportAsJPG(); else { const db=document.getElementById('downloadBtn'); if(db) db.click(); } }
       });
     }
   });
 })();
 </script>
 
-  
+
 
 <div id="gh-reset-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);">
   <div style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);background:#0b1220; color:#fff; padding:18px 20px;border-radius:14px; width:min(520px,92vw); border:1px solid rgba(255,255,255,0.12); box-shadow:0 12px 40px rgba(0,0,0,0.35);">
@@ -398,120 +366,18 @@
   if(btn){ btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Connecting...`; lucide.createIcons(); }
   const dash = (new URL(location.href)).searchParams.get('dash') || '';
   fetch('/api/ado/run-tickets?dash='+encodeURIComponent(dash), { headers: { 'Accept':'application/json' } })
-    .then(async r=>{
-      const t = await r.text();
-      let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={error:t}; }
-      if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
-      return j;
-    })
+    .then(async r=>{ const t=await r.text(); let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={error:t}; } if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status)); return j; })
     .then(data=>{
-      const tickets = (data && (data.tickets||data.payload||data.items||data)) || [];
+      const tickets = (data && (data.tickets||data.items||data.payload||data)) || [];
       if(!Array.isArray(tickets) || tickets.length===0){ showAlert('❌ No valid tickets found from ADO endpoint.'); resetSyncBtn(); return; }
       loadedTicketData = tickets;
       document.getElementById('fileName').textContent = 'Synced from Azure DevOps';
-      const pb = document.getElementById('processBtn');
-      if(pb){ pb.disabled = false; pb.style.opacity = 1; }
+      const pb=document.getElementById('processBtn'); if(pb){ pb.disabled=false; pb.style.opacity=1; }
       resetSyncBtn();
       processData();
     })
     .catch(err=>{ showAlert('❌ ADO sync failed: '+(err.message||String(err))); resetSyncBtn(); });
 }
-
-
-        
-
-        function resetSyncBtn() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="cloud-lightning" class="w-4 h-4"></i> Sync from ADO`; lucide.createIcons(); }
-
-        function parseCustomDate(dateStr) {
-            if (!dateStr) return null;
-            if (typeof dateStr === 'number') return new Date(Math.round((dateStr - 25569) * 86400 * 1000));
-            if (typeof dateStr === 'string') {
-                const parts = dateStr.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s(\d{1,2}):(\d{1,2})/);
-                if (parts) return new Date(parts[3], parts[2] - 1, parts[1], parts[4], parts[5]);
-                const d = new Date(dateStr); if (!isNaN(d.getTime())) return d;
-            }
-            return null;
-        }
-
-        function calculateBusinessHours(startDate, endDate) {
-            let minutes = 0; if (!startDate || !endDate || startDate >= endDate) return 0;
-            if ((endDate - startDate) > 31536000000) return 0; 
-            let ptr = new Date(startDate);
-            while (ptr < endDate) {
-                if (ptr.getDay() !== 0 && ptr.getDay() !== 6) {
-                    if (ptr.getHours() >= 9 && ptr.getHours() < 17) minutes += 60;
-                }
-                ptr.setHours(ptr.getHours() + 1); ptr.setMinutes(0); ptr.setSeconds(0);
-            }
-            return parseFloat((minutes / 60).toFixed(2));
-        }
-
-        function handleFile(file) {
-            if (!file.name.match(/\.(xlsx|xls|csv)$/)) { showAlert('❌ Please upload valid Excel or CSV'); return; }
-            loadedTicketData = null;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    if (jsonData.length === 0) { showAlert('❌ File is empty'); return; }
-                    const ticketData = jsonData.map((row) => {
-                        const title = row['Title'] || row['title'];
-                        const id = row['ID'] || row['id'] || Math.floor(Math.random() * 1000000);
-                        let ticketType = row['Ticket type'];
-                        const tags = (row['Tags'] || row['tags'] || '').toLowerCase();
-                        if (tags.includes('small')) ticketType = 'Small';
-                        else if (tags.includes('large')) ticketType = 'Large';
-                        else if (tags.includes('medium')) ticketType = 'Medium';
-                        else if (!ticketType) ticketType = 'Medium';
-                        let actualTime = parseFloat(row['Actual time']);
-                        if (isNaN(actualTime)) {
-                            const start = row['Actual Start date'] || row['Actual Start Date'] || row['Start Date'] || row['start date'];
-                            const end = row['Actual End date'] || row['Actual End Date'] || row['End Date'] || row['end date'];
-                            if (start && end) actualTime = calculateBusinessHours(parseCustomDate(start), parseCustomDate(end));
-                            else actualTime = 0;
-                        }
-                        let threshold = parseFloat(row['Threshold']);
-                        if (isNaN(threshold)) threshold = { 'Small': 4, 'Medium': 6, 'Large': 8 }[ticketType] || 6;
-                        return { id: id, title: title, actualTime: actualTime, type: ticketType, threshold: threshold };
-                    });
-                    const validTickets = ticketData.filter(t => t.type);
-                    if (validTickets.length === 0) { showAlert('❌ No valid data found'); return; }
-                    loadedTicketData = validTickets;
-                    document.getElementById('fileName').textContent = file.name;
-                    document.getElementById('processBtn').disabled = false;
-                    document.getElementById('processBtn').style.opacity = 1;
-                } catch (error) { showAlert('❌ Error: ' + error.message); }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function processData() { if (!loadedTicketData) return; generateDashboard(loadedTicketData); }
-
-        function generateDashboard(ticketData) {
-            document.getElementById('dashboard').classList.add('active');
-            const total = ticketData.length;
-            const onTime = ticketData.filter(t => t.actualTime <= t.threshold).length;
-            const breached = total - onTime;
-            const slaPercentage = ((onTime / total) * 100).toFixed(1);
-            (function(){
-  try{
-    const dash = new URL(location.href).searchParams.get('dash') || 'default';
-    const key = 'tw_bau_' + dash;
-    localStorage.setItem(key, JSON.stringify({$1}));
-  }catch(e){}
-})();
-            document.getElementById('totalTickets').textContent = total;
-            document.getElementById('onTimeTickets').textContent = onTime;
-            document.getElementById('breachedTickets').textContent = breached;
-            document.getElementById('slaPercentage').textContent = slaPercentage + '%';
-            if (pieChart) pieChart.destroy(); if (barChart) barChart.destroy();
-            const pieCtx = document.getElementById('pieChart').getContext('2d');
-            pieChart = new Chart(pieCtx, {
-                type: 'doughnut',
-                data: { labels: ['On Time', 'SLA Breached'], datasets: [{ data: [onTime, breached], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff', font: { size: 14 }, padding: 20 } }, datalabels: { color: '#fff', font: { weight: 'bold', size: 16 }, formatter: (value) => `${value}\n${((value / total) * 100).toFixed(1)}%`, display: true } } }
             });
             const byType = {};
             ticketData.forEach((ticket) => {
