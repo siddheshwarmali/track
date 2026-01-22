@@ -15,7 +15,6 @@
   <script src="/api/assets/state-client.js" defer></script>
   <script src="/api/assets/run-app.js" defer></script>
 
-  <!-- Old summary table badge styles (kept similar) -->
   <style>
     .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px;line-height:18px;}
     .badge-green{background:#dcfce7;color:#166534;border:1px solid #bbf7d0;}
@@ -23,7 +22,7 @@
     .badge-red{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;}
   </style>
 
-  <!-- Auth same pattern -->
+  <!-- Auth -->
   <script>
     async function twJson(url, opt){
       opt = opt || {};
@@ -63,7 +62,10 @@
 </head>
 
 <body class="bg-white text-slate-900">
-  <!-- Header: same build-style menu items -->
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
+
+  <!-- Header -->
   <div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
       <div class="min-w-0">
@@ -110,19 +112,13 @@
   </div>
 
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6" id="captureRegion">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div class="lg:col-span-1 rounded-2xl border border-slate-200 bg-white p-4">
-        <div class="text-sm font-semibold">Status</div>
-        <div class="mt-3 text-xs text-slate-600" id="statusText">Ready. Click Run to upload or sync.</div>
-        <div id="errorBox" class="hidden mt-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl p-3"></div>
-      </div>
 
-      <div class="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-xs text-slate-500">Total Tickets</div><div id="kpiTotal" class="mt-2 text-3xl font-extrabold">0</div></div>
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div class="text-xs text-emerald-700">On Time</div><div id="kpiOnTime" class="mt-2 text-3xl font-extrabold text-emerald-800">0</div></div>
-        <div class="rounded-2xl border border-red-200 bg-red-50 p-4"><div class="text-xs text-red-700">Breached</div><div id="kpiBreached" class="mt-2 text-3xl font-extrabold text-red-800">0</div></div>
-        <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4"><div class="text-xs text-indigo-700">SLA %</div><div id="kpiSla" class="mt-2 text-3xl font-extrabold text-indigo-800">0.0%</div></div>
-      </div>
+    <!-- KPI row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-xs text-slate-500">Total Tickets</div><div id="kpiTotal" class="mt-2 text-3xl font-extrabold">0</div></div>
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div class="text-xs text-emerald-700">On Time</div><div id="kpiOnTime" class="mt-2 text-3xl font-extrabold text-emerald-800">0</div></div>
+      <div class="rounded-2xl border border-red-200 bg-red-50 p-4"><div class="text-xs text-red-700">Breached</div><div id="kpiBreached" class="mt-2 text-3xl font-extrabold text-red-800">0</div></div>
+      <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4"><div class="text-xs text-indigo-700">SLA %</div><div id="kpiSla" class="mt-2 text-3xl font-extrabold text-indigo-800">0.0%</div></div>
     </div>
 
     <!-- Charts row -->
@@ -131,7 +127,7 @@
       <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-sm font-semibold mb-2">📈 Ticket Types</div><div class="h-72"><canvas id="barChart"></canvas></div></div>
     </div>
 
-    <!-- Ticket Type Summary (as old run) -->
+    <!-- Ticket Type Summary (old columns) -->
     <div class="rounded-2xl border border-slate-200 bg-white p-4" id="summaryTableSection">
       <div class="flex items-center justify-between gap-3">
         <div class="text-sm font-semibold">📋 Ticket Type Summary</div>
@@ -181,32 +177,62 @@
         </div>
       </div>
     </div>
+
+    <!-- hidden errorBox for JS (not a card) -->
+    <div id="errorBox" class="hidden mt-2 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl p-3"></div>
+
   </div>
 
-  <!-- Run Modal -->
+  <!-- Run Modal: Upload + ADO opens form -->
   <div id="runModal" class="hidden fixed inset-0 z-[9999] bg-black/40 items-center justify-center p-4">
-    <div class="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
+    <div class="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
       <div class="flex items-center justify-between">
-        <div class="text-sm font-semibold">Run Options</div>
+        <div class="text-sm font-semibold">Run</div>
         <button id="runModalClose" class="text-slate-500 hover:text-slate-900">✕</button>
       </div>
-      <div class="mt-4 space-y-3">
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div class="rounded-xl border border-slate-200 p-3">
           <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Upload Excel/CSV</div>
-          <div class="mt-2 flex items-center justify-between gap-2">
-            <div class="text-xs text-slate-500">Select a file to auto-generate report</div>
-            <button id="uploadPick" class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Choose File</button>
-          </div>
+          <div class="mt-2 text-xs text-slate-500">Select a file to auto-generate the report</div>
+          <button id="uploadPick" class="mt-3 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Choose File</button>
         </div>
+
         <div class="rounded-xl border border-slate-200 p-3">
           <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Azure DevOps</div>
-          <div class="mt-2 flex items-center justify-between gap-2">
-            <div class="text-xs text-slate-500">Sync tickets then auto-generate report</div>
-            <button id="adoSyncBtn" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800">Sync ADO</button>
-          </div>
-          <div class="mt-2 text-[11px] text-slate-400">Requires backend endpoint: <span class="font-mono">/api/ado/run-tickets</span></div>
+          <div class="mt-2 text-xs text-slate-500">Open ADO details form and auto-generate report</div>
+          <button id="adoOpenBtn" class="mt-3 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800">Open ADO Form</button>
         </div>
       </div>
+
+      <!-- ADO form (shown when ADO clicked) -->
+      <div id="adoFormWrap" class="hidden mt-4 rounded-xl border border-slate-200 p-4">
+        <div class="text-sm font-semibold flex items-center gap-2">📌 Azure DevOps Details</div>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div>
+            <label class="text-xs text-slate-600">Organization</label>
+            <input id="adoOrg" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="myorg OR https://dev.azure.com/myorg" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-600">Project</label>
+            <input id="adoProject" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="Project name" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs text-slate-600">Personal Access Token (PAT)</label>
+            <input id="adoPat" type="password" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="PAT" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs text-slate-600">WIQL</label>
+            <textarea id="adoWiql" rows="4" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[12px]" placeholder="Select [System.Id] From WorkItems Where [System.TeamProject] = @project And [System.State] <> 'Closed' Order By [System.ChangedDate] desc"></textarea>
+            <div class="mt-1 text-[11px] text-slate-500">This is sent to backend <span class="font-mono">POST /api/ado/run-tickets</span>.</div>
+          </div>
+        </div>
+        <div class="mt-3 flex justify-end gap-2">
+          <button id="adoCancel" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-sm">Cancel</button>
+          <button id="adoSubmit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Sync & Generate</button>
+        </div>
+      </div>
+
       <div class="mt-5 flex justify-end gap-2">
         <button id="runModalCancel" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-sm">Close</button>
       </div>
@@ -233,5 +259,6 @@
       </div>
     </div>
   </div>
+
 </body>
 </html>
