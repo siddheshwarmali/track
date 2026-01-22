@@ -2,17 +2,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Run Dashboard</title>
 
-  <!-- CDN dependencies (same as your original run.html) -->
-  <script src="https://cdn.tailwindcss.com" defer></script>
-  <script src="https://unpkg.com/lucide@latest" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <!-- External libs -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px;line-height:18px;}
@@ -21,22 +21,75 @@
     .badge-red{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;}
   </style>
 
-  <!-- Auth / nav (kept compatible with your original run.html behavior) -->
   <script>
+    /* ---------------------------
+      Helpers
+    --------------------------- */
+    function qs(id){ return document.getElementById(id); }
+    function qsa(sel){ return document.querySelectorAll(sel); }
+
+    function esc(s){
+      return String(s || '').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      })[c]);
+    }
+
+    function toast(msg, kind){
+      const t = qs('toast');
+      if(!t) return;
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      t.classList.remove('bg-emerald-600','bg-red-600','bg-slate-900');
+      t.classList.add(kind==='error'?'bg-red-600':(kind==='ok'?'bg-emerald-600':'bg-slate-900'));
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(()=>t.classList.add('hidden'), 2600);
+    }
+
+    function dashId(){
+      try{ return new URL(location.href).searchParams.get('dash') || ''; }
+      catch(e){ return ''; }
+    }
+
+    function setDashInUrlNoReload(id){
+      try{
+        const u = new URL(location.href);
+        if(id) u.searchParams.set('dash', id);
+        else u.searchParams.delete('dash');
+        history.pushState({}, '', u.pathname + u.search);
+      }catch(e){
+        // fallback - do nothing
+      }
+      const dp = qs('dashPill');
+      if(dp) dp.textContent = id || '—';
+    }
+
+    function setDirty(isDirty){
+      const ind = qs('ws-indicator');
+      if(!ind) return;
+      if(isDirty){
+        ind.textContent = 'Unsaved';
+        ind.className = 'text-xs text-amber-800 px-2 py-1 rounded-full bg-amber-50 border border-amber-200';
+      }
+    }
+    function clearDirty(){
+      // indicator status is updated by workspace publish/private check
+      // so we don't override it here; workspace init will set it.
+    }
+
+    /* ---------------------------
+      Auth (optional, kept like original)
+    --------------------------- */
     async function twJson(url, opt){
       opt = opt || {};
-      const r = await fetch(url, {
-        credentials:'same-origin',
+      const r = await fetch(url, { credentials:'same-origin',
         headers:{'Accept':'application/json','Content-Type':'application/json'},
         ...opt
       });
       const t = await r.text();
-      let j = {};
-      try{ j = JSON.parse(t || '{}'); }catch(e){ j = {error:t}; }
-      if(!r.ok) throw new Error(j.error || j.message || t || ('HTTP '+r.status));
+      let j={}; try{ j=JSON.parse(t||'{}'); }catch(e){ j={error:t}; }
+      if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
       return j;
     }
-
     async function twInit(){
       try{
         const me = await twJson('/api/auth/me');
@@ -46,20 +99,17 @@
           return;
         }
         window.twMe = me;
-
-        const pill = document.getElementById('tw-userpill');
+        const pill=qs('tw-userpill');
         if(pill) pill.textContent = (me.userId||'User') + ' • ' + (me.role||'viewer');
-
-        const eb = document.getElementById('tw-execboard');
+        const eb=qs('tw-execboard');
         if(eb){
-          const perms = me.permissions || {};
+          const perms=me.permissions||{};
           eb.classList.toggle('hidden', !((me.role==='admin') || perms.executiveBoard));
         }
-
-        const um = document.getElementById('tw-usermgr');
+        const um=qs('tw-usermgr');
         if(um) um.classList.toggle('hidden', me.role!=='admin');
 
-        const lo = document.getElementById('tw-logout');
+        const lo=qs('tw-logout');
         if(lo) lo.onclick = async ()=>{
           try{ await twJson('/api/auth/logout',{method:'POST',body:'{}'}); }catch(e){}
           location.href='/login.html';
@@ -69,235 +119,241 @@
         location.replace('/login.html?next='+next);
       }
     }
-    window.addEventListener('DOMContentLoaded', ()=>twInit());
-  </script>
 
-  <!-- state-client.js (INLINE) -->
-  <script>
+    /* ---------------------------
+      StateApi (inline state-client.js)
+    --------------------------- */
     (function(global){
-      'use strict';
       function toQS(p){
-        var e=encodeURIComponent,a=[];
-        for(var k in p){
+        const e=encodeURIComponent, a=[];
+        for(const k in p){
           if(!Object.prototype.hasOwnProperty.call(p,k)) continue;
           if(p[k]===undefined || p[k]===null) continue;
           a.push(e(k)+'='+e(String(p[k])));
         }
         return a.length ? ('?'+a.join('&')) : '';
       }
-      function safeParse(t,fb){ try{return JSON.parse(t||'');}catch(e){return fb;} }
-      function req(url,opt){
-        opt=opt||{};
-        var h=opt.headers||{};
-        h['Accept']=h['Accept']||'application/json';
+      function safeParse(t, fb){ try{return JSON.parse(t||'');}catch(e){return fb;} }
+      function req(url, opt){
+        opt = opt || {};
+        const h = opt.headers || {};
+        h['Accept'] = h['Accept'] || 'application/json';
         if(opt.body!==undefined && opt.body!==null) h['Content-Type']=h['Content-Type']||'application/json';
-        return fetch(url,{
-          method:opt.method||'GET',
+
+        return fetch(url, {
+          method: opt.method||'GET',
           credentials:'same-origin',
-          headers:h,
-          body:(opt.body!==undefined && opt.body!==null)
+          headers: h,
+          body: (opt.body!==undefined && opt.body!==null)
             ? (typeof opt.body==='string' ? opt.body : JSON.stringify(opt.body))
             : undefined
-        }).then(function(r){
-          return r.text().then(function(t){
-            var j=safeParse(t,{error:t});
-            if(!r.ok) throw new Error((j&&(j.error||j.message))||t||('HTTP '+r.status));
-            return j;
-          });
+        }).then(async r=>{
+          const t = await r.text();
+          const j = safeParse(t, {error:t});
+          if(!r.ok) throw new Error((j && (j.error||j.message)) || t || ('HTTP '+r.status));
+          return j;
         });
       }
-      global.StateApi={
-        list:function(){return req('/api/state'+toQS({list:1}),{method:'GET'}).then(d=>(d&&d.dashboards)||[]);},
-        get:function(id){return req('/api/state'+toQS({dash:id}),{method:'GET'});},
-        save:function(id,state,name){return req('/api/state'+toQS({dash:id}),{method:'POST',body:{state:state,name:name}});},
-        merge:function(id,patch){return req('/api/state'+toQS({dash:id,merge:1}),{method:'POST',body:{patch:patch}});},
-        publish:function(id,body){return req('/api/state'+toQS({dash:id,publish:1}),{method:'POST',body:body||{}});},
-        unpublish:function(id){return req('/api/state'+toQS({dash:id,unpublish:1}),{method:'POST',body:{}});},
-        remove:function(id){return req('/api/state'+toQS({dash:id}),{method:'DELETE',body:{}});}
+
+      global.StateApi = {
+        list: ()=> req('/api/state'+toQS({list:1}), {method:'GET'}).then(d => (d&&d.dashboards)||[]),
+        get:  (id)=> req('/api/state'+toQS({dash:id}), {method:'GET'}),
+        save: (id,state,name)=> req('/api/state'+toQS({dash:id}), {method:'POST', body:{state,name}}),
+        merge:(id,patch)=> req('/api/state'+toQS({dash:id,merge:1}), {method:'POST', body:{patch}}),
+        publish:(id,body)=> req('/api/state'+toQS({dash:id,publish:1}), {method:'POST', body:body||{}}),
+        unpublish:(id)=> req('/api/state'+toQS({dash:id,unpublish:1}), {method:'POST', body:{}}),
+        remove:(id)=> req('/api/state'+toQS({dash:id}), {method:'DELETE', body:{}})
       };
     })(window);
-  </script>
 
-  <!-- run-app.js (INLINE, fixed + robust) -->
-  <script>
-    (function(){'use strict';
-      var tickets=[];
-      var pieChart=null, barChart=null;
-      var thresholds={Small:4,Medium:6,Large:8};
+    /* ---------------------------
+      RunApp (charts + upload + ADO + CRUD)
+    --------------------------- */
+    (function(){
+      let tickets = [];
+      let pieChart=null, barChart=null;
+      const thresholds = {Small:4,Medium:6,Large:8};
 
-      function qs(id){return document.getElementById(id);}
-      function dashId(){try{return new URL(location.href).searchParams.get('dash')||'';}catch(e){return ''}}
-      function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
-      function toast(msg,kind){
-        var t=qs('toast'); if(!t) return;
-        t.textContent=msg; t.classList.remove('hidden');
-        t.classList.remove('bg-emerald-600','bg-red-600','bg-slate-900');
-        t.classList.add(kind==='error'?'bg-red-600':(kind==='ok'?'bg-emerald-600':'bg-slate-900'));
-        clearTimeout(toast._timer); toast._timer=setTimeout(function(){t.classList.add('hidden');},2600);
-      }
+      let dirty = false;
+      function markDirty(){ dirty = true; setDirty(true); }
 
       function computeTotals(){
-        var total=tickets.length,onTime=0;
-        for(var i=0;i<tickets.length;i++){
-          var t=tickets[i]||{};
-          if(Number(t.actualTime)<=Number(t.threshold)) onTime++;
+        const total=tickets.length;
+        let onTime=0;
+        for(const t of tickets){
+          if(Number(t.actualTime) <= Number(t.threshold)) onTime++;
         }
-        var breached=total-onTime;
-        var sla=total?((onTime/total)*100).toFixed(1):'0.0';
-        return{total:total,onTime:onTime,breached:breached,sla:sla};
+        const breached = total - onTime;
+        const sla = total ? ((onTime/total)*100).toFixed(1) : '0.0';
+        return {total,onTime,breached,sla};
       }
 
       function buildBarData(){
-        var map={};
-        for(var i=0;i<tickets.length;i++){
-          var t=tickets[i]||{};
-          var tp=t.type||'Medium';
-          if(!map[tp]) map[tp]={type:tp,total:0,onTime:0,breached:0,totalTime:0};
+        const map = {};
+        for(const t of tickets){
+          const tp = t.type || 'Medium';
+          map[tp] ||= {type:tp,total:0,onTime:0,breached:0,totalTime:0};
           map[tp].total++;
-          map[tp].totalTime+=Number(t.actualTime||0);
+          map[tp].totalTime += Number(t.actualTime||0);
           if(Number(t.actualTime)<=Number(t.threshold)) map[tp].onTime++;
           else map[tp].breached++;
         }
-        var arr=[]; for(var k in map) if(Object.prototype.hasOwnProperty.call(map,k)) arr.push(map[k]);
-        var order={Small:1,Medium:2,Large:3};
-        arr.sort(function(a,b){return (order[a.type]||99)-(order[b.type]||99) || a.type.localeCompare(b.type);});
+        const arr = Object.values(map);
+        const order={Small:1,Medium:2,Large:3};
+        arr.sort((a,b)=>(order[a.type]||99)-(order[b.type]||99)||a.type.localeCompare(b.type));
         return arr;
       }
 
       function renderKPIs(t){
-        if(qs('kpiTotal')) qs('kpiTotal').textContent=String(t.total);
-        if(qs('kpiOnTime')) qs('kpiOnTime').textContent=String(t.onTime);
-        if(qs('kpiBreached')) qs('kpiBreached').textContent=String(t.breached);
-        if(qs('kpiSla')) qs('kpiSla').textContent=t.sla+'%';
+        if(qs('kpiTotal')) qs('kpiTotal').textContent = String(t.total);
+        if(qs('kpiOnTime')) qs('kpiOnTime').textContent = String(t.onTime);
+        if(qs('kpiBreached')) qs('kpiBreached').textContent = String(t.breached);
+        if(qs('kpiSla')) qs('kpiSla').textContent = t.sla+'%';
       }
 
-      function renderCharts(totals,barData){
-        if(typeof Chart==='undefined'){toast('Chart.js not loaded','error');return;}
-        if(typeof ChartDataLabels!=='undefined'){ try{Chart.register(ChartDataLabels);}catch(e){} }
-        var pie=qs('pieChart'), bar=qs('barChart');
+      function renderCharts(totals, barData){
+        if(typeof Chart==='undefined'){ toast('Chart.js not loaded','error'); return; }
+        if(typeof ChartDataLabels!=='undefined'){ try{ Chart.register(ChartDataLabels); }catch(e){} }
+
+        const pie=qs('pieChart'), bar=qs('barChart');
         if(!pie || !bar) return;
 
         if(pieChart) pieChart.destroy();
-        pieChart=new Chart(pie.getContext('2d'),{
+        pieChart = new Chart(pie.getContext('2d'), {
           type:'doughnut',
-          data:{labels:['On Time','Breached'],datasets:[{data:[totals.onTime,totals.breached],backgroundColor:['#10b981','#ef4444'],borderWidth:0}]},
-          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},datalabels:{color:'#111',font:{weight:'bold'},formatter:function(v){return v;}}}}
+          data:{ labels:['On Time','Breached'], datasets:[{ data:[totals.onTime, totals.breached], backgroundColor:['#10b981','#ef4444'], borderWidth:0 }]},
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{position:'bottom'},
+              datalabels:{ color:'#111', font:{weight:'bold'}, formatter:v=>v }
+            }
+          }
         });
 
         if(barChart) barChart.destroy();
-        barChart=new Chart(bar.getContext('2d'),{
+        barChart = new Chart(bar.getContext('2d'), {
           type:'bar',
           data:{
-            labels:barData.map(function(d){return d.type;}),
+            labels: barData.map(d=>d.type),
             datasets:[
-              {label:'On Time',data:barData.map(function(d){return d.onTime;}),backgroundColor:'#10b981'},
-              {label:'Breached',data:barData.map(function(d){return d.breached;}),backgroundColor:'#ef4444'}
+              {label:'On Time', data:barData.map(d=>d.onTime), backgroundColor:'#10b981'},
+              {label:'Breached', data:barData.map(d=>d.breached), backgroundColor:'#ef4444'}
             ]
           },
-          options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},plugins:{legend:{position:'bottom'}}}
+          options:{ responsive:true, maintainAspectRatio:false,
+            scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+            plugins:{legend:{position:'bottom'}}
+          }
         });
       }
 
       function renderSummary(barData){
-        var body=qs('tableBody'); if(!body) return;
+        const body=qs('tableBody'); if(!body) return;
         body.innerHTML='';
-        for(var i=0;i<barData.length;i++){
-          var d=barData[i];
-          var avg=d.total?(d.totalTime/d.total).toFixed(2):'0.00';
-          var sla=d.total?((d.onTime/d.total)*100).toFixed(1):'0.0';
-          var badgeClass='badge-green';
+        for(const d of barData){
+          const avg = d.total ? (d.totalTime/d.total).toFixed(2) : '0.00';
+          const sla = d.total ? ((d.onTime/d.total)*100).toFixed(1) : '0.0';
+
+          let badgeClass='badge-green';
           if(Number(sla)<70) badgeClass='badge-red';
           else if(Number(sla)<90) badgeClass='badge-yellow';
-          var thr=(thresholds[d.type]!==undefined)?thresholds[d.type]:'-';
-          var tr=document.createElement('tr');
-          tr.innerHTML=
-            "<td><strong>"+esc(d.type)+"</strong></td>"+
-            "<td style='text-align:center;'>"+thr+"</td>"+
-            "<td style='text-align:center;'>"+d.total+"</td>"+
-            "<td style='text-align:center;'><span class='badge badge-green'>"+d.onTime+"</span></td>"+
-            "<td style='text-align:center;'><span class='badge badge-red'>"+d.breached+"</span></td>"+
-            "<td style='text-align:center;'>"+avg+"</td>"+
-            "<td style='text-align:center;'><span class='badge "+badgeClass+"'>"+sla+"%</span></td>";
+
+          const thr = thresholds[d.type] ?? '-';
+
+          const tr=document.createElement('tr');
+          tr.innerHTML =
+            `<td><strong>${esc(d.type)}</strong></td>
+             <td style="text-align:center;">${thr}</td>
+             <td style="text-align:center;">${d.total}</td>
+             <td style="text-align:center;"><span class="badge badge-green">${d.onTime}</span></td>
+             <td style="text-align:center;"><span class="badge badge-red">${d.breached}</span></td>
+             <td style="text-align:center;">${avg}</td>
+             <td style="text-align:center;"><span class="badge ${badgeClass}">${sla}%</span></td>`;
           body.appendChild(tr);
         }
       }
 
       function renderTickets(){
-        var tb=qs('ticketTbody'); if(!tb) return;
-        var sb=qs('searchBox');
-        var q=(sb?sb.value:'').toLowerCase().trim();
+        const tb=qs('ticketTbody'); if(!tb) return;
+        const q=(qs('searchBox')?.value||'').toLowerCase().trim();
         tb.innerHTML='';
-        for(var i=0;i<tickets.length;i++){
-          var t=tickets[i]||{};
-          var hay=(String(t.id)+' '+String(t.title)+' '+String(t.type)).toLowerCase();
-          if(q && hay.indexOf(q)===-1) continue;
-          var tr=document.createElement('tr');
+
+        tickets.forEach((t, idx)=>{
+          const hay=(String(t.id)+' '+String(t.title)+' '+String(t.type)).toLowerCase();
+          if(q && !hay.includes(q)) return;
+
+          const tr=document.createElement('tr');
           tr.className='border-b hover:bg-slate-50';
-          tr.innerHTML=
-            "<td class='py-2 pr-3 font-mono text-slate-700'>"+esc(t.id)+"</td>"+
-            "<td class='py-2 pr-3 text-slate-800'>"+esc(t.title)+"</td>"+
-            "<td class='py-2 pr-3 text-slate-700'>"+esc(t.type)+"</td>"+
-            "<td class='py-2 pr-3 text-right text-slate-700'>"+Number(t.actualTime||0).toFixed(2)+"</td>"+
-            "<td class='py-2 pr-3 text-right text-slate-700'>"+Number(t.threshold||0).toFixed(2)+"</td>";
+
+          tr.innerHTML =
+            `<td class="py-2 pr-3 font-mono text-slate-700 whitespace-nowrap">${esc(t.id)}</td>
+             <td class="py-2 pr-3 text-slate-800 min-w-[220px]">${esc(t.title)}</td>
+             <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">${esc(t.type)}</td>
+             <td class="py-2 pr-3 text-right text-slate-700 whitespace-nowrap">${Number(t.actualTime||0).toFixed(2)}</td>
+             <td class="py-2 pr-3 text-right text-slate-700 whitespace-nowrap">${Number(t.threshold||0).toFixed(2)}</td>
+             <td class="py-2 text-right whitespace-nowrap">
+               <button class="ticketEdit text-indigo-600 hover:underline text-xs" data-idx="${idx}">Edit</button>
+               <span class="mx-1 text-slate-300">|</span>
+               <button class="ticketDel text-red-600 hover:underline text-xs" data-idx="${idx}">Delete</button>
+             </td>`;
           tb.appendChild(tr);
+        });
+      }
+
+      function renderAll(){
+        if(!tickets.length){
+          // clear UI
+          renderKPIs({total:0,onTime:0,breached:0,sla:'0.0'});
+          renderSummary([]);
+          if(qs('ticketTbody')) qs('ticketTbody').innerHTML='';
+          if(pieChart){ pieChart.destroy(); pieChart=null; }
+          if(barChart){ barChart.destroy(); barChart=null; }
+          return;
         }
-      }
-
-      function saveToWorkspace(){
-        var d=dashId();
-        if(!d || !window.StateApi) return Promise.resolve();
-        var totals=computeTotals();
-        var bau={totalTickets:totals.total,withinSLA:totals.onTime,breachedSLA:totals.breached,slaPercentage:totals.sla};
-        return window.StateApi.merge(d,{run:{tickets:tickets,updatedAt:new Date().toISOString()},executive:{bauData:bau}});
-      }
-
-      function generateAndRender(){
-        if(!tickets.length){toast('No tickets loaded','error');return;}
-        var totals=computeTotals();
-        var bar=buildBarData();
+        const totals=computeTotals();
+        const bar=buildBarData();
         renderKPIs(totals);
-        renderCharts(totals,bar);
+        renderCharts(totals, bar);
         renderSummary(bar);
         renderTickets();
       }
 
-      function generateAndSave(){
-        generateAndRender();
-        if(!tickets.length) return;
-        toast('Saving…','info');
-        saveToWorkspace().then(function(){toast('Saved','ok');}).catch(function(){toast('Save failed','error');});
+      async function saveToWorkspace(){
+        const d = dashId();
+        if(!d){
+          toast('Select/Create a workspace first','error');
+          throw new Error('No workspace selected');
+        }
+        const totals=computeTotals();
+        const bau={ totalTickets:totals.total, withinSLA:totals.onTime, breachedSLA:totals.breached, slaPercentage:totals.sla };
+        await window.StateApi.merge(d, {
+          run:{ tickets, updatedAt:new Date().toISOString() },
+          executive:{ bauData: bau }
+        });
+        dirty = false;
+        toast('Saved','ok');
+        // refresh indicator state (private/published)
+        window.dispatchEvent(new CustomEvent('tw:refreshIndicator', {detail:{dash:d}}));
       }
 
-      function downloadJpg(){
-        var region=qs('captureRegion');
-        if(!region){toast('Capture region not found','error');return;}
-        toast('Generating image…','info');
-        html2canvas(region,{backgroundColor:'#ffffff',scale:2})
-          .then(function(canvas){
-            var a=document.createElement('a');
-            a.download='Run_Report_'+new Date().toISOString().slice(0,10)+'.jpg';
-            a.href=canvas.toDataURL('image/jpeg',0.95);
-            a.click();
-            toast('Downloaded','ok');
-          })
-          .catch(function(){toast('Download failed','error');});
-      }
+      function openModal(){ const m=qs('runModal'); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex'); }
+      function closeModal(){ const m=qs('runModal'); if(!m) return; m.classList.add('hidden'); m.classList.remove('flex'); }
+      function openAdoForm(){ qs('adoFormWrap')?.classList.remove('hidden'); }
+      function closeAdoForm(){ qs('adoFormWrap')?.classList.add('hidden'); }
 
-      function openModal(){var m=qs('runModal'); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex');}
-      function closeModal(){var m=qs('runModal'); if(!m) return; m.classList.add('hidden'); m.classList.remove('flex');}
-      function openAdoForm(){var a=qs('adoFormWrap'); if(a) a.classList.remove('hidden');}
-      function closeAdoForm(){var a=qs('adoFormWrap'); if(a) a.classList.add('hidden');}
-
+      /* ---------- Upload parsing ---------- */
       function parseRows(rows){
-        var out=[];
-        for(var i=0;i<rows.length;i++){
-          var r=rows[i]||{};
-          var id=r.ID||r.Id||r.id||(''+Math.floor(Math.random()*1000000));
-          var title=r.Title||r.title||'Untitled';
-          var type=r['Ticket type']||r['Ticket Type']||r.Type||r.type||'Medium';
-          var time=Number(r['Actual time']||r['Actual Time']||r.actualTime||0);
-          var thr=Number(r.Threshold||r.threshold||thresholds[type]||6);
-          out.push({id:String(id),title:String(title),type:String(type),actualTime:isFinite(time)?time:0,threshold:isFinite(thr)?thr:(thresholds[type]||6)});
+        const out=[];
+        for(const r of (rows||[])){
+          const id = r.ID || r.Id || r.id || (''+Math.floor(Math.random()*1000000));
+          const title = r.Title || r.title || 'Untitled';
+          const type = r['Ticket type'] || r['Ticket Type'] || r.Type || r.type || 'Medium';
+          const time = Number(r['Actual time'] || r['Actual Time'] || r.actualTime || 0);
+          const thr = Number(r.Threshold || r.threshold || thresholds[type] || 6);
+          out.push({
+            id:String(id), title:String(title), type:String(type),
+            actualTime: isFinite(time)?time:0,
+            threshold: isFinite(thr)?thr:(thresholds[type]||6)
+          });
         }
         return out;
       }
@@ -306,162 +362,324 @@
         if(!file) return;
         toast('Reading file…','info');
 
-        var lower=(file.name||'').toLowerCase();
-        var isCsv=lower.endsWith('.csv');
-        var reader=new FileReader();
-
-        reader.onerror=function(){toast('File read failed','error');};
-
-        reader.onload=function(e){
+        const isCsv = (file.name||'').toLowerCase().endsWith('.csv');
+        const reader=new FileReader();
+        reader.onerror=()=>toast('File read failed','error');
+        reader.onload=(e)=>{
           try{
-            var wb;
+            let wb;
             if(isCsv){
-              var text=e.target.result;
-              wb=XLSX.read(text,{type:'string'});
+              wb = XLSX.read(String(e.target.result||''), {type:'string'});
             }else{
-              var data=new Uint8Array(e.target.result);
-              wb=XLSX.read(data,{type:'array'});
+              wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
             }
-            var sheet=wb.Sheets[wb.SheetNames[0]];
-            var rows=XLSX.utils.sheet_to_json(sheet);
-            tickets=parseRows(rows);
-
-            var fp=qs('filePill'); if(fp) fp.textContent=file.name+' ('+tickets.length+' rows)';
+            const sheet=wb.Sheets[wb.SheetNames[0]];
+            const rows=XLSX.utils.sheet_to_json(sheet);
+            tickets = parseRows(rows);
+            qs('filePill').textContent = `${file.name} (${tickets.length} rows)`;
+            markDirty();
             closeModal();
-            generateAndSave();
+            renderAll();
           }catch(err){
             console.error(err);
-            toast('Upload failed: '+(err.message||String(err)),'error');
+            toast('Upload failed: '+(err.message||String(err)), 'error');
           }
         };
-
         if(isCsv) reader.readAsText(file);
         else reader.readAsArrayBuffer(file);
       }
 
+      /* ---------- ADO CLIENT-SIDE SYNC (merged from your backend) ---------- */
+      function normalizeOrg(org){
+        org = String(org||'').trim();
+        org = org.replace(/^https?:\/\//i,'');
+        org = org.replace(/^dev\.azure\.com\//i,'');
+        org = org.replace(/\/$/,'');
+        return org;
+      }
+      function authHeaderFromPat(pat){
+        const token = btoa(':'+String(pat||''));
+        return 'Basic '+token;
+      }
+      function num(v){
+        const n = Number(v);
+        return isFinite(n) ? n : 0;
+      }
+      function mapTypeFromWorkItem(wi){
+        const f = (wi && wi.fields) ? wi.fields : {};
+        const wtype = f['System.WorkItemType'] || '';
+        const tags = String(f['System.Tags']||'').toLowerCase();
+        if(tags.includes('small')) return 'Small';
+        if(tags.includes('medium')) return 'Medium';
+        if(tags.includes('large')) return 'Large';
+        if(String(wtype).toLowerCase().includes('bug')) return 'Medium';
+        if(String(wtype).toLowerCase().includes('task')) return 'Small';
+        return 'Medium';
+      }
+
       async function adoSubmit(){
         toast('Querying ADO…','info');
-        var org=(qs('adoOrg')&&qs('adoOrg').value||'').trim();
-        var project=(qs('adoProject')&&qs('adoProject').value||'').trim();
-        var queryId=(qs('adoQueryId')&&qs('adoQueryId').value||'').trim();
-        var pat=(qs('adoPat')&&qs('adoPat').value||'').trim();
-        if(!org||!project||!queryId||!pat){toast('Fill all ADO fields','error');return;}
+        const org = normalizeOrg(qs('adoOrg')?.value||'');
+        const project = String(qs('adoProject')?.value||'').trim();
+        const queryId = String(qs('adoQueryId')?.value||'').trim();
+        const pat = String(qs('adoPat')?.value||'').trim();
+        let wiql = String(qs('adoWiql')?.value||'').trim(); // optional if you add a WIQL textbox
+
+        if(!org || !project || (!queryId && !wiql) || !pat){
+          toast('Fill org, project, PAT and Query ID (or WIQL)','error');
+          return;
+        }
 
         try{
-          var resp=await fetch('/api/ado/run-tickets',{
-            method:'POST',
-            credentials:'same-origin',
-            headers:{'Accept':'application/json','Content-Type':'application/json'},
-            body:JSON.stringify({org:org,project:project,queryId:queryId,pat:pat})
-          });
-          var t=await resp.text();
-          var j={}; try{j=JSON.parse(t||'{}');}catch(e){j={error:t};}
-          if(!resp.ok) throw new Error(j.error||j.message||t||('HTTP '+resp.status));
-          var list=j.tickets||[];
-          if(!Array.isArray(list)||!list.length){toast('No tickets returned','error');return;}
-          tickets=list;
+          const baseUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}`;
+          const headers = {
+            'Accept':'application/json',
+            'Content-Type':'application/json',
+            'Authorization': authHeaderFromPat(pat)
+          };
 
-          var fp=qs('filePill'); if(fp) fp.textContent='ADO Sync ('+tickets.length+' tickets)';
-          closeAdoForm(); closeModal();
-          generateAndSave();
+          if(queryId && !wiql){
+            const qUrl = `${baseUrl}/_apis/wit/queries/${encodeURIComponent(queryId)}?$expand=wiql&api-version=7.1`;
+            const qResp = await fetch(qUrl, {method:'GET', headers});
+            const qText = await qResp.text();
+            let qJson={}; try{ qJson=JSON.parse(qText||'{}'); }catch(e){ qJson={error:qText}; }
+            if(!qResp.ok) throw new Error(qJson.error || qJson.message || qText || 'Query fetch failed');
+            wiql = String(qJson.wiql||'').trim();
+            if(!wiql) throw new Error('No WIQL found for queryId');
+          }
+
+          const wiqlUrl = `${baseUrl}/_apis/wit/wiql?api-version=7.1`;
+          const wiqlResp = await fetch(wiqlUrl, {method:'POST', headers, body: JSON.stringify({query: wiql})});
+          const wiqlText = await wiqlResp.text();
+          let wiqlJson={}; try{ wiqlJson=JSON.parse(wiqlText||'{}'); }catch(e){ wiqlJson={error:wiqlText}; }
+          if(!wiqlResp.ok) throw new Error(wiqlJson.error || wiqlJson.message || wiqlText || 'WIQL execution failed');
+
+          const ids = (wiqlJson.workItems||[]).map(x=>x.id).filter(Boolean);
+          if(!ids.length){
+            toast('No tickets returned','error');
+            return;
+          }
+
+          const batchUrl = `${baseUrl}/_apis/wit/workitemsbatch?api-version=7.1`;
+          const fields = [
+            'System.Id','System.Title','System.WorkItemType','System.Tags',
+            'Microsoft.VSTS.Scheduling.CompletedWork','Microsoft.VSTS.Scheduling.OriginalEstimate'
+          ];
+          const thresholdMap = {Small:4, Medium:6, Large:8};
+
+          // chunk into 200
+          const items=[];
+          for(let i=0;i<ids.length;i+=200){
+            const chunk = ids.slice(i, i+200);
+            const bResp = await fetch(batchUrl, {method:'POST', headers, body: JSON.stringify({ids: chunk, fields})});
+            const bText = await bResp.text();
+            let bJson={}; try{ bJson=JSON.parse(bText||'{}'); }catch(e){ bJson={error:bText}; }
+            if(!bResp.ok) throw new Error(bJson.error || bJson.message || bText || 'WorkItems batch failed');
+            if(Array.isArray(bJson.value)) items.push(...bJson.value);
+          }
+
+          tickets = items.map(wi=>{
+            const f = wi.fields || {};
+            const type = mapTypeFromWorkItem(wi);
+            const actualTime = num(f['Microsoft.VSTS.Scheduling.CompletedWork'] || f['Microsoft.VSTS.Scheduling.OriginalEstimate']);
+            const threshold = thresholdMap[type] || 6;
+            return {
+              id: String(f['System.Id'] || wi.id || ''),
+              title: String(f['System.Title'] || ''),
+              type, actualTime, threshold
+            };
+          });
+
+          qs('filePill').textContent = `ADO Sync (${tickets.length} tickets)`;
+          markDirty();
+          closeAdoForm();
+          closeModal();
+          renderAll();
+          toast('ADO sync complete','ok');
         }catch(e){
           console.error(e);
           toast('ADO sync failed: '+(e.message||String(e)),'error');
         }
       }
 
-      function loadFromWorkspace(){
-        // IMPORTANT: load should render but not auto-save (prevents noisy writes)
-        var d=dashId(); if(!d||!window.StateApi) return;
-        window.StateApi.get(d).then(function(resp){
-          var st=resp&&resp.state?resp.state:{};
-          var run=st.run||{};
-          if(Array.isArray(run.tickets)) tickets=run.tickets;
-          if(tickets.length){
-            var fp=qs('filePill'); if(fp) fp.textContent='Workspace ('+tickets.length+' tickets)';
-            generateAndRender();
-          }
-        }).catch(function(){});
+      /* ---------- Ticket CRUD ---------- */
+      function openTicketModal(mode, idx){
+        const m = qs('ticketModal');
+        if(!m) return;
+        m.dataset.mode = mode;
+        m.dataset.idx = (idx!==undefined && idx!==null) ? String(idx) : '';
+
+        const t = (mode==='edit' && tickets[idx]) ? tickets[idx] : {id:'',title:'',type:'Medium',actualTime:0,threshold:6};
+        qs('tId').value = t.id || '';
+        qs('tTitle').value = t.title || '';
+        qs('tType').value = t.type || 'Medium';
+        qs('tActual').value = String(t.actualTime ?? 0);
+        qs('tThr').value = String(t.threshold ?? (thresholds[t.type]||6));
+
+        qs('ticketModalTitle').textContent = mode==='edit' ? 'Edit Ticket' : 'Add Ticket';
+
+        m.classList.remove('hidden'); m.classList.add('flex');
+      }
+      function closeTicketModal(){
+        const m = qs('ticketModal'); if(!m) return;
+        m.classList.add('hidden'); m.classList.remove('flex');
+      }
+      function saveTicketFromModal(){
+        const mode = qs('ticketModal').dataset.mode;
+        const idxStr = qs('ticketModal').dataset.idx;
+        const idx = idxStr ? Number(idxStr) : null;
+
+        const id = String(qs('tId').value||'').trim() || String(Math.floor(Math.random()*1000000));
+        const title = String(qs('tTitle').value||'').trim() || 'Untitled';
+        const type = String(qs('tType').value||'Medium');
+        const actualTime = Number(qs('tActual').value||0);
+        const threshold = Number(qs('tThr').value||thresholds[type]||6);
+
+        const ticket = { id, title, type, actualTime: isFinite(actualTime)?actualTime:0, threshold: isFinite(threshold)?threshold:(thresholds[type]||6) };
+
+        if(mode==='edit' && idx!==null && tickets[idx]){
+          tickets[idx] = ticket;
+        }else{
+          tickets.unshift(ticket);
+        }
+        markDirty();
+        closeTicketModal();
+        renderAll();
       }
 
-      function init(){
-        window.RunApp={
-          saveNow:function(){return saveToWorkspace();},
-          download:downloadJpg,
-          openGenerate:openModal
-        };
-        window.addEventListener('tw:openGenerate', openModal);
-
-        if(window.lucide && window.lucide.createIcons) window.lucide.createIcons();
-
-        // modal wiring (safe)
-        var c=qs('runModalClose'); if(c) c.addEventListener('click',closeModal);
-        var cc=qs('runModalCancel'); if(cc) cc.addEventListener('click',closeModal);
-        var up=qs('uploadPick'); if(up) up.addEventListener('click',function(){var fi=qs('fileInput'); if(fi) fi.click();});
-        var ao=qs('adoOpenBtn'); if(ao) ao.addEventListener('click',openAdoForm);
-        var ac=qs('adoCancel'); if(ac) ac.addEventListener('click',closeAdoForm);
-        var as=qs('adoSubmit'); if(as) as.addEventListener('click',function(){adoSubmit();});
-        var fi=qs('fileInput');
-        if(fi) fi.addEventListener('change',function(e){var f=e.target.files&&e.target.files[0]; if(f) uploadFile(f); e.target.value='';});
-
-        // tickets
-        var sb=qs('searchBox'); if(sb) sb.addEventListener('input',renderTickets);
-        var toggleBtn=qs('toggleTicketsBtn');
-        if(toggleBtn) toggleBtn.addEventListener('click',function(){
-          var sec=qs('ticketsSection'); if(!sec) return;
-          sec.classList.toggle('hidden');
-          toggleBtn.textContent=sec.classList.contains('hidden')?'Show Tickets':'Hide Tickets';
-        });
-        var ts=qs('ticketsSection'); if(ts) ts.classList.add('hidden');
-
-        loadFromWorkspace();
+      function deleteTicket(idx){
+        if(!tickets[idx]) return;
+        if(!confirm('Delete this ticket?')) return;
+        tickets.splice(idx, 1);
+        markDirty();
+        renderAll();
       }
 
-      window.addEventListener('DOMContentLoaded',init);
-    })();
-  </script>
+      function clearTickets(){
+        if(!tickets.length) return;
+        if(!confirm('Clear all tickets?')) return;
+        tickets = [];
+        markDirty();
+        renderAll();
+      }
 
-  <!-- workspace.js (INLINE, with extra null-guards + dash pill update) -->
-  <script>
-    (function(){'use strict';
-      function qs(id){return document.getElementById(id);}
-      function dashId(){ try{ return new URL(location.href).searchParams.get('dash')||''; }catch(e){ return ''; } }
-      function setDashInUrl(id){
+      /* ---------- Workspace state load ---------- */
+      async function loadFromWorkspace(id){
+        const d = id || dashId();
+        if(!d || !window.StateApi){
+          tickets = [];
+          renderAll();
+          return;
+        }
         try{
-          var u=new URL(location.href);
-          if(id) u.searchParams.set('dash',id);
-          else u.searchParams.delete('dash');
-          location.href=u.pathname+u.search;
+          const resp = await window.StateApi.get(d);
+          const st = resp && resp.state ? resp.state : {};
+          const run = st.run || {};
+          tickets = Array.isArray(run.tickets) ? run.tickets : [];
+          dirty = false;
+          qs('filePill').textContent = tickets.length ? `Workspace (${tickets.length} tickets)` : 'No data loaded';
+          renderAll();
         }catch(e){
-          location.href='/run.html?dash='+encodeURIComponent(id||'');
+          tickets = [];
+          renderAll();
+          toast('Failed to load workspace: '+(e.message||String(e)),'error');
         }
       }
 
-      function toast(msg, kind){
-        var t=qs('toast'); if(!t) return;
-        t.textContent=msg; t.classList.remove('hidden');
-        t.classList.remove('bg-emerald-600','bg-red-600','bg-slate-900');
-        t.classList.add(kind==='error'?'bg-red-600':(kind==='ok'?'bg-emerald-600':'bg-slate-900'));
-        clearTimeout(toast._timer);
-        toast._timer=setTimeout(function(){t.classList.add('hidden');}, 2600);
+      /* ---------- Download JPG ---------- */
+      function downloadJpg(){
+        const region=qs('captureRegion');
+        if(!region){ toast('Capture region not found','error'); return; }
+        toast('Generating image…','info');
+        html2canvas(region,{backgroundColor:'#ffffff',scale:2})
+          .then(canvas=>{
+            const a=document.createElement('a');
+            a.download='Run_Report_'+new Date().toISOString().slice(0,10)+'.jpg';
+            a.href=canvas.toDataURL('image/jpeg',0.95);
+            a.click();
+            toast('Downloaded','ok');
+          })
+          .catch(()=>toast('Download failed','error'));
       }
 
-      function fillSelect(sel, dashboards, current){
-        if(!sel) return;
-        sel.innerHTML = dashboards.map(function(d){
-          var id=String(d.id);
-          var name=(d.name||d.id);
-          return '<option value="'+id.replace(/"/g,'&quot;')+'">'+String(name).replace(/</g,'&lt;')+'</option>';
-        }).join('') || '<option value="">No workspaces</option>';
-        sel.value = current || (dashboards[0] && dashboards[0].id) || '';
+      function init(){
+        window.RunApp = {
+          openGenerate: openModal,
+          download: downloadJpg,
+          saveNow: saveToWorkspace,
+          loadWorkspace: loadFromWorkspace,
+          getTickets: ()=>tickets
+        };
+
+        // Open modal from workspace menu if needed
+        window.addEventListener('tw:openGenerate', openModal);
+
+        // Reload data when workspace changes (NO full reload)
+        window.addEventListener('tw:workspaceChanged', (e)=>{
+          const d = e.detail?.dash || dashId();
+          loadFromWorkspace(d);
+        });
+
+        // ticket row edit/delete delegation
+        qs('ticketTbody')?.addEventListener('click', (e)=>{
+          const edit = e.target.closest('.ticketEdit');
+          const del = e.target.closest('.ticketDel');
+          if(edit){ openTicketModal('edit', Number(edit.dataset.idx)); }
+          if(del){ deleteTicket(Number(del.dataset.idx)); }
+        });
+
+        // Wire buttons
+        qs('runModalClose')?.addEventListener('click', closeModal);
+        qs('runModalCancel')?.addEventListener('click', closeModal);
+        qs('uploadPick')?.addEventListener('click', ()=>qs('fileInput')?.click());
+        qs('fileInput')?.addEventListener('change', (e)=>{
+          const f = e.target.files && e.target.files[0];
+          if(f) uploadFile(f);
+          e.target.value='';
+        });
+
+        qs('adoOpenBtn')?.addEventListener('click', openAdoForm);
+        qs('adoCancel')?.addEventListener('click', closeAdoForm);
+        qs('adoSubmit')?.addEventListener('click', adoSubmit);
+
+        qs('searchBox')?.addEventListener('input', renderTickets);
+
+        qs('toggleTicketsBtn')?.addEventListener('click', ()=>{
+          const sec = qs('ticketsSection');
+          if(!sec) return;
+          sec.classList.toggle('hidden');
+          qs('toggleTicketsBtn').textContent = sec.classList.contains('hidden') ? 'Show Tickets' : 'Hide Tickets';
+        });
+        qs('ticketsSection')?.classList.add('hidden');
+
+        // CRUD buttons
+        qs('addTicketBtn')?.addEventListener('click', ()=>openTicketModal('add'));
+        qs('clearTicketsBtn')?.addEventListener('click', clearTickets);
+
+        // Ticket modal
+        qs('ticketModalClose')?.addEventListener('click', closeTicketModal);
+        qs('ticketCancel')?.addEventListener('click', closeTicketModal);
+        qs('ticketSave')?.addEventListener('click', saveTicketFromModal);
+
+        if(window.lucide?.createIcons) window.lucide.createIcons();
+
+        // Initial load from current workspace
+        loadFromWorkspace(dashId());
       }
 
+      window.addEventListener('DOMContentLoaded', init);
+    })();
+
+    /* ---------------------------
+      Workspace logic (inline workspace.js) - NO RELOAD switching
+    --------------------------- */
+    (function(){
       async function updateIndicator(id){
-        var ind=qs('ws-indicator'); if(!ind) return;
+        const ind=qs('ws-indicator'); if(!ind) return;
         if(!id){ ind.textContent=''; return; }
         try{
-          var resp=await window.StateApi.get(id);
-          var meta=resp&&resp.meta?resp.meta:{};
+          const resp = await window.StateApi.get(id);
+          const meta = resp && resp.meta ? resp.meta : {};
           if(meta.published){
             ind.textContent = meta.publishedToAll ? 'Published (All)' : 'Published';
             ind.className='text-xs text-emerald-700 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200';
@@ -472,60 +690,77 @@
         }catch(e){ ind.textContent=''; }
       }
 
-      async function beforeSwitchSave(){
-        try{ if(window.RunApp && typeof window.RunApp.saveNow==='function') await window.RunApp.saveNow(); }catch(e){}
-      }
-
-      async function switchWorkspace(id){
-        if(!id) return;
-        await beforeSwitchSave();
-        setDashInUrl(id);
+      function fillSelect(sel, dashboards, current){
+        if(!sel) return;
+        sel.innerHTML = dashboards.map(d=>{
+          const id=String(d.id);
+          const name=(d.name||d.id);
+          return `<option value="${esc(id)}">${esc(name)}</option>`;
+        }).join('') || '<option value="">No workspaces</option>';
+        sel.value = current || (dashboards[0]?.id||'');
       }
 
       async function createWorkspace(){
-        var name=prompt('New workspace name:');
+        const name = prompt('New workspace name:');
         if(!name) return;
-        var id='dash-'+Math.random().toString(36).slice(2,8)+'-'+Date.now().toString(36);
-        var state={ __meta:{name:name}, executive:{ bauData:{} }, run:{ tickets:[] } };
-        try{ await window.StateApi.save(id, state, name); toast('Workspace created','ok'); setDashInUrl(id); }
-        catch(e){ toast('Create failed: '+(e.message||String(e)),'error'); }
+        const id='dash-'+Math.random().toString(36).slice(2,8)+'-'+Date.now().toString(36);
+        const state={ __meta:{name}, executive:{bauData:{}}, run:{tickets:[]} };
+        try{
+          await window.StateApi.save(id, state, name);
+          toast('Workspace created','ok');
+          setDashInUrlNoReload(id);
+          qs('ws-select').value = id;
+          await updateIndicator(id);
+          window.dispatchEvent(new CustomEvent('tw:workspaceChanged', {detail:{dash:id}}));
+        }catch(e){
+          toast('Create failed: '+(e.message||String(e)),'error');
+        }
       }
 
       async function renameWorkspace(){
-        var id=dashId(); if(!id){ toast('Select workspace first','error'); return; }
+        const id = dashId(); if(!id){ toast('Select workspace first','error'); return; }
         try{
-          var resp=await window.StateApi.get(id);
-          var current=resp&&resp.name?resp.name:id;
-          var name=prompt('Rename workspace:', current);
-          if(!name||name===current) return;
-          var st=resp&&resp.state?resp.state:{};
-          if(st && st.__meta) st.__meta.name=name;
+          const resp = await window.StateApi.get(id);
+          const current = resp?.name || id;
+          const name = prompt('Rename workspace:', current);
+          if(!name || name===current) return;
+
+          const st = resp?.state || {};
+          st.__meta ||= {};
+          st.__meta.name = name;
+
           await window.StateApi.save(id, st, name);
           toast('Renamed','ok');
-          location.reload();
+          // refresh list
+          await initWorkspaces(true);
         }catch(e){ toast('Rename failed: '+(e.message||String(e)),'error'); }
       }
 
       async function deleteWorkspace(){
-        var id=dashId(); if(!id) return;
+        const id=dashId(); if(!id) return;
         if(!confirm('Delete workspace '+id+'?')) return;
-        try{ await window.StateApi.remove(id); toast('Deleted','ok'); location.href='/run.html'; }
-        catch(e){ toast('Delete failed: '+(e.message||String(e)),'error'); }
+        try{
+          await window.StateApi.remove(id);
+          toast('Deleted','ok');
+          setDashInUrlNoReload('');
+          await initWorkspaces(true);
+          window.dispatchEvent(new CustomEvent('tw:workspaceChanged', {detail:{dash:''}}));
+        }catch(e){ toast('Delete failed: '+(e.message||String(e)),'error'); }
       }
 
       function downloadText(filename, text){
-        var blob=new Blob([text],{type:'application/json'});
-        var url=URL.createObjectURL(blob);
-        var a=document.createElement('a');
+        const blob=new Blob([text],{type:'application/json'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
         a.href=url; a.download=filename;
         document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
       }
 
       async function exportWorkspace(){
-        var id=dashId(); if(!id){ toast('Select workspace first','error'); return; }
+        const id=dashId(); if(!id){ toast('Select workspace first','error'); return; }
         try{
-          var resp=await window.StateApi.get(id);
+          const resp=await window.StateApi.get(id);
           downloadText((resp.name||id)+'-workspace.json', JSON.stringify(resp,null,2));
           toast('Exported','ok');
         }catch(e){ toast('Export failed: '+(e.message||String(e)),'error'); }
@@ -533,40 +768,41 @@
 
       async function importWorkspace(file){
         try{
-          var text=await file.text();
-          var data=JSON.parse(text);
-          var id=data.id||('dash-'+Math.random().toString(36).slice(2,8));
-          var name=data.name||id;
-          var st=data.state||{};
+          const text=await file.text();
+          const data=JSON.parse(text);
+          const id=data.id || ('dash-'+Math.random().toString(36).slice(2,8));
+          const name=data.name || id;
+          const st=data.state || {};
           await window.StateApi.save(id, st, name);
           toast('Imported','ok');
-          setDashInUrl(id);
+          setDashInUrlNoReload(id);
+          qs('ws-select').value = id;
+          await updateIndicator(id);
+          window.dispatchEvent(new CustomEvent('tw:workspaceChanged', {detail:{dash:id}}));
+          await initWorkspaces(true);
         }catch(e){ toast('Import failed: '+(e.message||String(e)),'error'); }
       }
 
       async function openPublishModal(){
-        var id=dashId(); if(!id){ toast('Select workspace first','error'); return; }
-        var modal=qs('publishModal'), box=qs('publishUsers'), all=qs('publishAll');
-        if(!modal || !box || !all){
-          toast('Publish UI missing in HTML','error');
-          return;
-        }
+        const id=dashId(); if(!id){ toast('Select workspace first','error'); return; }
+        const modal=qs('publishModal'), box=qs('publishUsers'), all=qs('publishAll');
+        if(!modal||!box||!all){ toast('Publish UI missing','error'); return; }
+
         box.innerHTML='Loading…';
         all.checked=false;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        modal.classList.remove('hidden'); modal.classList.add('flex');
 
         try{
-          var r=await fetch('/api/users/list',{credentials:'same-origin',headers:{'Accept':'application/json'}});
-          var t=await r.text();
-          var j={}; try{j=JSON.parse(t||'{}');}catch(e){j={};}
-          var users=(j.users||[]).map(function(u){return u.userId;}).filter(Boolean);
+          const r=await fetch('/api/users/list',{credentials:'same-origin',headers:{'Accept':'application/json'}});
+          const t=await r.text();
+          let j={}; try{ j=JSON.parse(t||'{}'); }catch(e){ j={}; }
+          const users=(j.users||[]).map(u=>u.userId).filter(Boolean);
 
-          box.innerHTML = users.map(function(u){
-            return '<label class="flex items-center justify-between px-2 py-1 border-b last:border-b-0">'+
-              '<span class="font-mono text-xs">'+u+'</span>'+
-              '<input type="checkbox" class="publishUser" value="'+u+'">'+
-              '</label>';
+          box.innerHTML = users.map(u=>{
+            return `<label class="flex items-center justify-between px-2 py-1 border-b last:border-b-0">
+              <span class="font-mono text-xs">${esc(u)}</span>
+              <input type="checkbox" class="publishUser" value="${esc(u)}">
+            </label>`;
           }).join('') || '<div class="text-xs text-slate-500">No users</div>';
         }catch(e){
           box.innerHTML='<div class="text-xs text-red-600">Failed to load users</div>';
@@ -574,110 +810,136 @@
       }
 
       function closePublishModal(){
-        var m=qs('publishModal');
+        const m=qs('publishModal');
         if(m){ m.classList.add('hidden'); m.classList.remove('flex'); }
       }
 
       async function doPublish(){
-        var id=dashId();
-        var all=qs('publishAll'); if(!all){toast('Publish UI missing','error');return;}
-        var users=[];
-        var checks=document.querySelectorAll('.publishUser');
-        for(var i=0;i<checks.length;i++) if(checks[i].checked) users.push(checks[i].value);
+        const id=dashId();
+        const all=qs('publishAll')?.checked || false;
+        const users=[];
+        qsa('.publishUser').forEach(ch=>{ if(ch.checked) users.push(ch.value); });
         try{
-          await window.StateApi.publish(id,{all:all.checked,users:users});
+          await window.StateApi.publish(id, {all, users});
           toast('Published','ok');
           closePublishModal();
-          updateIndicator(id);
+          await updateIndicator(id);
         }catch(e){ toast('Publish failed: '+(e.message||String(e)),'error'); }
       }
 
       async function doUnpublish(){
-        var id=dashId();
-        try{ await window.StateApi.unpublish(id); toast('Unpublished','ok'); updateIndicator(id); }
-        catch(e){ toast('Unpublish failed: '+(e.message||String(e)),'error'); }
+        const id=dashId();
+        try{
+          await window.StateApi.unpublish(id);
+          toast('Unpublished','ok');
+          await updateIndicator(id);
+        }catch(e){ toast('Unpublish failed: '+(e.message||String(e)),'error'); }
       }
 
       function openGenerateReport(){
-        if(window.RunApp && typeof window.RunApp.openGenerate==='function'){ window.RunApp.openGenerate(); return; }
-        window.dispatchEvent(new CustomEvent('tw:openGenerate'));
+        if(window.RunApp?.openGenerate) window.RunApp.openGenerate();
+        else window.dispatchEvent(new CustomEvent('tw:openGenerate'));
       }
 
       function wireMenu(){
-        var btn=qs('ws-actions-btn');
-        var menu=qs('ws-actions-menu');
-        var back=qs('ws-actions-backdrop');
+        const btn=qs('ws-actions-btn');
+        const menu=qs('ws-actions-menu');
+        const back=qs('ws-actions-backdrop');
 
-        function open(){ if(menu) menu.classList.remove('hidden'); if(back) back.classList.remove('hidden'); }
-        function close(){ if(menu) menu.classList.add('hidden'); if(back) back.classList.add('hidden'); }
+        const open=()=>{ menu?.classList.remove('hidden'); back?.classList.remove('hidden'); };
+        const close=()=>{ menu?.classList.add('hidden'); back?.classList.add('hidden'); };
 
-        if(btn) btn.addEventListener('click', function(e){
+        btn?.addEventListener('click', (e)=>{
           e.preventDefault(); e.stopPropagation();
-          if(menu && menu.classList.contains('hidden')) open(); else close();
+          if(menu?.classList.contains('hidden')) open();
+          else close();
         });
-        if(back) back.addEventListener('click', close);
-        document.addEventListener('click', function(e){
+        back?.addEventListener('click', close);
+        document.addEventListener('click', (e)=>{
           if(menu && !menu.classList.contains('hidden')){
-            var inside=menu.contains(e.target) || (btn && btn.contains(e.target));
+            const inside = menu.contains(e.target) || (btn && btn.contains(e.target));
             if(!inside) close();
           }
         });
 
-        if(menu) menu.addEventListener('click', function(e){
-          var it = e.target.closest ? e.target.closest('[data-ws-action]') : null;
+        menu?.addEventListener('click', async (e)=>{
+          const it = e.target.closest?.('[data-ws-action]');
           if(!it) return;
           e.preventDefault();
           close();
-          var act = it.getAttribute('data-ws-action');
+          const act = it.getAttribute('data-ws-action');
+
           if(act==='generate') return openGenerateReport();
-          if(act==='downloadJpg') { if(window.RunApp && window.RunApp.download) return window.RunApp.download(); return; }
+          if(act==='downloadJpg') return window.RunApp?.download?.();
           if(act==='new') return createWorkspace();
           if(act==='rename') return renameWorkspace();
-          if(act==='save') { if(window.RunApp && window.RunApp.saveNow) return window.RunApp.saveNow(); return; }
+          if(act==='save') return window.RunApp?.saveNow?.().catch(err=>toast(err.message||String(err),'error'));
           if(act==='export') return exportWorkspace();
-          if(act==='import') { var f=qs('ws-import-file'); if(f) f.click(); return; }
+          if(act==='import') return qs('ws-import-file')?.click();
           if(act==='publish') return openPublishModal();
           if(act==='unpublish') return doUnpublish();
           if(act==='delete') return deleteWorkspace();
         });
       }
 
-      async function init(){
+      async function initWorkspaces(refresh){
         if(!window.StateApi) return;
+        const sel=qs('ws-select');
+        const current=dashId();
 
-        // show current dash in pill
-        var dp=qs('dashPill'); if(dp) dp.textContent = dashId() || '—';
-
-        var sel=qs('ws-select');
-        var current=dashId();
         try{
-          var list = await window.StateApi.list();
+          const list = await window.StateApi.list();
           fillSelect(sel, list, current);
 
-          var chosen=(sel && sel.value)?sel.value:current;
-          if(!current && chosen){ setDashInUrl(chosen); return; }
+          let chosen = sel?.value || current;
+          if(!chosen && list.length) chosen = list[0].id;
 
-          if(dp) dp.textContent = chosen || '—';
-          updateIndicator(chosen);
+          if(chosen && chosen!==current){
+            setDashInUrlNoReload(chosen);
+          }else{
+            const dp=qs('dashPill'); if(dp) dp.textContent = chosen || '—';
+          }
+
+          await updateIndicator(chosen);
+
+          if(refresh || chosen!==current){
+            window.dispatchEvent(new CustomEvent('tw:workspaceChanged', {detail:{dash:chosen}}));
+          }
         }catch(e){
-          toast('Failed to load workspaces','error');
+          toast('Failed to load workspaces: '+(e.message||String(e)),'error');
         }
 
-        if(sel) sel.addEventListener('change', function(e){ switchWorkspace(e.target.value); });
+        sel?.addEventListener('change', async (e)=>{
+          const id = e.target.value;
+          // save before switch (best effort)
+          try{ await window.RunApp?.saveNow?.(); }catch(_){}
+          setDashInUrlNoReload(id);
+          await updateIndicator(id);
+          window.dispatchEvent(new CustomEvent('tw:workspaceChanged', {detail:{dash:id}}));
+        });
+      }
 
-        var imp=qs('ws-import-file');
-        if(imp) imp.addEventListener('change', function(e){
-          var f=e.target.files && e.target.files[0];
+      function init(){
+        // import
+        qs('ws-import-file')?.addEventListener('change', (e)=>{
+          const f = e.target.files && e.target.files[0];
           if(f) importWorkspace(f);
           e.target.value='';
         });
 
-        // publish modal wiring
-        var pc=qs('publishClose'); if(pc) pc.addEventListener('click', closePublishModal);
-        var pc2=qs('publishCancel'); if(pc2) pc2.addEventListener('click', closePublishModal);
-        var pb=qs('publishDo'); if(pb) pb.addEventListener('click', doPublish);
+        // publish modal
+        qs('publishClose')?.addEventListener('click', closePublishModal);
+        qs('publishCancel')?.addEventListener('click', closePublishModal);
+        qs('publishDo')?.addEventListener('click', doPublish);
+
+        // allow RunApp to request indicator refresh after save
+        window.addEventListener('tw:refreshIndicator', (e)=>{
+          const id = e.detail?.dash || dashId();
+          updateIndicator(id);
+        });
 
         wireMenu();
+        initWorkspaces(true);
       }
 
       window.addEventListener('DOMContentLoaded', init);
@@ -688,14 +950,12 @@
 <body class="bg-white text-slate-900">
   <div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
 
-  <!-- Header (same IDs and structure your JS expects) -->
   <div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
       <div class="min-w-0">
         <div class="text-lg font-extrabold truncate">Run Dashboard</div>
         <div class="text-xs text-slate-500 truncate">
-          Workspace: <span id="dashPill" class="font-mono">—</span> •
-          <span id="filePill">No data loaded</span>
+          Workspace: <span id="dashPill" class="font-mono">—</span> • <span id="filePill">No data loaded</span>
         </div>
       </div>
 
@@ -707,13 +967,11 @@
         <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
 
         <div class="relative">
-          <button id="ws-actions-btn" type="button"
-                  class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 flex items-center gap-2">
+          <button id="ws-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 flex items-center gap-2">
             Actions
           </button>
           <div id="ws-actions-backdrop" class="hidden fixed inset-0 z-40"></div>
-          <div id="ws-actions-menu"
-               class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+          <div id="ws-actions-menu" class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
             <div class="p-2">
               <button data-ws-action="generate" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Generate Report</button>
               <button data-ws-action="downloadJpg" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Download JPG</button>
@@ -732,8 +990,9 @@
           </div>
         </div>
 
-        <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
+        <input type="file" id="ws-import-file" accept="application/json" class="hidden"/>
 
+        <!-- User menu -->
         <div class="relative">
           <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
           <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
@@ -743,8 +1002,8 @@
             </div>
             <div class="p-2">
               <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-              <a id="nav-build" href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
-              <a id="nav-run" href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
+              <a href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
+              <a href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
               <a id="tw-execboard" href="/executive-board.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
             </div>
             <div class="p-2 border-t">
@@ -760,7 +1019,6 @@
     </div>
   </div>
 
-  <!-- Body -->
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6" id="captureRegion">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
@@ -792,22 +1050,24 @@
       </div>
     </div>
 
-    <div class="rounded-2xl border border-slate-200 bg-white p-4" id="summaryTableSection">
-      <div class="flex items-center justify-between gap-3">
+    <div class="rounded-2xl border border-slate-200 bg-white p-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="text-sm font-semibold">📋 Ticket Type Summary</div>
-        <button id="toggleTicketsBtn" type="button" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100">Show Tickets</button>
+        <button id="toggleTicketsBtn" type="button" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100">
+          Show Tickets
+        </button>
       </div>
       <div class="mt-3 overflow-auto">
-        <table id="summaryTable" class="min-w-full text-sm">
+        <table class="min-w-full text-sm">
           <thead class="text-slate-600">
             <tr class="border-b">
               <th>Ticket Type</th>
-              <th style="text-align:center;">Threshold (hrs)</th>
-              <th style="text-align:center;">Total Count</th>
-              <th style="text-align:center;">On Time</th>
-              <th style="text-align:center;">Breached</th>
-              <th style="text-align:center;">Avg Time (hrs)</th>
-              <th style="text-align:center;">SLA %</th>
+              <th class="text-center">Threshold (hrs)</th>
+              <th class="text-center">Total</th>
+              <th class="text-center">On Time</th>
+              <th class="text-center">Breached</th>
+              <th class="text-center">Avg Time</th>
+              <th class="text-center">SLA %</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -815,12 +1075,19 @@
       </div>
     </div>
 
+    <!-- Tickets Section (CRUD added) -->
     <div id="ticketsSection" class="hidden">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div class="text-sm font-semibold">Tickets</div>
-          <input id="searchBox" class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm outline-none" placeholder="Search by ID / Title / Type…"/>
+          <div class="flex gap-2 flex-wrap justify-end">
+            <button id="addTicketBtn" class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">➕ Add Ticket</button>
+            <button id="clearTicketsBtn" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold hover:bg-slate-200">Clear</button>
+            <input id="searchBox" class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm outline-none"
+                   placeholder="Search by ID / Title / Type…"/>
+          </div>
         </div>
+
         <div class="mt-3 overflow-auto">
           <table class="min-w-full text-sm">
             <thead class="text-slate-600">
@@ -830,6 +1097,7 @@
                 <th class="py-2 pr-3 text-left">Type</th>
                 <th class="py-2 pr-3 text-right">Hours</th>
                 <th class="py-2 pr-3 text-right">Threshold</th>
+                <th class="py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="ticketTbody"></tbody>
@@ -839,7 +1107,7 @@
     </div>
   </div>
 
-  <!-- Publish Modal (required by workspace features) -->
+  <!-- Publish Modal -->
   <div id="publishModal" class="hidden fixed inset-0 z-[9999] bg-black/40 items-center justify-center p-4">
     <div class="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
       <div class="flex items-center justify-between">
@@ -868,11 +1136,15 @@
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div class="rounded-xl border border-slate-200 p-3">
           <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Upload Excel/CSV</div>
-          <button id="uploadPick" class="mt-3 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Choose File</button>
+          <button id="uploadPick" class="mt-3 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
+            Choose File
+          </button>
         </div>
         <div class="rounded-xl border border-slate-200 p-3">
           <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Azure DevOps</div>
-          <button id="adoOpenBtn" class="mt-3 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800">Open ADO Form</button>
+          <button id="adoOpenBtn" class="mt-3 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800">
+            Open ADO Form
+          </button>
         </div>
       </div>
 
@@ -881,19 +1153,19 @@
         <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div>
             <label class="text-xs text-slate-600">Organization</label>
-            <input id="adoOrg" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="BFLDevOpsOrg" />
+            <input id="adoOrg" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="org or dev.azure.com/org"/>
           </div>
           <div>
             <label class="text-xs text-slate-600">Project</label>
-            <input id="adoProject" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="3in1 Agile Board_MarTech" />
+            <input id="adoProject" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="project name"/>
           </div>
           <div class="md:col-span-2">
             <label class="text-xs text-slate-600">Query ID</label>
-            <input id="adoQueryId" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[12px]" value="3a6725c4-6a00-43ff-ac2a-ed550c633088" />
+            <input id="adoQueryId" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[12px]" placeholder="query GUID"/>
           </div>
           <div class="md:col-span-2">
             <label class="text-xs text-slate-600">PAT Token</label>
-            <input id="adoPat" type="password" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="PAT" />
+            <input id="adoPat" type="password" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="PAT"/>
           </div>
         </div>
         <div class="mt-3 flex justify-end gap-2">
@@ -908,19 +1180,64 @@
     </div>
   </div>
 
-  <!-- Menu toggle for the ☰ user menu -->
+  <!-- Ticket CRUD Modal -->
+  <div id="ticketModal" class="hidden fixed inset-0 z-[9999] bg-black/40 items-center justify-center p-4">
+    <div class="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
+      <div class="flex items-center justify-between">
+        <div id="ticketModalTitle" class="text-sm font-semibold">Add Ticket</div>
+        <button id="ticketModalClose" class="text-slate-500 hover:text-slate-900">✕</button>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <div>
+          <label class="text-xs text-slate-600">ID</label>
+          <input id="tId" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" placeholder="ID"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-600">Type</label>
+          <select id="tType" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200">
+            <option>Small</option>
+            <option selected>Medium</option>
+            <option>Large</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-600">Title</label>
+          <input id="tTitle" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="Title"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-600">Actual Time (hrs)</label>
+          <input id="tActual" type="number" step="0.01" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="0"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-600">Threshold (hrs)</label>
+          <input id="tThr" type="number" step="0.01" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="6"/>
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end gap-2">
+        <button id="ticketCancel" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-sm">Cancel</button>
+        <button id="ticketSave" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Save Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User menu toggle -->
   <script>
-    (function(){
-      function toggle(el){ if(el) el.classList.toggle('hidden'); }
-      window.addEventListener('DOMContentLoaded', function(){
-        var hb=document.getElementById('tw-menu-btn');
-        var hm=document.getElementById('tw-menu');
-        if(hb) hb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); toggle(hm); });
-        document.addEventListener('click', function(e){
-          if(hm && !hm.classList.contains('hidden') && !(hm.contains(e.target) || hb.contains(e.target))) hm.classList.add('hidden');
-        });
+    window.addEventListener('DOMContentLoaded', ()=>{
+      twInit();
+      const hb=qs('tw-menu-btn');
+      const hm=qs('tw-menu');
+      hb?.addEventListener('click', (e)=>{
+        e.preventDefault(); e.stopPropagation();
+        hm?.classList.toggle('hidden');
       });
-    })();
+      document.addEventListener('click', (e)=>{
+        if(hm && !hm.classList.contains('hidden') && !(hm.contains(e.target) || hb.contains(e.target))){
+          hm.classList.add('hidden');
+        }
+      });
+    });
   </script>
 </body>
 </html>
