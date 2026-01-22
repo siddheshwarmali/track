@@ -78,6 +78,8 @@
       window.twMe = me;
       if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
       if(mgr) mgr.classList.toggle('hidden', role!=='admin');
+ const eb=document.getElementById('tw-execboard');
+ if(eb){ const perms = me.permissions || {}; eb.classList.toggle('hidden', !(role==='admin' || perms.executiveBoard)); }
       if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
     }catch(e){
       const next=encodeURIComponent(location.pathname+location.search+location.hash);
@@ -139,7 +141,11 @@
         <button type="button" onclick="twNav('run')" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
           <span class="text-base">▶️</span><span>Run</span>
         </button>
-      </div>
+      
+        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+          <span class="text-base">🗂️</span><span>Executive Board</span>
+        </a>
+</div>
 
       <!-- Account -->
       <div class="p-2 border-t border-slate-100">
@@ -1615,8 +1621,8 @@
                             startDate: parseXlsDate(r['Start Date']||r.startDate), 
                             endDate: parseXlsDate(r['End Date']||r.endDate),
                             actualStartDate: parseXlsDate(r['Actual Start Date']||r.actualStartDate), 
-                            actualEndDate: parseXlsDate(r['Actual End Date']||r.actualEndDate),
-            owner: r['Owner'] || r['owner'] || '', 
+                            actualEndDate: parseXlsDate(r['Actual End Date']||r.actualEndDate), 
+                            owner: r['Owner']||r.owner||r['owner']||'',
                             remark: r.Remark||r.remark||''
                         }));
                         renderMilestones();
@@ -1815,7 +1821,7 @@
                 let badgeColor = 'bg-gray-100 text-gray-800';
                 if(tracker === 'On Track') badgeColor = 'bg-green-100 text-green-800 border-green-200';
                 if(tracker === 'Delayed') badgeColor = 'bg-red-100 text-red-800 border-red-200';
-                return `<div class="bg-white rounded-lg p-3 border border-gray-200 flex flex-col min-w-[160px] max-w-[180px] shadow-sm hover:border-blue-400 cursor-pointer" onclick="openMilestoneModal(${i})"><p class="text-xs font-bold text-gray-800 mb-2 text-center h-8 flex items-center justify-center break-words">${m.phase}</p><div class="flex-1 space-y-2 mb-2"><div class="bg-blue-50 p-1.5 rounded text-[10px]"><p class="font-bold text-blue-700">Planned</p><p>S: ${m.startDate || '-'}</p><p>E: ${m.endDate || '-'}</p></div><div class="bg-green-50 p-1.5 rounded text-[10px]"><p class="font-bold text-green-700">Actual</p><p>S: ${m.actualStartDate || '-'}</p><p>E: ${m.actualEndDate || '-'}</p></div></div><div class="bg-amber-50 p-1.5 rounded text-[10px]"><p class="font-bold text-amber-700">Owner</p><p>${m.owner ? m.owner : '-'}</p></div><div class="mb-2 px-1 border-t border-gray-50 pt-1">${m.remark ? `<div class="bg-gray-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600 line-clamp-2" title="${m.remark}">R: ${m.remark}</p></div>` : ''}<div class="flex justify-between items-center"><span class="text-[10px] text-gray-500 font-medium">Status:</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${execColor}">${execLabel}</span></div></div><div class="mt-auto pt-2 border-t border-gray-100"><span class="block text-center text-[10px] px-2 py-1 rounded-full font-bold border ${badgeColor}">${tracker}</span></div></div>`;
+                return `<div class="bg-white rounded-lg p-3 border border-gray-200 flex flex-col min-w-[160px] max-w-[180px] shadow-sm hover:border-blue-400 cursor-pointer" onclick="openMilestoneModal(${i})"><p class="text-xs font-bold text-gray-800 mb-2 text-center h-8 flex items-center justify-center break-words">${m.phase}</p><div class="flex-1 space-y-2 mb-2"><div class="bg-blue-50 p-1.5 rounded text-[10px]"><p class="font-bold text-blue-700">Planned</p><p>S: ${m.startDate || '-'}</p><p>E: ${m.endDate || '-'}</p></div><div class="bg-green-50 p-1.5 rounded text-[10px]"><p class="font-bold text-green-700">Actual</p><p>S: ${m.actualStartDate || '-'}</p><p>E: ${m.actualEndDate || '-'}</p></div></div><div class="bg-amber-50 p-1.5 rounded text-[10px]"><p class="font-bold text-amber-700">Owner</p><p>${m.owner || '-'}</p></div><div class="mb-2 px-1 border-t border-gray-50 pt-1">${m.remark ? `<div class="bg-gray-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600 line-clamp-2" title="${m.remark}">R: ${m.remark}</p></div>` : ''}<div class="flex justify-between items-center"><span class="text-[10px] text-gray-500 font-medium">Status:</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${execColor}">${execLabel}</span></div></div><div class="mt-auto pt-2 border-t border-gray-100"><span class="block text-center text-[10px] px-2 py-1 rounded-full font-bold border ${badgeColor}">${tracker}</span></div></div>`;
             }).join('');
         }
 
