@@ -12,7 +12,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <!-- JS served from /api folder -->
   <script src="/api/assets/state-client.js" defer></script>
   <script src="/api/assets/workspace.js" defer></script>
   <script src="/api/assets/run-app.js" defer></script>
@@ -24,7 +23,6 @@
     .badge-red{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;}
   </style>
 
-  <!-- Auth -->
   <script>
     async function twJson(url, opt){
       opt = opt || {};
@@ -66,7 +64,6 @@
 <body class="bg-white text-slate-900">
   <div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
 
-  <!-- Header: remove separate Actions button and Run button; use Actions menu in workspace dropdown -->
   <div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
       <div class="min-w-0">
@@ -79,9 +76,7 @@
           <option value="">Loading…</option>
         </select>
         <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
-        <button id="ws-new-btn" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-xl hover:bg-blue-700">New</button>
 
-        <!-- Rename Workspace menu button to Actions -->
         <div class="relative">
           <button id="ws-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 flex items-center gap-2">Actions</button>
           <div id="ws-actions-backdrop" class="hidden fixed inset-0 z-40"></div>
@@ -105,7 +100,6 @@
         </div>
         <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
 
-        <!-- Hamburger: remove workspace section only -->
         <div class="relative">
           <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
           <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
@@ -132,7 +126,6 @@
     </div>
   </div>
 
-  <!-- Dashboard -->
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6" id="captureRegion">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-xs text-slate-500">Total Tickets</div><div id="kpiTotal" class="mt-2 text-3xl font-extrabold">0</div></div>
@@ -193,7 +186,6 @@
     </div>
   </div>
 
-  <!-- Publish Modal -->
   <div id="publishModal" class="hidden fixed inset-0 z-[9999] bg-black/40 items-center justify-center p-4">
     <div class="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
       <div class="flex items-center justify-between">
@@ -211,7 +203,6 @@
     </div>
   </div>
 
-  <!-- Generate Report Modal (previously Run Modal) -->
   <div id="runModal" class="hidden fixed inset-0 z-[9999] bg-black/40 items-center justify-center p-4">
     <div class="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
       <div class="flex items-center justify-between">
@@ -263,7 +254,6 @@
     </div>
   </div>
 
-  <!-- Menu toggle for hamburger only -->
   <script>
     (function(){
       function toggle(el){ if(el) el.classList.toggle('hidden'); }
