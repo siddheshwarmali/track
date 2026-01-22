@@ -78,6 +78,8 @@
       window.twMe = me;
       if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
       if(mgr) mgr.classList.toggle('hidden', role!=='admin');
+ const eb=document.getElementById('tw-execboard');
+ if(eb){ const perms = me.permissions || {}; eb.classList.toggle('hidden', !(role==='admin' || perms.executiveBoard)); }
       if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
     }catch(e){
       const next=encodeURIComponent(location.pathname+location.search+location.hash);
@@ -133,13 +135,13 @@
       <!-- Navigation -->
       <div class="p-2">
         <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-        <a href=\"/build.html\" class=\"w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50\">
-          <span class="text-base">🛠️</span><span>Build</span>
+        <a id="nav-build" href="/build.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50"><span class="text-base">🛠️</span><span>Build</span></a>
+        <a id="nav-run" href="/run.html" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50"><span class="text-base">▶️</span><span>Run</span></a>
+      
+        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+          <span class="text-base">🗂️</span><span>Executive Board</span>
         </a>
-        <a href=\"/run.html\" class=\"w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50\">
-          <span class="text-base">▶️</span><span>Run</span>
-        </a>
-      </div>
+</div>
 
       <!-- Account -->
       <div class="p-2 border-t border-slate-100">
@@ -437,12 +439,7 @@
             <!-- END BUILD TAB -->
 
             <!-- RUN TAB CONTENT (IFrame Container) -->
-            <div id="content-run" class="animate-fade-in hidden h-[800px] w-full bg-[#0f172a] rounded-lg overflow-hidden">
-                <iframe id="run-iframe" class="w-full h-full border-0"></iframe>
-            </div>
-
-        </div>
-    </div>
+            
 
     <!-- MODALS -->
 
@@ -564,7 +561,7 @@
     <div id="modal-milestone" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in">
             <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-800" id="milestone-modal-title">Add New Milestone</h3><button onclick="closeModal('modal-milestone')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea id="ms-remark" class="w-full border border-gray-300 rounded-lg p-2 h-20"></textarea></div></div>
+            <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Owner</label><input type="text" id="ms-owner" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Owner name"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea id="ms-remark" class="w-full border border-gray-300 rounded-lg p-2 h-20"></textarea></div></div>
             <div class="flex justify-end space-x-3 mt-6"><button id="btn-delete-ms" onclick="deleteMilestone()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium mr-auto hidden">Delete</button><button onclick="closeModal('modal-milestone')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button onclick="saveMilestone()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Save</button></div>
         </div>
     </div>
@@ -626,781 +623,7 @@
     </div>
 
     <!-- TEMPLATE FOR RUN TAB -->
-    <template id="run-dashboard-template">
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Headless CMS Authoring Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%); min-height: 100vh; padding: 20px; color: white; }
-        .container { max-width: 1400px; margin: 0 auto; }
-        .header { margin-bottom: 40px; text-align: center; }
-        .header h1 { font-size: 2.5rem; margin-bottom: 10px; font-weight: 700; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header p { color: #93c5fd; font-size: 1.1rem; }
-        .controls-container { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; margin-bottom: 40px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; gap: 20px; }
-        .file-input { display: none; }
-        .btn { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: all 0.3s ease; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(59, 130, 246, 0.4); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-        .btn-generate { background: linear-gradient(135deg, #10b981, #059669); }
-        .btn-sync { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-        .btn-download { background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 20px; padding: 15px 30px; font-size: 1.1rem; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.4); display: inline-block; }
-        .btn-download:hover { box-shadow: 0 12px 40px rgba(245, 158, 11, 0.6); }
-        .download-section { text-align: center; margin: 40px 0; }
-        .status-text { color: #93c5fd; font-size: 1rem; font-family: monospace; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .kpi-card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.3s ease; cursor: pointer; }
-        .kpi-card:hover { transform: translateY(-5px); }
-        .kpi-card.blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-        .kpi-card.green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-        .kpi-card.red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .kpi-card.purple { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); }
-        .kpi-label { font-size: 0.9rem; opacity: 0.9; margin-bottom: 10px; }
-        .kpi-value { font-size: 3rem; font-weight: 700; }
-        .charts-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-bottom: 40px; }
-        .chart-card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .chart-container { position: relative; height: 350px; }
-        .full-width { grid-column: 1 / -1; }
-        .table-container { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); overflow-x: auto; margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; text-align: left; }
-        th { background: rgba(255, 255, 255, 0.1); font-weight: 600; border-bottom: 2px solid rgba(255, 255, 255, 0.2); }
-        tr:hover { background: rgba(255, 255, 255, 0.05); cursor: pointer; }
-        .badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
-        .badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
-        .badge-red { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
-        .badge-yellow { background: rgba(251, 191, 36, 0.2); color: #fde047; }
-        .footer { text-align: center; color: #93c5fd; margin-top: 40px; padding: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        #dashboard { display: none; }
-        #dashboard.active { display: block; }
-        .alert { padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
-        .alert-error { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-overlay.active { display: flex; }
-        .modal-content { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 30px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); position: relative; color: white; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .modal-title { font-size: 1.5rem; font-weight: 700; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; transition: color 0.3s; }
-        .close-btn:hover { color: white; }
-        .form-group { margin-bottom: 15px; }
-        .form-label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #93c5fd; }
-        .form-input { width: 100%; padding: 10px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 1rem; outline: none; }
-        .form-input:focus { border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2); }
-        .form-select { width: 100%; padding: 10px 15px; background: #0f172a; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 1rem; outline: none; }
-        .action-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .edit-btn { padding: 5px 10px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-right: 5px; }
-        .edit-btn:hover { background: rgba(59, 130, 246, 0.4); }
-        .delete-btn { padding: 5px 10px; background: rgba(239, 68, 68, 0.2); color: #f87171; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-        .delete-btn:hover { background: rgba(239, 68, 68, 0.4); }
-    </style>
-
-    <style>
-      @keyframes ghspin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
-      /* Hide Clear Storage button */
-      button[onclick^="wsClearLocalStorage"], button[onclick="wsClearLocalStorage()"] { display:none !important; }
-    </style>
-
-<script>
-  async function twJson(url, opt){
-    const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
-    const t = await r.text();
-    let j={};
-    try{ j=JSON.parse(t||'{}'); }catch{ j={error:t}; }
-    if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
-    return j;
-  }
-
-  async function twInit(){
-    const pill=document.getElementById('tw-userpill');
-    const mgr=document.getElementById('tw-usermgr');
-    const lo=document.getElementById('tw-logout');
-    try{
-      const me = await twJson('/api/auth/me');
-      if(!me || !me.authenticated){
-        const next=encodeURIComponent(location.pathname+location.search+location.hash);
-        location.replace('/login.html?next='+next);
-        return;
-      }
-      const role = me.role || 'viewer';
-      document.body.classList.remove('role-admin','role-creator','role-viewer');
-      document.body.classList.add('role-'+role);
-      if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
-      if(mgr) mgr.classList.toggle('hidden', role!=='admin');
-      if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
-    }catch(e){
-      const next=encodeURIComponent(location.pathname+location.search+location.hash);
-      location.replace('/login.html?next='+next);
-    }
-  }
-  window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
-</script>
-
-</head>
-<body>
-
-<div id="gh-reset-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);">
-  <div style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);background:#0b1220; color:#fff; padding:18px 20px;border-radius:14px; width:min(520px,92vw); border:1px solid rgba(255,255,255,0.12); box-shadow:0 12px 40px rgba(0,0,0,0.35);">
-    <div style="display:flex;gap:12px;align-items:center;">
-      <div style="width:22px;height:22px;border-radius:999px;border:3px solid rgba(255,255,255,0.25);border-top-color:#22c55e;animation:ghspin 0.8s linear infinite;"></div>
-      <div>
-        <div style="font-weight:700;font-size:14px;">Loading dashboard…</div>
-        <div id="gh-reset-msg" style="opacity:0.85;font-size:12px;margin-top:2px;">Resetting view and fetching from GitHub</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-    <div class="container">
-        <!-- Controls First -->
-        <div class="controls-container">
-            <input type="file" id="fileInput" class="file-input" accept=".xlsx, .xls, .csv" />
-            <button class="btn" onclick="document.getElementById('fileInput').click()">📁 Choose Excel/CSV File</button>
-            <span class="status-text" style="opacity:0.7">OR</span>
-            <button class="btn btn-sync" id="syncAdoBtn" onclick="requestAdoSync()">
-                <i data-lucide="cloud-lightning" class="w-4 h-4"></i> Sync from ADO
-            </button>
-            <span id="fileName" class="status-text">No file chosen</span>
-            <button class="btn btn-generate" id="processBtn" onclick="processData()" disabled>🚀 Generate Report</button>
-        </div>
-
-        <!-- Capture Region for Download -->
-        <div id="capture-region">
-            <div class="header">
-                <h1>🎯 Headless CMS Authoring Dashboard</h1>
-                <p>Authoring Weekly Report (Total Closed Headless Run Task)</p>
-            </div>
-            <div id="alertContainer"></div>
-            <div id="dashboard">
-                <div class="kpi-grid">
-                    <div class="kpi-card blue" ondblclick="openTicketList('all')"><div class="kpi-label">Total Tickets</div><div class="kpi-value" id="totalTickets">0</div></div>
-                    <div class="kpi-card green" ondblclick="openTicketList('status', 'onTime')"><div class="kpi-label">On Time Delivery</div><div class="kpi-value" id="onTimeTickets">0</div></div>
-                    <div class="kpi-card red" ondblclick="openTicketList('status', 'breached')"><div class="kpi-label">SLA Breached</div><div class="kpi-value" id="breachedTickets">0</div></div>
-                    <div class="kpi-card purple" ondblclick="openTicketList('all')"><div class="kpi-label">SLA Achievement</div><div class="kpi-value" id="slaPercentage">0%</div></div>
-                </div>
-                <div class="charts-grid" id="chartsArea">
-                    <div class="chart-card" id="pieChartCard"><h2>📊 SLA Performance Overview</h2><div class="chart-container"><canvas id="pieChart"></canvas></div></div>
-                </div>
-                <div class="table-container" id="summaryTableSection">
-                    <h2 style="color: #93c5fd; margin-bottom: 20px;">📋 Ticket Type Summary</h2>
-                    <table id="summaryTable"><thead><tr><th>Ticket Type</th><th style="text-align: center;">Threshold (hrs)</th><th style="text-align: center;">Total Count</th><th style="text-align: center;">On Time</th><th style="text-align: center;">Breached</th><th style="text-align: center;">Avg Time (hrs)</th><th style="text-align: center;">SLA %</th></tr></thead><tbody id="tableBody"></tbody></table>
-                </div>
-                <div class="chart-card full-width" id="barChartSection"><h2>📈 Ticket Type Distribution & SLA Status</h2><div class="chart-container" style="height: 550px; padding-top: 20px;"><canvas id="barChart"></canvas></div></div>
-            </div>
-        </div>
-
-        <div class="download-section" id="downloadSection">
-            <button class="btn btn-download" onclick="downloadReportAsJPG()" id="downloadBtn">📸 Download Complete Report as JPG</button>
-        </div>
-        <div class="footer"><p>Dashboard refreshed: <span id="currentTime"></span></p></div>
-    </div>
-
-    <!-- LIST MODAL -->
-    <div id="listModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header"><h3 class="modal-title" id="listModalTitle">Ticket Details</h3><button class="close-btn" onclick="closeListModal()">×</button></div>
-            <div style="margin-bottom: 15px; display:flex; justify-content:flex-end;"><button class="btn btn-sync" onclick="addTicket()" style="padding: 8px 15px; font-size: 0.9rem;">+ Add New Ticket</button></div>
-            <div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;"><thead><tr style="border-bottom: 1px solid rgba(255,255,255,0.2); text-align: left;"><th style="padding: 10px;">ID</th><th style="padding: 10px;">Title</th><th style="padding: 10px;">Type</th><th style="padding: 10px;">Hours</th><th style="padding: 10px;">Threshold</th><th style="padding: 10px;">Status</th><th style="padding: 10px; text-align: right;">Actions</th></tr></thead><tbody id="ticketListBody"></tbody></table></div>
-        </div>
-    </div>
-
-    <!-- EDIT/ADD MODAL -->
-    <div id="editModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 500px;">
-            <div class="modal-header"><h3 class="modal-title" id="editModalTitle">Edit Ticket</h3><button class="close-btn" onclick="closeEditModal()">×</button></div>
-            <input type="hidden" id="editIndex">
-            <div class="form-group"><label class="form-label">ID</label><input type="text" id="editId" class="form-input" placeholder="Auto-generated or Enter ID"></div>
-            <div class="form-group"><label class="form-label">Ticket Title</label><input type="text" id="editTitle" class="form-input" placeholder="Enter task title"></div>
-            <div class="form-group"><label class="form-label">Ticket Type</label><select id="editType" class="form-select" onchange="updateThresholdFromType()"><option value="Small">Small</option><option value="Medium">Medium</option><option value="Large">Large</option></select></div>
-            <div class="form-group"><label class="form-label">Actual Time (Business Hours)</label><input type="number" id="editTime" class="form-input" step="0.01" min="0"></div>
-            <div class="form-group"><label class="form-label">Threshold (Hours)</label><input type="number" id="editThreshold" class="form-input" step="0.5" min="0"></div>
-            <div class="action-row"><button class="btn" style="background: #475569;" onclick="closeEditModal()">Cancel</button><button class="btn" onclick="saveTicket()">Save Changes</button></div>
-        </div>
-    </div>
-
-    <script>
-        let pieChart, barChart;
-        let loadedTicketData = null;
-        if (typeof ChartDataLabels !== 'undefined') { Chart.register(ChartDataLabels); }
-        lucide.createIcons();
-
-        const fileInput = document.getElementById('fileInput');
-        fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
-
-        function showAlert(message) { const alertContainer = document.getElementById('alertContainer'); alertContainer.innerHTML = `<div class="alert alert-error">${message}</div>`; setTimeout(() => { alertContainer.innerHTML = ''; }, 5000); }
-
-        function openTicketList(filterType, filterValue) {
-            if(!loadedTicketData) return;
-            const modal = document.getElementById('listModal');
-            const tbody = document.getElementById('ticketListBody');
-            tbody.innerHTML = '';
-            let filtered = [];
-            let titleText = 'All Tickets';
-            if(filterType === 'all') { filtered = loadedTicketData; } 
-            else if (filterType === 'status') { titleText = filterValue === 'onTime' ? 'On Time Tickets' : 'Breached Tickets'; filtered = loadedTicketData.filter(t => filterValue === 'onTime' ? t.actualTime <= t.threshold : t.actualTime > t.threshold ); } 
-            else if (filterType === 'type') { titleText = `${filterValue} Tickets`; filtered = loadedTicketData.filter(t => t.type === filterValue); }
-            document.getElementById('listModalTitle').textContent = titleText;
-            filtered.forEach((t) => {
-                const index = loadedTicketData.indexOf(t);
-                const isBreached = t.actualTime > t.threshold;
-                const row = `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 10px; color: #93c5fd; font-family: monospace;">${t.id || '-'}</td><td style="padding: 10px;">${t.title || 'Untitled'}</td><td style="padding: 10px;"><span class="badge" style="background: rgba(255,255,255,0.1); font-size: 0.8rem;">${t.type}</span></td><td style="padding: 10px;">${t.actualTime}</td><td style="padding: 10px;">${t.threshold}</td><td style="padding: 10px;"><span class="badge ${isBreached ? 'badge-red' : 'badge-green'}" style="font-size: 0.75rem;">${isBreached ? 'Breached' : 'On Time'}</span></td><td style="padding: 10px; text-align: right;"><span class="edit-btn" onclick="editTicket(${index})">Edit</span><span class="delete-btn" onclick="deleteTicket(${index})">Delete</span></td></tr>`;
-                tbody.innerHTML += row;
-            });
-            modal.classList.add('active');
-        }
-
-        function closeListModal() { document.getElementById('listModal').classList.remove('active'); }
-        function addTicket() { document.getElementById('editIndex').value = '-1'; document.getElementById('editId').value = Math.floor(Math.random() * 1000000); document.getElementById('editTitle').value = ''; document.getElementById('editType').value = 'Medium'; document.getElementById('editTime').value = ''; document.getElementById('editThreshold').value = '6'; document.getElementById('editModalTitle').innerText = 'Add New Ticket'; closeListModal(); document.getElementById('editModal').classList.add('active'); }
-        function editTicket(index) { const t = loadedTicketData[index]; document.getElementById('editIndex').value = index; document.getElementById('editId').value = t.id || ''; document.getElementById('editTitle').value = t.title || ''; document.getElementById('editType').value = t.type; document.getElementById('editTime').value = t.actualTime; document.getElementById('editThreshold').value = t.threshold; document.getElementById('editModalTitle').innerText = 'Edit Ticket'; closeListModal(); document.getElementById('editModal').classList.add('active'); }
-        function updateThresholdFromType() { const type = document.getElementById('editType').value; const map = { 'Small': 4, 'Medium': 6, 'Large': 8 }; if(map[type]) document.getElementById('editThreshold').value = map[type]; }
-        function saveTicket() { const index = parseInt(document.getElementById('editIndex').value); const id = document.getElementById('editId').value; const title = document.getElementById('editTitle').value; const type = document.getElementById('editType').value; const time = parseFloat(document.getElementById('editTime').value); const threshold = parseFloat(document.getElementById('editThreshold').value); if(isNaN(time) || isNaN(threshold)) { alert("Please enter valid numbers"); return; } const newItem = { id: id, title: title, type: type, actualTime: time, threshold: threshold }; if(index === -1) { if(!loadedTicketData) loadedTicketData = []; loadedTicketData.push(newItem); } else { loadedTicketData[index] = newItem; } closeEditModal(); generateDashboard(loadedTicketData); openTicketList('all'); }
-        function deleteTicket(index) { if(confirm("Are you sure?")) { loadedTicketData.splice(index, 1); generateDashboard(loadedTicketData); openTicketList('all'); } }
-        function closeEditModal() { document.getElementById('editModal').classList.remove('active'); if(loadedTicketData && loadedTicketData.length > 0) openTicketList('all'); }
-
-        function requestAdoSync() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Connecting...`; lucide.createIcons(); window.parent.postMessage({ type: 'REQUEST_ADO_SYNC_RUN' }, '*'); }
-
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'ADO_DATA_FOR_RUN') {
-                const tickets = event.data.payload;
-                if(!tickets || tickets.length === 0) { showAlert('❌ No valid tickets found.'); resetSyncBtn(); return; }
-                loadedTicketData = tickets;
-                document.getElementById('fileName').textContent = "Synced from Azure DevOps";
-                document.getElementById('processBtn').disabled = false;
-                document.getElementById('processBtn').style.opacity = 1;
-                resetSyncBtn();
-                processData();
-            }
-        });
-
-        function resetSyncBtn() { const btn = document.getElementById('syncAdoBtn'); btn.innerHTML = `<i data-lucide="cloud-lightning" class="w-4 h-4"></i> Sync from ADO`; lucide.createIcons(); }
-
-        function parseCustomDate(dateStr) {
-            if (!dateStr) return null;
-            if (typeof dateStr === 'number') return new Date(Math.round((dateStr - 25569) * 86400 * 1000));
-            if (typeof dateStr === 'string') {
-                const parts = dateStr.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s(\d{1,2}):(\d{1,2})/);
-                if (parts) return new Date(parts[3], parts[2] - 1, parts[1], parts[4], parts[5]);
-                const d = new Date(dateStr); if (!isNaN(d.getTime())) return d;
-            }
-            return null;
-        }
-
-        function calculateBusinessHours(startDate, endDate) {
-            let minutes = 0; if (!startDate || !endDate || startDate >= endDate) return 0;
-            if ((endDate - startDate) > 31536000000) return 0; 
-            let ptr = new Date(startDate);
-            while (ptr < endDate) {
-                if (ptr.getDay() !== 0 && ptr.getDay() !== 6) {
-                    if (ptr.getHours() >= 9 && ptr.getHours() < 17) minutes += 60;
-                }
-                ptr.setHours(ptr.getHours() + 1); ptr.setMinutes(0); ptr.setSeconds(0);
-            }
-            return parseFloat((minutes / 60).toFixed(2));
-        }
-
-        function handleFile(file) {
-            if (!file.name.match(/\.(xlsx|xls|csv)$/)) { showAlert('❌ Please upload valid Excel or CSV'); return; }
-            loadedTicketData = null;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    if (jsonData.length === 0) { showAlert('❌ File is empty'); return; }
-                    const ticketData = jsonData.map((row) => {
-                        const title = row['Title'] || row['title'];
-                        const id = row['ID'] || row['id'] || Math.floor(Math.random() * 1000000);
-                        let ticketType = row['Ticket type'];
-                        const tags = (row['Tags'] || row['tags'] || '').toLowerCase();
-                        if (tags.includes('small')) ticketType = 'Small';
-                        else if (tags.includes('large')) ticketType = 'Large';
-                        else if (tags.includes('medium')) ticketType = 'Medium';
-                        else if (!ticketType) ticketType = 'Medium';
-                        let actualTime = parseFloat(row['Actual time']);
-                        if (isNaN(actualTime)) {
-                            const start = row['Actual Start date'] || row['Actual Start Date'] || row['Start Date'] || row['start date'];
-                            const end = row['Actual End date'] || row['Actual End Date'] || row['End Date'] || row['end date'];
-                            if (start && end) actualTime = calculateBusinessHours(parseCustomDate(start), parseCustomDate(end));
-                            else actualTime = 0;
-                        }
-                        let threshold = parseFloat(row['Threshold']);
-                        if (isNaN(threshold)) threshold = { 'Small': 4, 'Medium': 6, 'Large': 8 }[ticketType] || 6;
-                        return { id: id, title: title, actualTime: actualTime, type: ticketType, threshold: threshold };
-                    });
-                    const validTickets = ticketData.filter(t => t.type);
-                    if (validTickets.length === 0) { showAlert('❌ No valid data found'); return; }
-                    loadedTicketData = validTickets;
-                    document.getElementById('fileName').textContent = file.name;
-                    document.getElementById('processBtn').disabled = false;
-                    document.getElementById('processBtn').style.opacity = 1;
-                } catch (error) { showAlert('❌ Error: ' + error.message); }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function processData() { if (!loadedTicketData) return; generateDashboard(loadedTicketData); }
-
-        function generateDashboard(ticketData) {
-            document.getElementById('dashboard').classList.add('active');
-            const total = ticketData.length;
-            const onTime = ticketData.filter(t => t.actualTime <= t.threshold).length;
-            const breached = total - onTime;
-            const slaPercentage = ((onTime / total) * 100).toFixed(1);
-            window.parent.postMessage({ type: 'BAU_UPDATE', payload: { totalTickets: total, withinSLA: onTime, breachedSLA: breached, slaPercentage: slaPercentage } }, '*');
-            document.getElementById('totalTickets').textContent = total;
-            document.getElementById('onTimeTickets').textContent = onTime;
-            document.getElementById('breachedTickets').textContent = breached;
-            document.getElementById('slaPercentage').textContent = slaPercentage + '%';
-            if (pieChart) pieChart.destroy(); if (barChart) barChart.destroy();
-            const pieCtx = document.getElementById('pieChart').getContext('2d');
-            pieChart = new Chart(pieCtx, {
-                type: 'doughnut',
-                data: { labels: ['On Time', 'SLA Breached'], datasets: [{ data: [onTime, breached], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff', font: { size: 14 }, padding: 20 } }, datalabels: { color: '#fff', font: { weight: 'bold', size: 16 }, formatter: (value) => `${value}\n${((value / total) * 100).toFixed(1)}%`, display: true } } }
-            });
-            const byType = {};
-            ticketData.forEach((ticket) => {
-                if (!byType[ticket.type]) { byType[ticket.type] = { total: 0, onTime: 0, breached: 0, totalTime: 0 }; }
-                byType[ticket.type].total += 1; byType[ticket.type].totalTime += ticket.actualTime;
-                if (ticket.actualTime <= ticket.threshold) byType[ticket.type].onTime += 1; else byType[ticket.type].breached += 1;
-            });
-            const barData = Object.keys(byType).map(type => ({ type, ...byType[type] }));
-            const barCtx = document.getElementById('barChart').getContext('2d');
-            barChart = new Chart(barCtx, {
-                type: 'bar',
-                data: { labels: barData.map(d => d.type), datasets: [{ label: 'On Time', data: barData.map(d => d.onTime), backgroundColor: '#10b981' }, { label: 'Breached', data: barData.map(d => d.breached), backgroundColor: '#ef4444' }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#fff', font: { size: 14 } }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, y: { ticks: { color: '#fff', font: { size: 14 } }, grid: { color: 'rgba(255, 255, 255, 0.1)' }, beginAtZero: true } }, plugins: { legend: { labels: { color: '#fff', font: { size: 14 } } } } }
-            });
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
-            barData.forEach(data => {
-                const avgTime = (data.totalTime / data.total).toFixed(2);
-                const slaPercent = ((data.onTime / data.total) * 100).toFixed(1);
-                let badgeClass = 'badge-green'; if (slaPercent < 70) badgeClass = 'badge-red'; else if (slaPercent < 90) badgeClass = 'badge-yellow';
-                const row = `<tr ondblclick="openTicketList('type', '${data.type}')"><td><strong>${data.type}</strong></td><td style="text-align: center;">${{ 'Small': 4, 'Medium': 6, 'Large': 8 }[data.type] || '-'}</td><td style="text-align: center;">${data.total}</td><td style="text-align: center;"><span class="badge badge-green">${data.onTime}</span></td><td style="text-align: center;"><span class="badge badge-red">${data.breached}</span></td><td style="text-align: center;">${avgTime}</td><td style="text-align: center;"><span class="badge ${badgeClass}">${slaPercent}%</span></td></tr>`;
-                tableBody.innerHTML += row;
-            });
-            document.getElementById('currentTime').textContent = new Date().toLocaleString();
-            document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        async function downloadReportAsJPG() {
-            const btn = document.getElementById('downloadBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Generating...';
-            try {
-                const canvas = await html2canvas(document.getElementById('capture-region'), { backgroundColor: '#0f172a', scale: 2 });
-                const link = document.createElement('a'); link.download = `Report_${new Date().toISOString().split('T')[0]}.jpg`; link.href = canvas.toDataURL('image/jpeg', 1.0); link.click();
-            } catch (err) { console.error(err); alert('Error downloading report'); }
-            btn.innerHTML = originalText;
-        }
-    </script>
-
-<script>
-  // ---------- Advanced Loader ----------
-  const twLoader = {
-    show(title='Loading…', sub='Please wait', pct=15) {
-      const el = document.getElementById('tw-app-loader');
-      if (!el) return;
-      document.getElementById('tw-loader-title').textContent = title;
-      document.getElementById('tw-loader-sub').textContent = sub;
-      twLoader.pct(pct);
-      el.classList.remove('hidden');
-    },
-    hide() {
-      const el = document.getElementById('tw-app-loader');
-      if (!el) return;
-      el.classList.add('hidden');
-    },
-    pct(p) {
-      const bar = document.getElementById('tw-loader-bar');
-      if (bar) bar.style.width = Math.max(5, Math.min(100, p)) + '%';
-    }
-  };
-
-  // ---------- Advanced Hamburger ----------
-  function twMenuOpen(open) {
-    const menu = document.getElementById('tw-menu');
-    if (!menu) return;
-    const next = (typeof open === 'boolean') ? open : menu.classList.contains('hidden');
-    menu.classList.toggle('hidden', !next);
-  }
-
-  function twNav(tab) {
-    try {
-      if (typeof switchTab === 'function') switchTab(tab);
-    } finally {
-      twMenuOpen(false);
-    }
-  }
-
-  // Workspace select inside hamburger mirrors main workspace select
-  function twSyncWsSelectFromMain() {
-    const main = document.getElementById('ws-select');
-    const tw = document.getElementById('tw-ws-select');
-    if (!main || !tw) return;
-    tw.innerHTML = main.innerHTML;
-    tw.value = main.value;
-    const ind = document.getElementById('tw-ws-indicator');
-    const saved = document.getElementById('ws-saved-indicator');
-    if (ind && saved) ind.textContent = saved.textContent || '';
-  }
-
-  async function twSelectWorkspace(id) {
-    try {
-      twMenuOpen(false);
-      if (!id) return;
-      if (typeof wsSelectWorkspace === 'function') {
-        twLoader.show('Loading dashboard…', 'Switching workspace', 35);
-        twLoader.pct(45);
-        await Promise.resolve(wsSelectWorkspace(id));
-        // Ensure render on first load / after switch
-        if (typeof renderAll === 'function') renderAll();
-      }
-    } catch (e) {
-      console.error(e);
-      alert(e.message || String(e));
-    } finally {
-      twLoader.hide();
-      // sync selects
-      setTimeout(twSyncWsSelectFromMain, 50);
-    }
-  }
-
-  async function twWsAction(action) {
-    try {
-      twMenuOpen(false);
-      if (!action) return;
-      if (action === 'new') return wsOpenCreateModal && wsOpenCreateModal();
-      if (action === 'rename') return wsRenameCurrent && wsRenameCurrent();
-      if (action === 'delete') {
-        twLoader.show('Deleting dashboard…', 'Removing from GitHub / database', 40);
-        return await Promise.resolve(wsDeleteCurrent && wsDeleteCurrent());
-      }
-      if (action === 'save') {
-        twLoader.show('Saving dashboard…', 'Persisting to GitHub / database', 45);
-        return await Promise.resolve(wsSaveNow && wsSaveNow({ prompt: true }));
-      }
-      if (action === 'export') return wsExportCurrent && wsExportCurrent();
-      if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
-      if (action === 'import') {
-        const inp = document.getElementById('ws-import-file');
-        if (inp) inp.click();
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-      alert(e.message || String(e));
-    } finally {
-      twLoader.hide();
-      setTimeout(twSyncWsSelectFromMain, 50);
-    }
-  }
-
-  // ---------- First-load Fix + Advanced Init ----------
-  async function twInitApp() {
-    try {
-      twLoader.show('Starting…', 'Checking session', 15);
-      // Ensure auth init runs (existing twInit redirects if not logged in)
-      if (typeof twInit === 'function') {
-        await Promise.resolve(twInit());
-      }
-      twLoader.pct(30);
-
-      // Inject Run iframe content early so Run tab is ready
-      try {
-        const tmpl = document.getElementById('run-dashboard-template');
-        const iframe = document.getElementById('run-iframe');
-        if (tmpl && iframe && !iframe.srcdoc) {
-          iframe.srcdoc = tmpl.innerHTML;
-        }
-      } catch (e) {
-        console.warn('Run iframe init failed:', e);
-      }
-
-      twLoader.show('Loading dashboards…', 'Syncing workspace list', 45);
-
-      // Initialize workspace manager (some versions are async)
-      if (typeof wsInitWorkspaceManager === 'function') {
-        await Promise.resolve(wsInitWorkspaceManager());
-      }
-      twLoader.pct(70);
-
-      // Ensure first-time render happens (this fixes "loads only after switching dashboard")
-      if (typeof renderAll === 'function') {
-        renderAll();
-      }
-
-      // Sync hamburger workspace select from main select
-      setTimeout(twSyncWsSelectFromMain, 100);
-
-      // Hook main workspace select changes to keep hamburger select updated
-      const mainSel = document.getElementById('ws-select');
-      if (mainSel) {
-        mainSel.addEventListener('change', () => setTimeout(twSyncWsSelectFromMain, 50));
-      }
-
-      twLoader.show('Almost done…', 'Finalizing UI', 88);
-      // Allow browser a tick to paint
-      await new Promise(r => setTimeout(r, 150));
-      twLoader.hide();
-
-    } catch (e) {
-      console.error(e);
-      twLoader.show('Failed to load', e.message || String(e), 100);
-      // keep visible so user can read
-    }
-  }
-
-  // Close menu on outside click and Escape; open on button
-  window.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('tw-menu-btn');
-    const menu = document.getElementById('tw-menu');
-    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); twMenuOpen(); });
-    document.addEventListener('click', (e) => {
-      if (!menu) return;
-      const inside = menu.contains(e.target) || (btn && btn.contains(e.target));
-      if (!inside) twMenuOpen(false);
-    });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') twMenuOpen(false); });
-
-    // Start app init after DOM is ready
-    twInitApp();
-  });
-</script>
-
-<script>
-
-// ===== Workspace Actions Menu (responsive) =====
-(function(){
-  function qs(id){ return document.getElementById(id); }
-  function isOpen(){ const m=qs('ws-actions-menu'); return m && !m.classList.contains('hidden'); }
-  function openMenu(){
-    const menu = qs('ws-actions-menu');
-    const btn = qs('ws-actions-btn');
-    const back = qs('ws-actions-backdrop');
-    if(!menu || !btn) return;
-    menu.classList.remove('hidden');
-    btn.setAttribute('aria-expanded','true');
-    if(back) back.classList.remove('hidden');
-  }
-  function closeMenu(){
-    const menu = qs('ws-actions-menu');
-    const btn = qs('ws-actions-btn');
-    const back = qs('ws-actions-backdrop');
-    if(menu) menu.classList.add('hidden');
-    if(back) back.classList.add('hidden');
-    if(btn) btn.setAttribute('aria-expanded','false');
-  }
-  async function perform(action){
-    if(action==='new') return window.wsOpenCreateModal && window.wsOpenCreateModal();
-    if(action==='rename') return window.wsRenameCurrent && window.wsRenameCurrent();
-    if(action==='save') return window.wsSaveNow && window.wsSaveNow({prompt:true});
-    if(action==='delete') return window.wsDeleteCurrent && window.wsDeleteCurrent();
-    if(action==='export') return window.wsExportCurrent && window.wsExportCurrent();
-    if(action==='exportExcel') return window.wsExportCurrentExcel && window.wsExportCurrentExcel();
-    if(action==='import'){
-      const inp = qs('ws-import-file');
-      if(inp) inp.click();
-      return;
-    }
-  }
-  window.addEventListener('DOMContentLoaded', ()=>{
-    const btn = qs('ws-actions-btn');
-    const menu = qs('ws-actions-menu');
-    const back = qs('ws-actions-backdrop');
-    if(btn) btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); isOpen()?closeMenu():openMenu(); });
-    if(back) back.addEventListener('click', closeMenu);
-    if(menu) menu.addEventListener('click', async (e)=>{
-      const t=e.target;
-      const c=t && t.closest ? t.closest('[data-ws-close]') : null;
-      if(c){ e.preventDefault(); closeMenu(); return; }
-      const item=t && t.closest ? t.closest('[data-ws-action]') : null;
-      if(!item) return;
-      e.preventDefault();
-      const action=item.getAttribute('data-ws-action');
-      closeMenu();
-      try{ await perform(action); }catch(err){ console.error(err); alert(err.message||String(err)); }
-    });
-    document.addEventListener('click', (e)=>{ if(!isOpen()) return; const inside = (menu && menu.contains(e.target)) || (btn && btn.contains(e.target)); if(!inside) closeMenu(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-  });
-})();
-
-</script>
-
-
-<!-- Publish Modal -->
-<div id="modal-publish" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl animate-fade-in">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-bold text-slate-900">Publish Dashboard</h3>
-      <button onclick="closeModal('modal-publish')" class="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
-    </div>
-    <p class="text-sm text-slate-600">Choose <b>who</b> can see this dashboard. (All sections will be visible to published users.)</p>
-
-    <div id="publish-err" class="hidden mt-3 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
-    <div id="publish-ok" class="hidden mt-3 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3"></div>
-
-    <div class="mt-4 grid md:grid-cols-2 gap-4">
-      <div class="border border-slate-200 rounded-xl p-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Audience</div>
-        <label class="flex items-center gap-2 mt-2 p-2 rounded border border-slate-200 bg-slate-50">
-          <input id="publish-all" type="checkbox" class="w-4 h-4" />
-          <span class="text-sm font-medium text-slate-800">Publish to <b>All users</b></span>
-        </label>
-        <div class="mt-3">
-          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Or select specific users</div>
-          <div id="publish-users" class="mt-2 max-h-56 overflow-auto border border-slate-200 rounded-lg"></div>
-        </div>
-      </div>
-      <div class="border border-slate-200 rounded-xl p-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note</div>
-        <p class="mt-2 text-sm text-slate-600">Only the <b>owner</b> of the dashboard or an <b>admin</b> can publish/unpublish.</p>
-      </div>
-    </div>
-
-    <div class="mt-5 flex justify-end gap-2">
-      <button onclick="closeModal('modal-publish')" class="px-4 py-2 bg-slate-100 text-slate-800 rounded-lg text-sm">Cancel</button>
-      <button id="btn-publish-now" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Publish</button>
-    </div>
-  </div>
-</div>
-
-
-
-<script>
-// Publish/Unpublish (audience only) - always present in UI
-(function(){
-  function qs(id){ return document.getElementById(id); }
-  function getCurrentDashId(){
-    try { if (typeof wsCurrentId !== 'undefined' && wsCurrentId) return wsCurrentId; } catch(e) {}
-    if (window.wsCurrentId) return window.wsCurrentId;
-    const p = new URLSearchParams(location.search);
-    return p.get('dash');
-  }
-  async function apiJson(url, opt){
-    opt = opt || {};
-    const r = await fetch(url, { credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}, ...opt });
-    const t = await r.text();
-    let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
-    if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
-    return j;
-  }
-  function canPublish(){
-    const me = window.twMe || {};
-    if(!me.authenticated) return false;
-    if(me.role === 'admin') return true;
-    return (window.wsCurrentMeta && window.wsCurrentMeta.ownerId && window.wsCurrentMeta.ownerId === me.userId);
-  }
-  function showErr(msg){ const el=qs('publish-err'); const ok=qs('publish-ok'); ok&&ok.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
-  function showOk(msg){ const el=qs('publish-ok'); const er=qs('publish-err'); er&&er.classList.add('hidden'); if(el){ el.textContent=msg; el.classList.remove('hidden'); } }
-
-  async function openPublish(){
-    qs('publish-err')?.classList.add('hidden');
-    qs('publish-ok')?.classList.add('hidden');
-
-    const dashId = getCurrentDashId();
-    if(!dashId){ showErr('No workspace selected. Please select or create a workspace first.'); qs('modal-publish').classList.add('open'); return; }
-
-    if(!canPublish()){
-      showErr('Forbidden: only owner or admin can publish/unpublish.');
-      qs('modal-publish').classList.add('open');
-      return;
-    }
-
-    try{
-      const data = await apiJson('/api/users/list', { method:'GET' });
-      const users = (data.users||[]).filter(u=>u && u.userId);
-      const me = window.twMe || {};
-      const box = qs('publish-users');
-      if(box){
-        box.innerHTML = users.map(u=>{
-          const isMe = u.userId === me.userId;
-          return `<label class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-slate-50">
-            <span class="text-sm text-slate-800 font-mono">${u.userId}</span>
-            <span class="flex items-center gap-2">
-              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${u.role||''}</span>
-              <input type="checkbox" class="publish-user w-4 h-4" value="${u.userId}" ${isMe?'disabled checked':''}/>
-            </span></label>`;
-        }).join('') || '<div class="p-3 text-sm text-slate-500">No users found.</div>';
-      }
-      const allCb = qs('publish-all');
-      if(allCb){
-        allCb.checked = false;
-        allCb.onchange = ()=>{
-          document.querySelectorAll('.publish-user').forEach(cb=>{ if(cb.disabled) return; cb.checked=false; cb.disabled=allCb.checked; });
-        };
-      }
-    } catch(e){
-      showErr(e.message || String(e));
-    }
-
-    qs('modal-publish').classList.add('open');
-  }
-
-  async function doPublish(){
-    try{
-      const dashId = getCurrentDashId();
-      if(!dashId) return showErr('No workspace selected.');
-      const all = !!qs('publish-all')?.checked;
-      const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb=>cb.checked).map(cb=>cb.value);
-      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&publish=1`, { method:'POST', body: JSON.stringify({ all, users }) });
-      showOk('Published successfully.');
-      setTimeout(()=>closeModal('modal-publish'), 350);
-    } catch(e){
-      showErr(e.message || String(e));
-    }
-  }
-
-  async function doUnpublish(){
-    try{
-      const dashId = getCurrentDashId();
-      if(!dashId) return alert('No workspace selected.');
-      if(!canPublish()) return alert('Forbidden: only owner or admin can unpublish.');
-      if(!confirm('Unpublish this dashboard?')) return;
-      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&unpublish=1`, { method:'POST', body: '{}' });
-      alert('Unpublished successfully.');
-    } catch(e){
-      alert(e.message || String(e));
-    }
-  }
-
-  window.wsOpenPublishModal = openPublish;
-  window.wsUnpublishCurrent = doUnpublish;
-
-  window.addEventListener('DOMContentLoaded', ()=>{
-    const b = document.getElementById('btn-publish-now');
-    if(b) b.addEventListener('click', doPublish);
-  });
-
-  // Workspace menu delegation
-  document.addEventListener('click', (e)=>{
-    const el = e.target.closest && e.target.closest('[data-ws-action]');
-    if(!el) return;
-    const action = el.getAttribute('data-ws-action');
-    if(action==='publish'){ e.preventDefault(); openPublish(); }
-    if(action==='unpublish'){ e.preventDefault(); doUnpublish(); }
-  }, true);
-})();
-</script>
-
-
-<script>
-/* DEFAULT_PAGE_BUILD */
-window.addEventListener('DOMContentLoaded', ()=>{ try{ if(typeof switchTab==='function') switchTab('build'); }catch(e){} });
-</script>
-</body>
-</html>
-</template>
+    
 
     <script>
         // --- GLOBAL & UTILITY FUNCTIONS ---
@@ -1621,6 +844,7 @@ window.addEventListener('DOMContentLoaded', ()=>{ try{ if(typeof switchTab==='fu
                             endDate: parseXlsDate(r['End Date']||r.endDate),
                             actualStartDate: parseXlsDate(r['Actual Start Date']||r.actualStartDate), 
                             actualEndDate: parseXlsDate(r['Actual End Date']||r.actualEndDate), 
+                            owner: r['Owner']||r.owner||r['owner']||'',
                             remark: r.Remark||r.remark||''
                         }));
                         renderMilestones();
@@ -1819,7 +1043,7 @@ window.addEventListener('DOMContentLoaded', ()=>{ try{ if(typeof switchTab==='fu
                 let badgeColor = 'bg-gray-100 text-gray-800';
                 if(tracker === 'On Track') badgeColor = 'bg-green-100 text-green-800 border-green-200';
                 if(tracker === 'Delayed') badgeColor = 'bg-red-100 text-red-800 border-red-200';
-                return `<div class="bg-white rounded-lg p-3 border border-gray-200 flex flex-col min-w-[160px] max-w-[180px] shadow-sm hover:border-blue-400 cursor-pointer" onclick="openMilestoneModal(${i})"><p class="text-xs font-bold text-gray-800 mb-2 text-center h-8 flex items-center justify-center break-words">${m.phase}</p><div class="flex-1 space-y-2 mb-2"><div class="bg-blue-50 p-1.5 rounded text-[10px]"><p class="font-bold text-blue-700">Planned</p><p>S: ${m.startDate || '-'}</p><p>E: ${m.endDate || '-'}</p></div><div class="bg-green-50 p-1.5 rounded text-[10px]"><p class="font-bold text-green-700">Actual</p><p>S: ${m.actualStartDate || '-'}</p><p>E: ${m.actualEndDate || '-'}</p></div></div><div class="mb-2 px-1 border-t border-gray-50 pt-1">${m.remark ? `<div class="bg-gray-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600 line-clamp-2" title="${m.remark}">R: ${m.remark}</p></div>` : ''}<div class="flex justify-between items-center"><span class="text-[10px] text-gray-500 font-medium">Status:</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${execColor}">${execLabel}</span></div></div><div class="mt-auto pt-2 border-t border-gray-100"><span class="block text-center text-[10px] px-2 py-1 rounded-full font-bold border ${badgeColor}">${tracker}</span></div></div>`;
+                return `<div class="bg-white rounded-lg p-3 border border-gray-200 flex flex-col min-w-[160px] max-w-[180px] shadow-sm hover:border-blue-400 cursor-pointer" onclick="openMilestoneModal(${i})"><p class="text-xs font-bold text-gray-800 mb-2 text-center h-8 flex items-center justify-center break-words">${m.phase}</p><div class="flex-1 space-y-2 mb-2"><div class="bg-blue-50 p-1.5 rounded text-[10px]"><p class="font-bold text-blue-700">Planned</p><p>S: ${m.startDate || '-'}</p><p>E: ${m.endDate || '-'}</p></div><div class="bg-green-50 p-1.5 rounded text-[10px]"><p class="font-bold text-green-700">Actual</p><p>S: ${m.actualStartDate || '-'}</p><p>E: ${m.actualEndDate || '-'}</p></div></div><div class="bg-amber-50 p-1.5 rounded text-[10px]"><p class="font-bold text-amber-700">Owner</p><p>${m.owner || '-'}</p></div><div class="mb-2 px-1 border-t border-gray-50 pt-1">${m.remark ? `<div class="bg-gray-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600 line-clamp-2" title="${m.remark}">R: ${m.remark}</p></div>` : ''}<div class="flex justify-between items-center"><span class="text-[10px] text-gray-500 font-medium">Status:</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${execColor}">${execLabel}</span></div></div><div class="mt-auto pt-2 border-t border-gray-100"><span class="block text-center text-[10px] px-2 py-1 rounded-full font-bold border ${badgeColor}">${tracker}</span></div></div>`;
             }).join('');
         }
 
@@ -2361,11 +1585,11 @@ function renderBlockers() {
             const isEdit = idx !== null; document.getElementById('milestone-modal-title').textContent = isEdit ? 'Edit Milestone' : 'Add New';
             document.getElementById('ms-index').value = isEdit ? idx : '';
             document.getElementById('btn-delete-ms').classList.toggle('hidden', !isEdit);
-            if(isEdit) { const m = milestones[idx]; document.getElementById('ms-phase').value = m.phase; document.getElementById('ms-start').value = m.startDate; document.getElementById('ms-end').value = m.endDate; document.getElementById('ms-act-start').value = m.actualStartDate; document.getElementById('ms-act-end').value = m.actualEndDate; document.getElementById('ms-remark').value = m.remark; } 
-            else { ['ms-phase','ms-start','ms-end','ms-act-start','ms-act-end','ms-remark'].forEach(id => document.getElementById(id).value = ''); }
+            if(isEdit) { const m = milestones[idx]; document.getElementById('ms-phase').value = m.phase; document.getElementById('ms-start').value = m.startDate; document.getElementById('ms-end').value = m.endDate; document.getElementById('ms-act-start').value = m.actualStartDate; document.getElementById('ms-act-end').value = m.actualEndDate; document.getElementById('ms-owner').value = m.owner || ''; document.getElementById('ms-remark').value = m.remark; } 
+            else { ['ms-phase','ms-start','ms-end','ms-act-start','ms-act-end','ms-owner','ms-remark'].forEach(id => document.getElementById(id).value = ''); }
             document.getElementById('modal-milestone').classList.add('open');
         }
-        function saveMilestone() { const idx = document.getElementById('ms-index').value; const item = { phase: document.getElementById('ms-phase').value, startDate: document.getElementById('ms-start').value, endDate: document.getElementById('ms-end').value, actualStartDate: document.getElementById('ms-act-start').value, actualEndDate: document.getElementById('ms-act-end').value, remark: document.getElementById('ms-remark').value }; if(!item.phase) return alert('Activity Name required'); if(idx === '') milestones.push(item); else milestones[idx] = item; closeModal('modal-milestone'); renderMilestones(); }
+        function saveMilestone() { const idx = document.getElementById('ms-index').value; const item = { phase: document.getElementById('ms-phase').value, startDate: document.getElementById('ms-start').value, endDate: document.getElementById('ms-end').value, actualStartDate: document.getElementById('ms-act-start').value, actualEndDate: document.getElementById('ms-act-end').value, owner: document.getElementById('ms-owner').value, remark: document.getElementById('ms-remark').value }; if(!item.phase) return alert('Activity Name required'); if(idx === '') milestones.push(item); else milestones[idx] = item; closeModal('modal-milestone'); renderMilestones(); }
         function deleteMilestone() { const idx = document.getElementById('ms-index').value; if(idx !== '') { milestones.splice(idx, 1); closeModal('modal-milestone'); renderMilestones(); } }
         function openDisciplineModal() { switchDiscTab('L1'); document.getElementById('modal-discipline').classList.add('open'); }
         function switchDiscTab(tab) { discModalTab = tab; document.getElementById('tab-l1-btn').className = `px-4 py-2 text-sm font-medium border-b-2 ${tab==='L1'?'border-teal-600 text-teal-600':'border-transparent text-gray-500'}`; document.getElementById('tab-l2-btn').className = `px-4 py-2 text-sm font-medium border-b-2 ${tab==='L2'?'border-teal-600 text-teal-600':'border-transparent text-gray-500'}`; const content = document.getElementById('disc-tab-content'); if (tab === 'L1') { content.innerHTML = `<table class="min-w-full divide-y divide-gray-200 mb-6"><thead class="bg-gray-50"><tr><th>Discipline</th><th>Total</th><th>Open</th><th>Closed</th><th>Hold</th><th>Grand Total</th></tr></thead><tbody>${taskDisciplines.map((d,i) => `<tr><td class="p-2 font-medium">${d.discipline}</td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.totalTasks}" oninput="updateL1(${i},'totalTasks',this.value)"></td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.openTasks}" oninput="updateL1(${i},'openTasks',this.value)"></td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.closedTasks}" oninput="updateL1(${i},'closedTasks',this.value)"></td><td class="p-2"><input type="number" class="w-full border rounded p-1 text-center" value="${d.holdTasks}" oninput="updateL1(${i},'holdTasks',this.value)"></td><td class="p-2"><input type="number" id="grand-total-${i}" class="w-full border rounded p-1 text-center font-bold bg-gray-100 text-gray-600 cursor-not-allowed" value="${d.grandTotal}" readonly></td></tr>`).join('')}</tbody></table>`; } else { renderL2EditMode(); } }
@@ -4117,6 +3341,44 @@ async function wsModalPrimary() {
     if(action==='publish'){ e.preventDefault(); openPublish(); }
     if(action==='unpublish'){ e.preventDefault(); doUnpublish(); }
   }, true);
+})();
+</script>
+
+
+<script>
+// Keep ?dash= across Build/Run navigation links
+(function(){
+  try{
+    const dash = new URL(location.href).searchParams.get('dash');
+    const qs = dash ? ('?dash='+encodeURIComponent(dash)) : '';
+    const b=document.getElementById('nav-build');
+    const r=document.getElementById('nav-run');
+    if(b) b.href='/build.html'+qs;
+    if(r) r.href='/run.html'+qs;
+  }catch(e){}
+})();
+
+// Pull BAU stats from localStorage written by run.html (key: tw_bau_<dash>)
+(function(){
+  function loadBauFromLocal(){
+    try{
+      const dash = new URL(location.href).searchParams.get('dash') || 'default';
+      const key = 'tw_bau_' + dash;
+      const raw = localStorage.getItem(key);
+      if(!raw) return;
+      const val = JSON.parse(raw);
+      if(!val) return;
+      if(typeof bauData === 'object' && bauData){
+        bauData.totalTickets = val.totalTickets ?? bauData.totalTickets;
+        bauData.withinSLA = val.withinSLA ?? bauData.withinSLA;
+        bauData.breachedSLA = val.breachedSLA ?? bauData.breachedSLA;
+        bauData.slaPercentage = val.slaPercentage ?? bauData.slaPercentage;
+        if(typeof renderBauStats === 'function') renderBauStats();
+      }
+    }catch(e){}
+  }
+  window.addEventListener('DOMContentLoaded', ()=>{ setTimeout(loadBauFromLocal, 250); });
+  window.addEventListener('storage', (e)=>{ if(e && e.key && e.key.startsWith('tw_bau_')) loadBauFromLocal(); });
 })();
 </script>
 
