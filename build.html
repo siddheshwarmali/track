@@ -1949,15 +1949,30 @@ function renderBlockers() {
             localStorage.setItem(WS_LAST_KEY, id);
         }
 
+        function wsUpdateDashPill() {
+            const pill = document.getElementById('dashPill');
+            if (!pill) return;
+            const select = document.getElementById('ws-select');
+            if (select && select.value) {
+                const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+                const name = opt ? opt.textContent : select.value;
+                pill.textContent = name || select.value;
+            } else {
+                pill.textContent = '—';
+            }
+        }
+
         function wsRefreshSelect() {
             const select = document.getElementById('ws-select');
-            if (!select) return;
+            if (!select) { wsUpdateDashPill(); return; }
             const items = wsList();
             select.innerHTML = '';
             if (items.length === 0) {
                 const opt = document.createElement('option');
                 opt.value = ''; opt.textContent = 'No workspaces';
                 select.appendChild(opt);
+                wsUpdateDashPill();
+                try { window.twSyncWsSelectFromMain && window.twSyncWsSelectFromMain(); } catch(e) {}
                 return;
             }
             items.forEach(w => {
@@ -1967,13 +1982,8 @@ function renderBlockers() {
                 select.appendChild(opt);
             });
             if (wsCurrentId) select.value = wsCurrentId;
-        }
-
-        function wsEnsureDefault() {
-            const items = wsList();
-            if (items.length === 0) {
-                wsCurrentId = wsCreateWorkspace('Default');
-            }
+            wsUpdateDashPill();
+            try { window.twSyncWsSelectFromMain && window.twSyncWsSelectFromMain(); } catch(e) {}
         }
 
         function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
@@ -2865,6 +2875,7 @@ async function wsInitWorkspaceManager() {
     if (wsCurrentId) {
         const sel = document.getElementById('ws-select');
         if (sel) sel.value = wsCurrentId;
+        try { window.wsUpdateDashPill && window.wsUpdateDashPill(); } catch(e) {}
         await wsSelectWorkspace(wsCurrentId, { saveCurrent:false });
     } else {
         // none exists: create default
@@ -3147,7 +3158,6 @@ async function wsModalPrimary() {
   }
 
   async function perform(action){
-    // Prefer Build's workspace manager API (ws*) but keep fallbacks to older names.
     if(action==='new')         return (window.wsOpenCreateModal?.() || window.createWorkspace?.());
     if(action==='rename')      return (window.wsRenameCurrent?.()   || window.renameWorkspace?.());
     if(action==='save')        return (window.wsSaveNow?.({prompt:true}) || window.saveWorkspace?.());
@@ -3168,7 +3178,7 @@ async function wsModalPrimary() {
     const menu = qs('ws-actions-menu');
     const back = qs('ws-actions-backdrop');
     if(!btn || !menu) return;
-    if(btn.dataset.twBound==='1') return; // prevent double-binding
+    if(btn.dataset.twBound==='1') return;
     btn.dataset.twBound='1';
 
     btn.addEventListener('click', (e)=>{
@@ -3202,7 +3212,6 @@ async function wsModalPrimary() {
     });
   }
 
-  // Bind after DOM is ready (mirrors Run dashboard behavior)
   window.addEventListener('DOMContentLoaded', bindOnce);
 })();
 </script>
