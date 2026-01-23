@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Executive Dashboard - Build</title>
+<!-- COPILOT_RESPONSIVE_PATCH: 2026-01-23 11:35:31 IST | actions-menu-scroll + publish-toggle + export-blob-unique -->
+
 <!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
     
     <!-- Tailwind CSS -->
@@ -98,6 +100,10 @@
     .tw-sticky-header-fix{ position: sticky; top: 0; }
     .tw-sticky-header-fix *{ max-width: 100%; }
 
+    /* Bottom-sheet menus should not overflow */
+    #ws-actions-menu{ max-height: 85vh; }
+
+    /* Make heavy modals full-screen on mobile */
     #modal-l3 > div,
     #modal-us-details > div,
     #modal-discipline > div,
@@ -125,8 +131,8 @@
 <!-- ===== Header (Run-style layout + Build workspace actions) ===== -->
 <div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 tw-sticky-header-fix">
   <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-    <div class="min-w-0 w-full sm:w-auto">
-      <div class="text-base sm:text-lg font-extrabold truncate">Executive Dashboard — Build</div>
+    <div class="min-w-0">
+      <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
       <div class="text-xs text-slate-500 truncate">
         Workspace: <span id="dashPill" class="font-mono">—</span>
       </div>
@@ -136,21 +142,21 @@
       <select id="ws-select" class="ml-0 sm:ml-1 col-span-2 sm:col-auto w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">Loading…</option>
                     </select>
-                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-0 sm:ml-2 col-span-1">Not saved</span>
+                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-2">Not saved</span>
 
       <!-- Publish/Private pill (optional, reused from Run ids) -->
-      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200 col-span-1 text-right sm:text-left"></span>
+      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
 
       <div class="relative">
   <button id="ws-actions-btn" type="button"
-    class="col-span-1 px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center justify-center sm:justify-start gap-2 active:scale-[0.99] transition"
+    class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 active:scale-[0.99] transition"
     aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">
     <span class="text-base">⚙️</span><span>Actions</span>
     <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
   </button>
   <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-40" aria-hidden="true"></div>
   <div id="ws-actions-menu" class="hidden z-50 fixed pb-[env(safe-area-inset-bottom)] inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-none" role="menu" aria-label="Workspace actions">
-    <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between sticky top-0"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
+    <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
     <div class="p-2 overflow-y-auto flex-1 custom-scroll">
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="new" role="menuitem">New workspace</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="rename" role="menuitem">Rename</button>
@@ -164,13 +170,13 @@
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem" id="ws-action-publish">Publish</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem" id="ws-action-unpublish">Unpublish</button>
     </div>
-    <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50 sticky bottom-0"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
+    <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
   </div>
 </div>
 
       <div class="relative">
           <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
-          <div id="tw-menu" class="hidden absolute right-0 mt-2 w-[min(20rem,92vw)] max-h-[80vh] overflow-auto bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl">
+          <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
             <div class="px-4 py-3 border-b bg-slate-50">
               <div class="text-xs text-slate-500">Signed in as</div>
               <div id="tw-userpill" class="mt-1 text-sm font-semibold">Checking…</div>
@@ -221,12 +227,12 @@
 </div>
 
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 pb-6 pt-2 sm:pt-3 min-h-screen">
+    <div class="max-w-7xl mx-auto px-6 pb-6 pt-3 min-h-screen">
         <!-- Header -->
 
 
 <!-- Main Card -->
-        <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
             <!-- Toolbar -->
             <div class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center">
@@ -290,7 +296,7 @@
                             </label>
                         </div>
                     </div>
-                    <div id="milestone-container" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-4 sm:p-6 overflow-x-auto min-h-[150px] custom-scroll"></div>
+                    <div id="milestone-container" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll"></div>
                     <div class="flex justify-center mt-4 pt-2 border-t border-blue-100 no-print">
                         <button onclick="toggleTrackerDetails()" class="flex items-center justify-center p-2 rounded-full bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 shadow-sm border border-gray-200 transition-all hover:shadow-md">
                             <i id="tracker-arrow" data-lucide="chevron-down" class="w-5 h-5"></i>
@@ -327,15 +333,15 @@
                         </div>
                     </div>
                     <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
-                        <table class="min-w-[720px] sm:min-w-full divide-y divide-gray-200" id="discipline-table">
+                        <table class="min-w-full divide-y divide-gray-200" id="discipline-table">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
-                                    <th class="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
-                                    <th class="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
-                                    <th class="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
-                                    <th class="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
-                                    <th class="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200" id="discipline-tbody"></tbody>
@@ -462,7 +468,7 @@
 
     <!-- L3 Task View Modal (New Task Management) -->
     <div id="modal-l3" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-none sm:rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-none sm:max-w-5xl h-[100dvh] sm:h-[85vh] flex flex-col animate-fade-in">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-5xl h-[85vh] flex flex-col animate-fade-in">
             <div class="flex justify-between items-center mb-6 border-b pb-4">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800 flex items-center">
@@ -517,9 +523,9 @@
 
     <!-- Details Modal (Used for US and Bugs) -->
     <div id="modal-us-details" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-none sm:rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-none sm:max-w-4xl h-[100dvh] sm:h-[80vh] flex flex-col animate-fade-in">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl h-[80vh] flex flex-col animate-fade-in">
             <div class="flex justify-between items-center mb-6"><div><h3 class="text-xl font-bold text-gray-800"><span id="us-modal-type-prefix">User Stories</span>: <span id="us-modal-stage" class="text-blue-600"></span></h3><p class="text-sm text-gray-500"><span id="us-modal-count">0</span> items in this stage</p></div><button onclick="closeModal('modal-us-details')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="flex-1 overflow-auto custom-scroll border rounded-lg"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th><th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th><th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th><th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stage</th><th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th><th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ETA</th></tr></thead><tbody id="us-details-tbody" class="bg-white divide-y divide-gray-200"></tbody></table></div>
+            <div class="flex-1 overflow-auto custom-scroll border rounded-lg"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stage</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ETA</th></tr></thead><tbody id="us-details-tbody" class="bg-white divide-y divide-gray-200"></tbody></table></div>
             <div class="flex justify-end mt-6"><button onclick="closeModal('modal-us-details')" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Close</button></div>
         </div>
     </div>
@@ -631,7 +637,7 @@
 
     <!-- Discipline Edit Modal (Tabs L1/L2) -->
     <div id="modal-discipline" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-none sm:rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-none sm:max-w-6xl h-[100dvh] sm:h-[90vh] flex flex-col animate-fade-in">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-6xl h-[90vh] flex flex-col animate-fade-in">
             <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-gray-800">Edit Task Discipline</h3><button onclick="closeModal('modal-discipline')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
             <div class="flex space-x-2 mb-4 border-b border-gray-200"><button id="tab-l1-btn" onclick="switchDiscTab('L1')" class="px-4 py-2 text-sm font-medium border-b-2 border-teal-600 text-teal-600">L1 Summary</button><button id="tab-l2-btn" onclick="switchDiscTab('L2')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500">L2 Detailed</button></div>
             <div id="disc-tab-content" class="flex-1 overflow-auto p-1 custom-scroll"></div>
@@ -808,7 +814,6 @@
         }
 
         async function exportReport() {
-            // Close menus/backdrops/overlays so they don't interfere with rendering
             try {
                 document.getElementById('ws-actions-menu')?.classList.add('hidden');
                 document.getElementById('ws-actions-backdrop')?.classList.add('hidden');
@@ -838,12 +843,10 @@
                         if (el.classList && el.classList.contains('no-print')) return true;
                         const id = (el.id || '').toLowerCase();
                         if (id.includes('modal') || id.includes('toast') || id.includes('menu') || id.includes('backdrop') || id.includes('loader') || id.includes('overlay')) return true;
-                        if (el.classList && (el.classList.contains('modal') || el.classList.contains('hidden-by-report'))) return true;
                         return false;
                     }
                 });
 
-                // Unique filename avoids OS/Gallery caching ("image not cleared")
                 const pad = (n) => String(n).padStart(2,'0');
                 const now = new Date();
                 const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
@@ -861,14 +864,12 @@
                             document.body.appendChild(a);
                             a.click();
                             a.remove();
-                            // Revoke later (Safari needs time)
                             setTimeout(() => { try { URL.revokeObjectURL(url); } catch(e) {} }, 30000);
                             resolve();
                         } catch (e) { reject(e); }
                     }, 'image/jpeg', 0.92);
                 });
 
-                // Explicit cleanup
                 try { canvas.width = 1; canvas.height = 1; } catch (e) {}
             } catch (err) {
                 console.error(err);
@@ -1130,16 +1131,16 @@
                 // Specific L3 Modal triggers on numeric cells
                 return `
                 <tr class="hover:bg-gray-50 text-sm transition-colors ${isExpanded ? 'bg-teal-50 border-l-4 border-teal-500' : ''}">
-                    <td class="px-3 sm:px-6 py-4 font-medium flex items-center cursor-pointer" onclick="toggleL2Details('${d.discipline}')">
+                    <td class="px-6 py-4 font-medium flex items-center cursor-pointer" onclick="toggleL2Details('${d.discipline}')">
                         <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-up'}" class="w-4 h-4 mr-2 text-gray-400"></i>${d.discipline}
                     </td>
-                    <td class="px-3 sm:px-6 py-4 text-center clickable-cell text-blue-600 font-bold" onclick="openL3Modal('${d.discipline}', 'total')">${d.totalTasks}</td>
-                    <td class="px-3 sm:px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Open')">${d.openTasks}</td>
-                    <td class="px-3 sm:px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Closed')">${d.closedTasks}</td>
-                    <td class="px-3 sm:px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Hold')">${d.holdTasks}</td>
-                    <td class="px-3 sm:px-6 py-4 text-center font-bold clickable-cell" onclick="openL3Modal('${d.discipline}', 'grand')">${d.grandTotal}</td>
+                    <td class="px-6 py-4 text-center clickable-cell text-blue-600 font-bold" onclick="openL3Modal('${d.discipline}', 'total')">${d.totalTasks}</td>
+                    <td class="px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Open')">${d.openTasks}</td>
+                    <td class="px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Closed')">${d.closedTasks}</td>
+                    <td class="px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Hold')">${d.holdTasks}</td>
+                    <td class="px-6 py-4 text-center font-bold clickable-cell" onclick="openL3Modal('${d.discipline}', 'grand')">${d.grandTotal}</td>
                 </tr>`;
-            }).join('') + `<tr class="bg-gray-100 font-bold text-sm"><td class="px-3 sm:px-6 py-4">Grand Total</td><td class="px-3 sm:px-6 py-4 text-center">${grand.t}</td><td class="px-3 sm:px-6 py-4 text-center">${grand.o}</td><td class="px-3 sm:px-6 py-4 text-center">${grand.c}</td><td class="px-3 sm:px-6 py-4 text-center">${grand.h}</td><td class="px-3 sm:px-6 py-4 text-center">${grand.g}</td></tr>`;
+            }).join('') + `<tr class="bg-gray-100 font-bold text-sm"><td class="px-6 py-4">Grand Total</td><td class="px-6 py-4 text-center">${grand.t}</td><td class="px-6 py-4 text-center">${grand.o}</td><td class="px-6 py-4 text-center">${grand.c}</td><td class="px-6 py-4 text-center">${grand.h}</td><td class="px-6 py-4 text-center">${grand.g}</td></tr>`;
             lucide.createIcons();
         }
 
@@ -1422,13 +1423,13 @@
                     const badgeClass = (dt === 'US') ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800';
                     return `
                         <tr class="hover:bg-gray-50 text-xs transition-colors">
-                            <td class="px-3 sm:px-6 py-4 font-medium">${s.id}</td>
-                            <td class="px-3 sm:px-6 py-4"><span class="bg-gray-100 border rounded px-1">${s.type}</span></td>
-                            <td class="px-3 sm:px-6 py-4 truncate max-w-xs" title="${s.description}">${s.description}</td>
-                            <td class="px-3 sm:px-6 py-4"><span class="${badgeClass} px-2 py-1 rounded-full">${s.stage}</span></td>
-                            <td class="px-3 sm:px-6 py-4">${s.owner}</td>
-                            <td class="px-3 sm:px-6 py-4">${s.eta}</td>
-                            <td class="px-3 sm:px-6 py-4">
+                            <td class="px-6 py-4 font-medium">${s.id}</td>
+                            <td class="px-6 py-4"><span class="bg-gray-100 border rounded px-1">${s.type}</span></td>
+                            <td class="px-6 py-4 truncate max-w-xs" title="${s.description}">${s.description}</td>
+                            <td class="px-6 py-4"><span class="${badgeClass} px-2 py-1 rounded-full">${s.stage}</span></td>
+                            <td class="px-6 py-4">${s.owner}</td>
+                            <td class="px-6 py-4">${s.eta}</td>
+                            <td class="px-6 py-4">
                                 <div class="flex items-center gap-2">
                                     <button class="px-2 py-1 bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100" onclick="openUsBugModal('${dt}', '${s.id}', '${s.stage}')">Edit</button>
                                     <button class="px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100" onclick="deleteUsBug('${dt}', '${s.id}')">Delete</button>
@@ -3087,10 +3088,6 @@ async function wsModalPrimary() {
       }
       if (action === 'export') return wsExportCurrent && wsExportCurrent();
       if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
-  if (action === 'exportReport') {
-    twLoader.show('Generating report…', 'Exporting JPG', 45);
-    return await Promise.resolve(window.exportReport && window.exportReport());
-  }
       if (action === 'import') {
         const inp = document.getElementById('ws-import-file');
         if (inp) inp.click();
@@ -3442,8 +3439,8 @@ async function wsModalPrimary() {
     if (pill){
       pill.textContent = published ? 'Published' : 'Private';
       pill.className = published
-        ? 'text-xs text-green-700 px-2 py-1 rounded-full bg-green-50 border border-green-200 col-span-1 text-right sm:text-left'
-        : 'text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200 col-span-1 text-right sm:text-left';
+        ? 'text-xs text-green-700 px-2 py-1 rounded-full bg-green-50 border border-green-200'
+        : 'text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200';
     }
     const btnPub = document.getElementById('ws-action-publish') || document.querySelector('[data-ws-action="publish"]');
     const btnUnp = document.getElementById('ws-action-unpublish') || document.querySelector('[data-ws-action="unpublish"]');
