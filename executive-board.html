@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Executive Board</title>
-  <!-- COPILOT_EXECBOARD_REQUIREMENTS: 2026-01-23 16:27:30 IST | Card: Overall Summary (default). Details: Milestones+App Tracker + Task Discipline L2 (build-like). -->
+  <!-- COPILOT_EXECBOARD_REQUIREMENTS_FIXED: 2026-01-23 16:35:38 IST | fixes template literal syntax + card overall summary + details milestones+discipline -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     /* fallback line-clamp */
     .line-clamp-4{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
@@ -55,9 +56,14 @@
   const $ = (id)=>document.getElementById(id);
   const itemsById = new Map();
 
-  // --- utilities ---
   function esc(s){
-    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(s||'').replace(/[&<>"']/g, c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c]));
   }
   function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
   function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
@@ -73,7 +79,7 @@
     return j;
   }
 
-  // --- sorting/search ---
+  // Sorting/search
   function sortItems(items, mode){
     const m=(mode||'newest');
     if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
@@ -89,143 +95,14 @@
     });
   }
 
-  // --- Milestones: build-like journey (Completed green, InProgress blue, YTB gray) ---
-  function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
-  function milestoneStatus(m){
-    const plannedEnd = toDate(m.endDate);
-    const actualEnd = toDate(m.actualEndDate);
-    const actualStart = toDate(m.actualStartDate);
-    const today = new Date();
-
-    if(actualEnd) return { status:'completed', color:'bg-green-500', label:'Completed' };
-    if(actualStart){
-      if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500', label:'Delayed' };
-      return { status:'inprogress', color:'bg-blue-500', label:'In Progress' };
-    }
-    if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500', label:'Delayed' };
-    return { status:'ytb', color:'bg-slate-400', label:'YTB' };
-  }
-
-  function renderMilestoneSection(item){
-    const state=item._state || {};
-    const milestones=Array.isArray(state?.executive?.milestones)?state.executive.milestones:[];
-    const us=Array.isArray(state?.executive?.userStories)?state.executive.userStories:[];
-    const bugs=Array.isArray(state?.executive?.bugs)?state.executive.bugs:[];
-    const usOpen=us.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
-    const bugsOpen=bugs.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
-
-    const mapped=milestones.map(m=>({
-      phase: safeText(m?.phase||m?.Activity||m?.title||m?.name||'Milestone'),
-      startDate: safeText(m?.startDate||m?.plannedStart||m?.start||''),
-      endDate: safeText(m?.endDate||m?.plannedEnd||m?.end||''),
-      actualStartDate: safeText(m?.actualStartDate||m?.actualStart||''),
-      actualEndDate: safeText(m?.actualEndDate||m?.actualEnd||'')
-    }));
-
-    if(mapped.length===0){
-      return `
-        <div class="mb-8 border-b pb-8 border-gray-200">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-semibold text-gray-700">Project Milestones - Application Tracker</h3>
-          </div>
-          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6">No milestones</div>
-        </div>`;
-    }
-
-    const completedCount = mapped.filter(m=>milestoneStatus(m).status==='completed').length;
-    const pct = (completedCount/mapped.length)*100;
-
-    let nodes=`<div class="relative min-w-max px-4 pt-8 pb-4"><div class="absolute top-12 left-4 right-4 h-1 bg-gray-300 z-0"></div><div class="absolute top-12 left-4 h-1 bg-blue-500 z-0 transition-all duration-500" style="width:${pct}%"></div><div class="flex justify-between items-start">`;
-    mapped.forEach((m)=>{
-      const st=milestoneStatus(m);
-      nodes += `<div class="flex flex-col items-center z-10 relative mx-2" style="width: 120px"><div class="w-8 h-8 rounded-full flex items-center justify-center mb-2 text-white shadow-sm ${st.color}">✓</div><p class="text-xs font-bold text-gray-700 text-center leading-tight mb-1 break-words w-full">${esc(m.phase)}</p></div>`;
-    });
-    nodes += `</div></div>`;
-
-    return `
-      <div class="mb-8 border-b pb-8 border-gray-200">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold text-gray-700 cursor-pointer hover:text-blue-600 select-none transition-colors" title="Project Milestones - Application Tracker">
-            Project Milestones - Application Tracker
-          </h3>
-        </div>
-        <div class="text-sm text-slate-200 mb-3">User Stories: <b>${us.length}</b> (Open ${usOpen}) • Bugs: <b>${bugs.length}</b> (Open ${bugsOpen})</div>
-        <div id="milestone-container" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll">${nodes}</div>
-      </div>`;
-  }
-
-  // --- Discipline: build-like L1 + inline L2 view ---
-  function renderDisciplineSection(item){
-    const state=item._state || {};
-    const taskDisciplines=Array.isArray(state?.executive?.taskDisciplines)?state.executive.taskDisciplines:[];
-    const l2Columns=Array.isArray(state?.executive?.l2Columns)?state.executive.l2Columns: (Array.isArray(state?.l2Columns)?state.l2Columns:[]);
-    const l2Data=(state?.executive?.l2Data && typeof state.executive.l2Data==='object')?state.executive.l2Data: (state?.l2Data && typeof state.l2Data==='object'?state.l2Data:{});
-
-    const cols = (l2Columns && l2Columns.length) ? l2Columns : [{id:'c1',name:'Col 1'},{id:'c2',name:'Col 2'},{id:'c3',name:'Col 3'}];
-
-    // L1 rows
-    let tbody = '';
-    let grand = {t:0,o:0,c:0,h:0,g:0};
-    (taskDisciplines||[]).forEach(d=>{
-      grand.t += +d.totalTasks; grand.o += +d.openTasks; grand.c += +d.closedTasks; grand.h += +d.holdTasks; grand.g += +(d.grandTotal ?? (d.openTasks + d.closedTasks + d.holdTasks));
-      tbody += `<tr class="hover:bg-gray-50 text-sm transition-colors">
-        <td class="px-6 py-4 font-medium cursor-pointer" data-l2-toggle="${esc(d.discipline)}">${esc(d.discipline)}</td>
-        <td class="px-6 py-4 text-center text-blue-600 font-bold">${d.totalTasks||0}</td>
-        <td class="px-6 py-4 text-center text-gray-600">${d.openTasks||0}</td>
-        <td class="px-6 py-4 text-center text-gray-600">${d.closedTasks||0}</td>
-        <td class="px-6 py-4 text-center text-gray-600">${d.holdTasks||0}</td>
-        <td class="px-6 py-4 text-center font-bold">${d.grandTotal ?? (d.openTasks + d.closedTasks + d.holdTasks) || 0}</td>
-      </tr>`;
-      // L2 container row
-      tbody += `<tr class="hidden" data-l2-panel="${esc(d.discipline)}"><td colspan="6" class="px-6 pb-4">
-        <div class="mt-2 rounded-lg border border-gray-200 bg-white overflow-x-auto custom-scroll">
-          <table class="min-w-full text-sm">
-            <thead class="bg-gray-50"><tr>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Feature/Scope</th>
-              ${cols.map(c=>`<th class="px-3 py-2 text-center text-xs font-medium text-gray-500">${esc(c.name||c.id)}</th>`).join('')}
-            </tr></thead>
-            <tbody>
-              ${(Array.isArray(l2Data?.[d.discipline])?l2Data[d.discipline]:[]).map(r=>{
-                const feat = esc(r.feature||r.Feature||'');
-                const cells = cols.map(c=>`<td class="px-3 py-2 text-center text-gray-700">${esc(r[c.id]||'')}</td>`).join('');
-                return `<tr class="border-t"><td class="px-3 py-2 font-medium">${feat}</td>${cells}</tr>`;
-              }).join('') || `<tr><td colspan="${1+len(cols)}" class="px-3 py-2 text-slate-500">No L2 items</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-      </td></tr>`;
-    });
-
-    tbody += `<tr class="bg-gray-100 font-bold text-sm"><td class="px-6 py-4">Grand Total</td><td class="px-6 py-4 text-center">${grand.t}</td><td class="px-6 py-4 text-center">${grand.o}</td><td class="px-6 py-4 text-center">${grand.c}</td><td class="px-6 py-4 text-center">${grand.h}</td><td class="px-6 py-4 text-center">${grand.g}</td></tr>`;
-
-    return `
-      <div class="mb-8 border-b pb-8 border-gray-200">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold text-gray-700 flex items-center">Task Discipline Status</h3>
-        </div>
-        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
-          <table class="min-w-full divide-y divide-gray-200" id="discipline-table">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
-              </tr>
-            </thead>
-            <tbody id="discipline-tbody" class="bg-white divide-y divide-gray-200">${tbody}</tbody>
-          </table>
-        </div>
-      </div>`;
-  }
-
+  // ---------- Section 1 (Card): Overall Summary (Build-like look) ----------
   function overallSummaryCard(summaryText){
     return `
       <div class="mb-3">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-xl font-semibold text-gray-700 flex items-center">Overall Summary</h3>
+          <h3 class="text-xl font-semibold text-gray-700 flex items-center">
+            <span class="mr-2">📝</span>Overall Summary
+          </h3>
         </div>
         <div class="bg-purple-50 p-4 rounded-lg border border-purple-100 text-gray-700 text-sm whitespace-pre-wrap">${esc(summaryText||'No summary')}</div>
       </div>`;
@@ -249,7 +126,7 @@
                 <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
                 <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
               </div>
-              <!-- Card default view: Overall Summary -->
+              <!-- Default view in card: Overall Summary only -->
               <div class='mt-4 bg-white rounded-xl p-4'>
                 ${overallSummaryCard(summary)}
               </div>
@@ -267,6 +144,157 @@
       </div>`;
   }
 
+  // ---------- Section 2 (Details): Project Milestones - Application Tracker (build-like) ----------
+  function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
+  function milestoneStatus(m){
+    const plannedEnd = toDate(m.endDate);
+    const actualEnd = toDate(m.actualEndDate);
+    const actualStart = toDate(m.actualStartDate);
+    const today = new Date();
+
+    // completed green, in progress blue, YTB gray
+    if(actualEnd) return { status:'completed', color:'bg-green-500' };
+    if(actualStart){
+      if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500' };
+      return { status:'inprogress', color:'bg-blue-500' };
+    }
+    if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500' };
+    return { status:'ytb', color:'bg-slate-400' };
+  }
+
+  function renderMilestoneSection(item){
+    const state=item._state || {};
+    const milestonesRaw=Array.isArray(state?.executive?.milestones)?state.executive.milestones:[];
+    const userStories=Array.isArray(state?.executive?.userStories)?state.executive.userStories:[];
+    const bugs=Array.isArray(state?.executive?.bugs)?state.executive.bugs:[];
+
+    const usOpen=userStories.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
+    const bugsOpen=bugs.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
+
+    const milestones = milestonesRaw.map(m => ({
+      phase: safeText(m?.phase||m?.Activity||m?.title||m?.name||'Milestone'),
+      startDate: safeText(m?.startDate||m?.plannedStart||m?.start||''),
+      endDate: safeText(m?.endDate||m?.plannedEnd||m?.end||''),
+      actualStartDate: safeText(m?.actualStartDate||m?.actualStart||''),
+      actualEndDate: safeText(m?.actualEndDate||m?.actualEnd||'')
+    }));
+
+    let bodyHtml='';
+    if(milestones.length===0){
+      bodyHtml = `<div class="text-center py-10"><p class="text-gray-500 mt-2">Add Milestone</p></div>`;
+    } else {
+      const completedCount = milestones.filter(m => milestoneStatus(m).status === 'completed').length;
+      const pct = (completedCount / milestones.length) * 100;
+      let track = `<div class="relative min-w-max px-4 pt-8 pb-4">`;
+      track += `<div class="absolute top-12 left-4 right-4 h-1 bg-gray-300 z-0"></div>`;
+      track += `<div class="absolute top-12 left-4 h-1 bg-blue-500 z-0 transition-all duration-500" style="width:${pct}%"></div>`;
+      track += `<div class="flex justify-between items-start">`;
+
+      milestones.forEach((m) => {
+        const st = milestoneStatus(m);
+        track += `<div class="flex flex-col items-center z-10 relative mx-2" style="width: 120px">`;
+        track += `<div class="w-8 h-8 rounded-full flex items-center justify-center mb-2 text-white shadow-sm ${st.color}">`;
+        track += `<span class="text-sm font-bold">✓</span></div>`;
+        track += `<p class="text-xs font-bold text-gray-700 text-center leading-tight mb-1 break-words w-full">${esc(m.phase)}</p>`;
+        track += `</div>`;
+      });
+
+      track += `</div></div>`;
+      bodyHtml = track;
+    }
+
+    return `
+      <div class="mb-8 border-b pb-8 border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-700 cursor-pointer hover:text-blue-600 select-none transition-colors">Project Milestones - Application Tracker</h3>
+        </div>
+        <div class="text-sm text-slate-600 mb-3">User Stories: <b>${userStories.length}</b> (Open ${usOpen}) • Bugs: <b>${bugs.length}</b> (Open ${bugsOpen})</div>
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll">${bodyHtml}</div>
+      </div>`;
+  }
+
+  // ---------- Section 3 (Details): Task Discipline Status (L2 view inline) ----------
+  function renderDisciplineSection(item){
+    const state=item._state || {};
+    const taskDisciplines=Array.isArray(state?.executive?.taskDisciplines)?state.executive.taskDisciplines:[];
+
+    const l2Columns=Array.isArray(state?.executive?.l2Columns)?state.executive.l2Columns:
+                    (Array.isArray(state?.l2Columns)?state.l2Columns:[]);
+    const l2Data=(state?.executive?.l2Data && typeof state.executive.l2Data==='object')?state.executive.l2Data:
+                ((state?.l2Data && typeof state.l2Data==='object')?state.l2Data:{});
+
+    const cols = (l2Columns && l2Columns.length) ? l2Columns : [{id:'c1',name:'Col 1'},{id:'c2',name:'Col 2'},{id:'c3',name:'Col 3'}];
+    const colSpan = 1 + cols.length;
+
+    let tbodyHtml='';
+    let grand={t:0,o:0,c:0,h:0,g:0};
+
+    (taskDisciplines||[]).forEach(d=>{
+      const discipline = safeText(d.discipline,'');
+      grand.t += +d.totalTasks; grand.o += +d.openTasks; grand.c += +d.closedTasks; grand.h += +d.holdTasks;
+      const gtot = +(d.grandTotal ?? (d.openTasks + d.closedTasks + d.holdTasks));
+      grand.g += gtot;
+
+      const discKey = esc(discipline);
+      tbodyHtml += `<tr class="hover:bg-gray-50 text-sm transition-colors">`;
+      tbodyHtml += `<td class="px-6 py-4 font-medium cursor-pointer" data-l2-toggle="${discKey}">${discKey}</td>`;
+      tbodyHtml += `<td class="px-6 py-4 text-center text-blue-600 font-bold">${d.totalTasks||0}</td>`;
+      tbodyHtml += `<td class="px-6 py-4 text-center text-gray-600">${d.openTasks||0}</td>`;
+      tbodyHtml += `<td class="px-6 py-4 text-center text-gray-600">${d.closedTasks||0}</td>`;
+      tbodyHtml += `<td class="px-6 py-4 text-center text-gray-600">${d.holdTasks||0}</td>`;
+      tbodyHtml += `<td class="px-6 py-4 text-center font-bold">${gtot||0}</td>`;
+      tbodyHtml += `</tr>`;
+
+      // L2
+      const rows = Array.isArray(l2Data && l2Data[discipline]) ? l2Data[discipline] : [];
+      let l2Rows='';
+      if(rows.length===0){
+        l2Rows = `<tr><td colspan="${colSpan}" class="px-3 py-2 text-slate-500">No L2 items</td></tr>`;
+      } else {
+        rows.forEach(r=>{
+          const feat = esc(r.feature || r.Feature || '');
+          let cells='';
+          cols.forEach(c=>{ cells += `<td class="px-3 py-2 text-center text-gray-700">${esc(r[c.id]||'')}</td>`; });
+          l2Rows += `<tr class="border-t"><td class="px-3 py-2 font-medium">${feat}</td>${cells}</tr>`;
+        });
+      }
+
+      const head = cols.map(c=>`<th class="px-3 py-2 text-center text-xs font-medium text-gray-500">${esc(c.name||c.id)}</th>`).join('');
+      tbodyHtml += `<tr class="hidden" data-l2-panel="${discKey}">`;
+      tbodyHtml += `<td colspan="6" class="px-6 pb-4">`;
+      tbodyHtml += `<div class="mt-2 rounded-lg border border-gray-200 bg-white overflow-x-auto custom-scroll">`;
+      tbodyHtml += `<table class="min-w-full text-sm">`;
+      tbodyHtml += `<thead class="bg-gray-50"><tr><th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Feature/Scope</th>${head}</tr></thead>`;
+      tbodyHtml += `<tbody>${l2Rows}</tbody>`;
+      tbodyHtml += `</table></div></td></tr>`;
+    });
+
+    tbodyHtml += `<tr class="bg-gray-100 font-bold text-sm"><td class="px-6 py-4">Grand Total</td><td class="px-6 py-4 text-center">${grand.t}</td><td class="px-6 py-4 text-center">${grand.o}</td><td class="px-6 py-4 text-center">${grand.c}</td><td class="px-6 py-4 text-center">${grand.h}</td><td class="px-6 py-4 text-center">${grand.g}</td></tr>`;
+
+    return `
+      <div class="mb-8 border-b pb-8 border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-700 flex items-center">Task Discipline Status</h3>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
+          <table class="min-w-full divide-y divide-gray-200" id="discipline-table">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">${tbodyHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  // ---------- Data loading ----------
   async function apiList(){ return jget('/api/state?list=1'); }
   async function apiGetDash(id){ return jget(`/api/state?dash=${encodeURIComponent(id)}`); }
 
@@ -286,8 +314,8 @@
     }
 
     if(status) status.textContent='Loading dashboards…';
-
     const sortMode = $('sort')?.value || 'newest';
+
     const listRes = await apiList();
     const dashboards = Array.isArray(listRes.dashboards) ? listRes.dashboards : [];
     const publishedFromList = dashboards.filter(d => d && (d.published === true || d.published === 1 || d.published === 'true'));
@@ -356,6 +384,7 @@
     grid.__wired = true;
 
     grid.addEventListener('click', (e)=>{
+      // L2 toggles
       const l2toggle = e.target.closest && e.target.closest('[data-l2-toggle]');
       if(l2toggle){
         const disc = l2toggle.getAttribute('data-l2-toggle');
@@ -364,6 +393,7 @@
         return;
       }
 
+      // Details toggle
       const btn = e.target.closest && e.target.closest('[data-toggle]');
       if(!btn) return;
 
@@ -385,6 +415,7 @@
           ? (renderMilestoneSection(item) + renderDisciplineSection(item))
           : `<div class='text-sm text-slate-600'>No details available.</div>`;
         panel.setAttribute('data-loaded','1');
+        try{ window.lucide && lucide.createIcons(); }catch(e){}
       }
     });
   }
