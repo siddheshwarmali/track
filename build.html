@@ -95,6 +95,10 @@
 <style id="tw-responsive-overrides">
   /* Responsive overrides added by Copilot */
   @media (max-width: 640px){
+    /* Header: prevent clipping and allow wrap */
+    .tw-sticky-header-fix{ position: sticky; top: 0; }
+    .tw-sticky-header-fix *{ max-width: 100%; }
+
     /* Make heavy modals full-screen on mobile */
     #modal-l3 > div,
     #modal-us-details > div,
@@ -119,13 +123,6 @@
     /* Stack top action buttons */
     .no-print.mobile-stack-actions{ flex-direction: column !important; align-items: stretch !important; }
     .no-print.mobile-stack-actions > button{ width: 100% !important; justify-content: center !important; }
-
-    /* Workspace select full width */
-    #ws-select{ width: 100% !important; max-width: none !important; }
-
-    /* Allow header controls to wrap without clipping */
-    .tw-sticky-header-fix{ position: sticky; top: 0; }
-    .tw-sticky-header-fix *{ max-width: 100%; }
   }
 </style>
 
@@ -145,18 +142,18 @@
       </div>
     </div>
 
-    <div class="w-full sm:w-auto flex flex-wrap items-center gap-2 justify-between sm:justify-end">
-      <select id="ws-select" class="ml-0 sm:ml-1 flex-1 min-w-[12rem] w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <div class="w-full sm:w-auto grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:justify-end">
+      <select id="ws-select" class="ml-0 sm:ml-1 col-span-2 sm:col-auto w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">Loading…</option>
                     </select>
-                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-0 sm:ml-2 w-full sm:w-auto text-right">Not saved</span>
+                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-0 sm:ml-2 col-span-1 text-left sm:text-left">Not saved</span>
 
       <!-- Publish/Private pill (optional, reused from Run ids) -->
-      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200 w-full sm:w-auto text-right"></span>
+      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200 col-span-1 text-right sm:text-left"></span>
 
       <div class="relative">
   <button id="ws-actions-btn" type="button"
-    class="w-full sm:w-auto px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center justify-center sm:justify-start gap-2 active:scale-[0.99] transition"
+    class="col-span-1 px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center justify-center sm:justify-start gap-2 active:scale-[0.99] transition"
     aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">
     <span class="text-base">⚙️</span><span>Actions</span>
     <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
@@ -183,7 +180,7 @@
 </div>
 
       <div class="relative">
-          <button id="tw-menu-btn" class="w-10 h-10 shrink-0 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
+          <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
           <div id="tw-menu" class="hidden absolute right-0 mt-2 w-[min(20rem,92vw)] max-h-[80vh] overflow-auto bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl">
             <div class="px-4 py-3 border-b bg-slate-50">
               <div class="text-xs text-slate-500">Signed in as</div>
@@ -822,23 +819,78 @@
         }
 
         async function exportReport() {
-            // Button may now live inside the Actions menu; fall back safely if not found
+            // Close menus/backdrops so they don't interfere with rendering
+            try {
+                document.getElementById('ws-actions-menu')?.classList.add('hidden');
+                document.getElementById('ws-actions-backdrop')?.classList.add('hidden');
+                document.getElementById('tw-menu')?.classList.add('hidden');
+            } catch (e) {}
+
+            // Button may live inside Actions menu; fall back safely
             const btn = document.querySelector('[data-ws-action="exportReport"]') || document.querySelector('button[onclick="exportReport()"]');
             const originalContent = btn ? btn.innerHTML : null;
-            if (btn) {
-                btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generating...`;
-                lucide.createIcons();
-            }
+
             try {
-                await new Promise(r => setTimeout(r, 100)); // UI settle
+                // Optional loader overlay
+                try { window.twLoader?.show('Generating report…', 'Rendering image', 55); } catch (e) {}
+
+                if (btn) {
+                    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 inline-block align-middle mr-2 animate-spin"></i><span>Generating…</span>`;
+                    try { lucide.createIcons(); } catch (e) {}
+                }
+
+                await new Promise(r => setTimeout(r, 120)); // let UI settle
+
                 const element = document.getElementById('content-build');
-                const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#f9fafb', ignoreElements: (el) => el.tagName === 'BUTTON' || el.classList.contains('no-print') });
-                const link = document.createElement('a');
-                link.download = `Executive_Report_${new Date().toISOString().split('T')[0]}.jpg`;
-                link.href = canvas.toDataURL('image/jpeg', 0.9);
-                link.click();
-            } catch (err) { console.error(err); alert("Failed: " + err.message); } 
-            finally { if (btn && originalContent !== null) { btn.innerHTML = originalContent; lucide.createIcons(); } }
+                if (!element) throw new Error('Build content not found');
+
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    backgroundColor: '#f9fafb',
+                    ignoreElements: (el) => {
+                        const t = el.tagName;
+                        if (t === 'BUTTON') return true;
+                        if (el.classList && el.classList.contains('no-print')) return true;
+                        // ignore overlays/menus/modals/toasts
+                        const id = el.id || '';
+                        if (id.includes('modal') || id.includes('toast') || id.includes('menu') || id.includes('backdrop')) return true;
+                        if (el.classList && (el.classList.contains('modal') || el.classList.contains('hidden-by-report'))) return true;
+                        return false;
+                    }
+                });
+
+                const filename = `Executive_Report_${new Date().toISOString().split('T')[0]}.jpg`;
+
+                // Blob download is more reliable on mobile than data URLs
+                await new Promise((resolve, reject) => {
+                    canvas.toBlob((blob) => {
+                        try {
+                            if (!blob) return reject(new Error('Failed to create image blob'));
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            setTimeout(() => URL.revokeObjectURL(url), 5000);
+                            resolve();
+                        } catch (e) { reject(e); }
+                    }, 'image/jpeg', 0.92);
+                });
+
+                // Free some memory
+                try { canvas.width = 1; canvas.height = 1; } catch (e) {}
+            } catch (err) {
+                console.error(err);
+                alert('Failed: ' + (err?.message || err));
+            } finally {
+                if (btn && originalContent !== null) {
+                    btn.innerHTML = originalContent;
+                    try { lucide.createIcons(); } catch (e) {}
+                }
+                try { window.twLoader?.hide(); } catch (e) {}
+            }
         }
 
         // --- DASHBOARD TABS ---
@@ -3047,10 +3099,10 @@ async function wsModalPrimary() {
       }
       if (action === 'export') return wsExportCurrent && wsExportCurrent();
       if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
-  if (action === 'exportReport') {
-    twLoader.show('Generating report…', 'Exporting JPG', 45);
-    return await Promise.resolve(window.exportReport && window.exportReport());
-  }
+    if (action === 'exportReport') {
+      twLoader.show('Generating report…', 'Exporting JPG', 45);
+      return await Promise.resolve(window.exportReport && window.exportReport());
+    }
       if (action === 'import') {
         const inp = document.getElementById('ws-import-file');
         if (inp) inp.click();
