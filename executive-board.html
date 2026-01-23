@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Executive Board</title>
-<!-- COPILOT_EXECBOARD_BOARDAPI_V1: 2026-01-23 12:07:47 IST | use /api/board summary+milestone-journey (no /api/state hydration) -->
+<!-- COPILOT_EXECBOARD_MERGED: 2026-01-23 12:25:25 IST | merged board.js logic into executive-board (no /api/board) -->
 
 <!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
     
@@ -54,198 +54,101 @@
     </style>
 
 <script>
-  async function twJson(url, opt){
-    const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
-    const t = await r.text();
-    let j={};
-    try{ j=JSON.parse(t||'{}'); }catch{ j={error:t}; }
-    if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
-    return j;
-  }
-
-  async function twInit(){
-    const pill=document.getElementById('tw-userpill');
-    const mgr=document.getElementById('tw-usermgr');
-    const lo=document.getElementById('tw-logout');
-    try{
-      const me = await twJson('/api/auth/me');
-      if(!me || !me.authenticated){
-        const next=encodeURIComponent(location.pathname+location.search+location.hash);
-        location.replace('/login.html?next='+next);
-        return;
-      }
-      const role = me.role || 'viewer';
-      document.body.classList.remove('role-admin','role-creator','role-viewer');
-      document.body.classList.add('role-'+role);
-      if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
-      if(mgr) mgr.classList.toggle('hidden', role!=='admin');
-      if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
-    }catch(e){
-      const next=encodeURIComponent(location.pathname+location.search+location.hash);
-      location.replace('/login.html?next='+next);
-    }
-  }
-  window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
-</script>
-
-</head>
-<body class='bg-slate-950 text-slate-100'>
-  <div class='sticky top-0 z-40 bg-slate-950/70 backdrop-blur border-b border-white/10'>
-    <div class='max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between'>
-      <div>
-        <div class='text-lg font-extrabold'>Executive Board</div>
-        <div class='text-xs text-slate-400'>All published dashboards you can access — card view</div>
-      </div>
-      <div class='flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center w-full sm:w-auto'>
-        <div class='flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto'>
-          <span class='text-slate-400 text-xs'>Sort</span>
-          <select id='sort' class='bg-transparent outline-none text-sm'>
-            <option value='newest'>Newest</option>
-            <option value='oldest'>Oldest</option>
-            <option value='name_asc'>Name A→Z</option>
-            <option value='name_desc'>Name Z→A</option>
-          </select>
-        </div>
-        <div class='flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto'>
-          <span class='text-slate-400 text-xs'>Search</span>
-          <input id='q' placeholder='Project name…' class='bg-transparent outline-none text-sm w-full sm:w-44' />
-        </div>
-        <a href='/index.html' class='px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Back</a>
-      </div>
-    </div>
-  </div>
-
-  <div class='max-w-6xl mx-auto px-4 py-4'>
-    <div id='status' class='text-sm text-slate-400'>Loading…</div>
-    <div id='err' class='hidden mt-3 p-3 rounded-xl border border-red-400/30 bg-red-400/10 text-red-200 text-sm'></div>
-    <div id='grid' class='mt-4 grid grid-cols-1 md:grid-cols-2 gap-4'></div>
-  </div>
-
-<script>
 async function jget(url){
-  const r = await fetch(url, { headers:{'Accept':'application/json'} });
+  const r = await fetch(url, { headers:{'Accept':'application/json'}, credentials:'same-origin' });
   const t = await r.text();
-  let j={}; try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
-  if(!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+  let j={};
+  try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
+  if(!r.ok) throw new Error(j.error || j.message || `Request failed (${r.status})`);
   return j;
 }
+
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
 function esc(s){
-  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',''':'&#39;'}[c]));
-}
-[c])); }
-
-function card(d){
-  const dashId = String(d.id || '');
-  const name = esc(d.name || d.id || 'Dashboard');
-  const published = fmt(d.publishedAt || d.updatedAt);
-  const owner = esc(d.ownerId || '');
-  // Summary is provided by /api/board (server-computed or savedSummaryText)
- const summary = esc(d.summary || 'No summary');
-  const detailsId = `details-${encodeURIComponent(dashId || name).replace(/%/g,'_')}`;
-
-  return `
-  <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
-    <div class='p-4 flex flex-col gap-3'>
-      <div class='flex items-start justify-between gap-3'>
-        <div class='min-w-0'>
-          <div class='text-base font-bold truncate' title='${name}'>${name}</div>
-          <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
-            <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
-            <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
-          </div>
-          <!-- Only Overall Summary visible on the card -->
-          <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap' data-card-summary='${encodeURIComponent(dashId)}'>${summary || '—'}</div>
-        </div>
-        <div class='flex flex-wrap gap-2 justify-end shrink-0'>
-          <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
-          <button type='button' data-toggle='${detailsId}' data-dash='${encodeURIComponent(dashId)}'
-            class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Details</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Other details load only after clicking Details -->
-    <div id='${detailsId}' class='hidden p-4 space-y-3 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
-      <div class='text-sm text-slate-300'>Loading…</div>
-    </div>
-  </div>`;
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 }
 
-function applySearch(){
-  const q = (document.getElementById('q').value||'').trim().toLowerCase();
-  document.querySelectorAll('#grid [data-name]').forEach(el=>{
-    const n = el.getAttribute('data-name')||'';
-    el.style.display = (!q || n.includes(q)) ? '' : 'none';
-  });
+function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
+function normalizeStage(v){ return String(v||'').toLowerCase().trim(); }
+function countOpen(items){ return (items||[]).filter(x => normalizeStage(x?.stage||x?.status) !== 'closed').length; }
+
+function sortItems(items, mode){
+  const m=(mode||'newest');
+  if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
+  if(m==='name_asc') return items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  if(m==='name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
+  return items.sort((a,b)=>(b.publishedAt||b.updatedAt||'').localeCompare(a.publishedAt||a.updatedAt||''));
 }
 
-async function load(){
-  const status=document.getElementById('status');
-  const err=document.getElementById('err');
-  err.classList.add('hidden');
-  status.textContent='Checking access…';
-  const me = await jget('/api/auth/me');
-  if(!me.authenticated){ location.href='/login.html?next='+encodeURIComponent('/executive-board.html'); return; }
-  const perms = me.permissions || {};
-  if(!(me.role==='admin' || perms.executiveBoard)){
-    err.textContent='Access denied: Admin has not granted Executive Board access.';
-    err.classList.remove('hidden');
-    status.textContent='—';
-    return;
-  }
-  status.textContent='Loading…';
-  const sort=document.getElementById('sort').value;
-  const data = await jget('/api/board?sort='+encodeURIComponent(sort));
-  const items = Array.isArray(data.items)?data.items:[];
-  // Cache items by id for Details rendering
-  try { __itemsById.clear(); items.forEach(it => { if(it && it.id) __itemsById.set(String(it.id), it); }); } catch(e) {}
-  const grid=document.getElementById('grid');
-  grid.innerHTML = items.map(d=>`<div data-name='${esc((d.name||'').toLowerCase())}'>${card(d)}</div>`).join('') || "<div class='text-slate-400 text-sm'>No published dashboards available.</div>";
-  
-  status.textContent = `Showing ${items.length} dashboard(s).`;
-  applySearch();
-}
-
-document.getElementById('sort').addEventListener('change', load);
-document.getElementById('q').addEventListener('input', applySearch);
-wireExecBoardToggles();
-
-
-// ===== Details preview rendering (from /api/board payload) =====
-// We no longer fetch /api/state per dashboard. /api/board returns:
-// - summary (savedSummaryText or computed fallback)
-// - milestones: { count, progressPct, milestones: [...] }
-// - application: { userStories, bugs, usOpen, bugsOpen, bugsNew, bugsActive }
-// - discipline: { disciplines, pending }
-
-const __itemsById = new Map();
-
-function toDate(v){
-  try { return v ? new Date(v) : null; } catch { return null; }
-}
+function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
 
 function milestoneStatusFromDates(m){
   const plannedEnd = toDate(m.endDate);
   const actualEnd = toDate(m.actualEndDate);
   const actualStart = toDate(m.actualStartDate);
   const today = new Date();
-  if (actualEnd) return { label:'Completed', dot:'bg-green-500', cls:'bg-green-400/10 border-green-400/30 text-green-200' };
-  if (actualStart) {
-    if (plannedEnd && today > plannedEnd) return { label:'Delayed', dot:'bg-red-500', cls:'bg-red-400/10 border-red-400/30 text-red-200' };
+  if(actualEnd) return { label:'Completed', dot:'bg-green-500', cls:'bg-green-400/10 border-green-400/30 text-green-200' };
+  if(actualStart){
+    if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', cls:'bg-red-400/10 border-red-400/30 text-red-200' };
     return { label:'In Progress', dot:'bg-indigo-500', cls:'bg-indigo-400/10 border-indigo-400/30 text-indigo-200' };
   }
-  if (plannedEnd && today > plannedEnd) return { label:'Delayed', dot:'bg-red-500', cls:'bg-red-400/10 border-red-400/30 text-red-200' };
+  if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', cls:'bg-red-400/10 border-red-400/30 text-red-200' };
   return { label:'Planned', dot:'bg-slate-500', cls:'bg-slate-400/10 border-white/10 text-slate-200' };
+}
+
+function pickMilestones(state){
+  const src = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
+  const milestones = src.map(m => ({
+    phase: safeText(m?.phase || m?.Activity || m?.title || m?.name || 'Milestone'),
+    startDate: safeText(m?.startDate || m?.plannedStart || m?.start || m?.['Start Date'] || ''),
+    endDate: safeText(m?.endDate || m?.plannedEnd || m?.end || m?.['End Date'] || ''),
+    actualStartDate: safeText(m?.actualStartDate || m?.actualStart || m?.['Actual Start Date'] || ''),
+    actualEndDate: safeText(m?.actualEndDate || m?.actualEnd || m?.['Actual End Date'] || ''),
+    owner: safeText(m?.owner || m?.Owner || ''),
+    remark: safeText(m?.remark || m?.Remark || '')
+  }));
+  const completed = milestones.filter(x => !!safeText(x.actualEndDate)).length;
+  const progressPct = milestones.length ? Math.round((completed/milestones.length)*100) : 0;
+  const items = milestones.slice(0,3).map(x => {
+    const t = safeText(x.phase,'Milestone');
+    const dt = safeText(x.endDate || x.actualEndDate || '');
+    return dt ? `${t} — ${dt}` : t;
+  });
+  return { count: milestones.length, progressPct, items, milestones };
+}
+
+function pickApplication(state){
+  const us = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
+  const bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
+  const usOpen = countOpen(us);
+  const bugsOpen = countOpen(bugs);
+  const bugsNew = bugs.filter(b => normalizeStage(b?.stage||b?.status) === 'new').length;
+  const bugsActive = bugs.filter(b => normalizeStage(b?.stage||b?.status) === 'active').length;
+  return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen, bugsNew, bugsActive };
+}
+
+function pickDiscipline(state){
+  const d = Array.isArray(state?.executive?.taskDisciplines) ? state.executive.taskDisciplines : [];
+  const pending = Array.isArray(state?.executive?.pendingDisciplineData) ? state.executive.pendingDisciplineData.length : 0;
+  return { disciplines: d.length, pending };
+}
+
+function computeAutoSummary(state){
+  const ms = pickMilestones(state);
+  const app = pickApplication(state);
+  const parts=[];
+  if(ms.count) parts.push(`Project execution is at ${ms.progressPct}% completion (${ms.count} milestones).`);
+  if(app.bugs) parts.push(`Bugs: ${app.bugs} total (${app.bugsNew} new, ${app.bugsActive} active).`);
+  if(app.userStories) parts.push(`User Stories: ${app.userStories} total (Open ${app.usOpen}).`);
+  return parts.join(' ').trim();
 }
 
 function milestoneJourneyHtml(msObj){
   const milestones = Array.isArray(msObj && msObj.milestones) ? msObj.milestones : [];
-  if (!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
-
+  if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
   const pct = Math.max(0, Math.min(100, Number(msObj && msObj.progressPct) || 0));
 
-  const nodes = milestones.map((m) => {
+  const nodes = milestones.map(m => {
     const phase = esc(m.phase || 'Milestone');
     const st = milestoneStatusFromDates(m);
     return `
@@ -268,18 +171,16 @@ function milestoneJourneyHtml(msObj){
 
 function milestoneCardsHtml(msObj){
   const milestones = Array.isArray(msObj && msObj.milestones) ? msObj.milestones : [];
-  if (!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
-
-  return milestones.slice(0, 24).map((m) => {
-    const phase = esc(m.phase || 'Milestone');
-    const start = esc(m.startDate || '—');
-    const end = esc(m.endDate || '—');
-    const actS = esc(m.actualStartDate || '—');
-    const actE = esc(m.actualEndDate || '—');
-    const owner = esc(m.owner || '—');
-    const remark = esc(m.remark || '');
-    const st = milestoneStatusFromDates(m);
-
+  if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
+  return milestones.slice(0,24).map(m => {
+    const phase=esc(m.phase||'Milestone');
+    const start=esc(m.startDate||'—');
+    const end=esc(m.endDate||'—');
+    const actS=esc(m.actualStartDate||'—');
+    const actE=esc(m.actualEndDate||'—');
+    const owner=esc(m.owner||'—');
+    const remark=esc(m.remark||'');
+    const st=milestoneStatusFromDates(m);
     return `
       <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
         <div class='flex items-start justify-between gap-2'>
@@ -297,9 +198,9 @@ function milestoneCardsHtml(msObj){
 }
 
 function renderDetailsFromItem(item){
-  const app = item.application || {};
-  const disc = item.discipline || {};
-  const ms = item.milestones || {};
+  const app=item.application||{};
+  const disc=item.discipline||{};
+  const ms=item.milestones||{};
 
   return `
     <div class='rounded-xl border border-white/10 bg-white/5 overflow-hidden'>
@@ -332,17 +233,145 @@ function renderDetailsFromItem(item){
         <span class='px-3 py-2 rounded-xl border border-white/10 bg-white/5'>Disciplines: <b>${disc.disciplines||0}</b></span>
         <span class='px-3 py-2 rounded-xl border border-white/10 bg-white/5'>Pending ADO items: <b>${disc.pending||0}</b></span>
       </div>
-    </div>
-  `;
+    </div>`;
+}
+
+function card(d){
+  const dashId = String(d.id || '');
+  const name = esc(d.name || d.id || 'Dashboard');
+  const published = fmt(d.publishedAt || d.updatedAt);
+  const owner = esc(d.ownerId || '');
+  const summary = esc(d.summary || 'No summary');
+  const detailsId = `details-${encodeURIComponent(dashId).replace(/%/g,'_')}`;
+
+  return `
+    <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
+      <div class='p-4 flex flex-col gap-3'>
+        <div class='flex items-start justify-between gap-3'>
+          <div class='min-w-0'>
+            <div class='text-base font-bold truncate' title='${name}'>${name}</div>
+            <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
+              <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
+              <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
+            </div>
+            <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap'>${summary}</div>
+          </div>
+          <div class='flex flex-wrap gap-2 justify-end shrink-0'>
+            <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
+            <button type='button' data-toggle='${detailsId}' data-dash='${encodeURIComponent(dashId)}'
+              class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Details</button>
+          </div>
+        </div>
+      </div>
+      <div id='${detailsId}' class='hidden p-4 space-y-3 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
+        <div class='text-sm text-slate-300'>Loading…</div>
+      </div>
+    </div>`;
+}
+
+function applySearch(){
+  const q = (document.getElementById('q').value||'').trim().toLowerCase();
+  document.querySelectorAll('#grid [data-name]').forEach(el=>{
+    const n = el.getAttribute('data-name')||'';
+    el.style.display = (!q || n.includes(q)) ? '' : 'none';
+  });
+}
+
+const __itemsById = new Map();
+
+async function apiList(){
+  // Uses /api/state?list=1 as source of dashboards visible to this user
+  return jget('/api/state?list=1');
+}
+
+async function apiGetDash(id){
+  return jget(`/api/state?dash=${encodeURIComponent(id)}`);
+}
+
+async function load(){
+  const status=document.getElementById('status');
+  const err=document.getElementById('err');
+  err.classList.add('hidden');
+
+  status.textContent='Checking access…';
+  const me = await jget('/api/auth/me');
+  if(!me.authenticated){ location.href='/login.html?next='+encodeURIComponent('/executive-board.html'); return; }
+
+  const perms = me.permissions || {};
+  if(!(me.role==='admin' || perms.executiveBoard)){
+    err.textContent='Access denied: Executive Board access required.';
+    err.classList.remove('hidden');
+    status.textContent='—';
+    return;
+  }
+
+  status.textContent='Loading…';
+
+  const sort=document.getElementById('sort').value;
+  const listRes = await apiList();
+  const dashboards = Array.isArray(listRes.dashboards) ? listRes.dashboards : [];
+
+  // Fetch each dashboard state and filter to published only
+  const pool = 4;
+  let idx = 0;
+  const items = [];
+
+  async function worker(){
+    while(idx < dashboards.length){
+      const i = idx++;
+      const d = dashboards[i];
+      if(!d || !d.id) continue;
+      try{
+        const resp = await apiGetDash(d.id);
+        const meta = resp.meta || {};
+        const state = resp.state || {};
+        // only show published dashboards
+        if(!meta.published) continue;
+
+        const milestones = pickMilestones(state);
+        const application = pickApplication(state);
+        const discipline = pickDiscipline(state);
+        const saved = safeText(state?.executive?.savedSummaryText || '');
+        const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
+
+        items.push({
+          id: d.id,
+          name: resp.name || d.name || d.id,
+          ownerId: meta.ownerId || '',
+          publishedAt: meta.publishedAt || d.publishedAt || d.updatedAt,
+          updatedAt: d.updatedAt,
+          summary,
+          milestones,
+          application,
+          discipline
+        });
+      }catch(e){
+        // ignore individual dash errors
+      }
+    }
+  }
+
+  await Promise.all(Array.from({length: pool}, worker));
+
+  sortItems(items, sort);
+  __itemsById.clear();
+  items.forEach(it => { if(it && it.id) __itemsById.set(String(it.id), it); });
+
+  const grid=document.getElementById('grid');
+  grid.innerHTML = items.length
+    ? items.map(d => `<div data-name='${esc((d.name||'').toLowerCase())}'>${card(d)}</div>`).join('')
+    : "<div class='text-slate-400 text-sm'>No published dashboards available.</div>";
+
+  status.textContent = `Showing ${items.length} dashboard(s).`;
+  applySearch();
 }
 
 function wireExecBoardToggles(){
-  const grid = document.getElementById('grid');
+  const grid=document.getElementById('grid');
   if(!grid || grid.__wired) return;
   grid.__wired = true;
 
-  grid.addEventListener('click', (e) => {
-    // Inner toggle (Details button inside details panel)
+  grid.addEventListener('click', (e)=>{
     const innerBtn = e.target.closest && e.target.closest('[data-inner-toggle]');
     if(innerBtn){
       const key = innerBtn.getAttribute('data-inner-toggle');
@@ -351,14 +380,11 @@ function wireExecBoardToggles(){
       if(panel){ panel.classList.toggle('hidden'); return; }
     }
 
-    // Outer Details toggle per card
     const btn = e.target.closest && e.target.closest('[data-toggle]');
     if(!btn) return;
-
     const id = btn.getAttribute('data-toggle');
     const dashEnc = btn.getAttribute('data-dash');
     const dashId = dashEnc ? decodeURIComponent(dashEnc) : '';
-
     const panel = document.getElementById(id);
     if(!panel) return;
 
@@ -373,7 +399,16 @@ function wireExecBoardToggles(){
     }
   });
 }
-load().catch(e=>{ const err=document.getElementById('err'); err.textContent=e.message||String(e); err.classList.remove('hidden'); document.getElementById('status').textContent='—'; });
-</script>
 
+document.getElementById('sort').addEventListener('change', load);
+document.getElementById('q').addEventListener('input', applySearch);
+wireExecBoardToggles();
+
+load().catch(e=>{
+  const err=document.getElementById('err');
+  err.textContent = e.message || String(e);
+  err.classList.remove('hidden');
+  document.getElementById('status').textContent = '—';
+});
+</script>
 </body></html>
