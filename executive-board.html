@@ -1,416 +1,415 @@
-
-<!DOCTYPE html><html lang='en'>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Board</title>
-<!-- COPILOT_EXECBOARD_MILESTONE_UI: 2026-01-23 14:59:10 IST | build-style milestone journey + keep application tracker + remove nudges -->
-<!-- COPILOT_ESC_FIX: 2026-01-23 15:03:25 IST -->
-<!-- COPILOT_NULL_LISTENER_FIX: 2026-01-23 15:11:23 IST | guard addEventListener + DOMContentLoaded init -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Executive Board</title>
+  <!-- COPILOT_EXECBOARD_FULL: 2026-01-23 15:21:23 IST | full working file (robust init + error UI + milestones journey + app tracker, no nudges) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .line-clamp-4{ display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+    .custom-scroll::-webkit-scrollbar{ width:6px; height:6px; }
+    .custom-scroll::-webkit-scrollbar-track{ background:#0b1220; }
+    .custom-scroll::-webkit-scrollbar-thumb{ background:#334155; border-radius:999px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100">
 
-<!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- SheetJS for Excel -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-    
-    <!-- html2canvas for Report Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <div class="sticky top-0 z-40 bg-slate-950/70 backdrop-blur border-b border-white/10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between">
+      <div class="min-w-0">
+        <div class="text-lg font-extrabold">Executive Board</div>
+        <div class="text-xs text-slate-400">All published dashboards you can access — card view</div>
+      </div>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .modal { display: none; }
-        .modal.open { display: flex; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms; }
-        .hidden-by-report { display: none !important; }
-        
-        .clickable-cell:hover { text-decoration: underline; cursor: pointer; color: #2563eb; font-weight: 600; }
-        [contenteditable] { padding: 4px 8px; border-radius: 4px; transition: all 0.2s; border: 1px solid transparent; }
-        [contenteditable]:hover { background-color: #f8fafc; border-color: #e2e8f0; }
-        [contenteditable]:focus { outline: none; background-color: #eff6ff; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
-        .l3-row:hover { background-color: #f8fafc; }
-        .l3-row:hover .delete-btn { opacity: 1; pointer-events: auto; }
-        .delete-btn { opacity: 0; transition: opacity 0.2s; }
-    </style>
+      <div class="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center w-full sm:w-auto">
+        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto">
+          <span class="text-slate-400 text-xs">Sort</span>
+          <select id="sort" class="bg-transparent outline-none text-sm w-full sm:w-auto">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="name_asc">Name A→Z</option>
+            <option value="name_desc">Name Z→A</option>
+          </select>
+        </div>
 
-    <style>
-      @keyframes ghspin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
-      /* Hide Clear Storage button */
-      button[onclick^="wsClearLocalStorage"], button[onclick="wsClearLocalStorage()"] { display:none !important; }
-    </style>
+        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto">
+          <span class="text-slate-400 text-xs">Search</span>
+          <input id="q" placeholder="Project name…" class="bg-transparent outline-none text-sm w-full sm:w-44" />
+        </div>
+
+        <a href="/index.html" class="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm">Back</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 py-4">
+    <div id="status" class="text-sm text-slate-400">Loading…</div>
+    <pre id="err" class="hidden mt-3 p-3 rounded-xl border border-red-400/30 bg-red-400/10 text-red-200 text-xs whitespace-pre-wrap"></pre>
+    <div id="grid" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </div>
 
 <script>
-async function jget(url){
-  const r = await fetch(url, { headers:{'Accept':'application/json'}, credentials:'same-origin' });
-  const t = await r.text();
-  let j={};
-  try{ j=JSON.parse(t||'{}'); }catch{ j={}; }
-  if(!r.ok) throw new Error(j.error || j.message || `Request failed (${r.status})`);
-  return j;
-}
+(function(){
+  const $ = (id)=>document.getElementById(id);
 
-function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){
-  return String(s||'').replace(/[&<>"']/g, c => ({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
-  }[c]));
-}
-
-
-function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
-function normalizeStage(v){ return String(v||'').toLowerCase().trim(); }
-function countOpen(items){ return (items||[]).filter(x => normalizeStage(x?.stage||x?.status) !== 'closed').length; }
-
-function sortItems(items, mode){
-  const m=(mode||'newest');
-  if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
-  if(m==='name_asc') return items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
-  if(m==='name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
-  return items.sort((a,b)=>(b.publishedAt||b.updatedAt||'').localeCompare(a.publishedAt||a.updatedAt||''));
-}
-
-function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
-
-// Build-like status colors: Completed = green, In Progress / Planned = blue, Delayed = red
-function milestoneStatusFromDates(m){
-  const plannedEnd = toDate(m.endDate);
-  const actualEnd = toDate(m.actualEndDate);
-  const actualStart = toDate(m.actualStartDate);
-  const today = new Date();
-  if(actualEnd) return { label:'Completed', dot:'bg-green-500', ring:'border-green-500', cls:'bg-green-400/10 border-green-400/30 text-green-200' };
-  if(actualStart){
-    if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'border-red-500', cls:'bg-red-400/10 border-red-400/30 text-red-200' };
-    return { label:'In Progress', dot:'bg-blue-500', ring:'border-blue-500', cls:'bg-blue-400/10 border-blue-400/30 text-blue-200' };
+  function esc(s){
+    return String(s||'').replace(/[&<>"']/g, c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c]));
   }
-  if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'border-red-500', cls:'bg-red-400/10 border-red-400/30 text-red-200' };
-  return { label:'Planned', dot:'bg-blue-500', ring:'border-blue-500', cls:'bg-blue-400/10 border-blue-400/30 text-blue-200' };
-}
 
-function pickMilestones(state){
-  const src = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
-  const milestones = src.map(m => ({
-    phase: safeText(m?.phase || m?.Activity || m?.title || m?.name || 'Milestone'),
-    startDate: safeText(m?.startDate || m?.plannedStart || m?.start || m?.['Start Date'] || ''),
-    endDate: safeText(m?.endDate || m?.plannedEnd || m?.end || m?.['End Date'] || ''),
-    actualStartDate: safeText(m?.actualStartDate || m?.actualStart || m?.['Actual Start Date'] || ''),
-    actualEndDate: safeText(m?.actualEndDate || m?.actualEnd || m?.['Actual End Date'] || ''),
-    owner: safeText(m?.owner || m?.Owner || ''),
-    remark: safeText(m?.remark || m?.Remark || '')
-  }));
-  const completed = milestones.filter(x => !!safeText(x.actualEndDate)).length;
-  const progressPct = milestones.length ? Math.round((completed/milestones.length)*100) : 0;
-  const items = milestones.slice(0,3).map(x => {
-    const t = safeText(x.phase,'Milestone');
-    const dt = safeText(x.endDate || x.actualEndDate || '');
-    return dt ? `${t} — ${dt}` : t;
-  });
-  return { count: milestones.length, progressPct, items, milestones };
-}
+  function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
+  function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
+  function normalizeStage(v){ return String(v||'').toLowerCase().trim(); }
+  function countOpen(items){ return (items||[]).filter(x => normalizeStage(x?.stage||x?.status) !== 'closed').length; }
 
-function pickApplication(state){
-  const us = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
-  const bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
-  const usOpen = countOpen(us);
-  const bugsOpen = countOpen(bugs);
-  return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen };
-}
+  function sortItems(items, mode){
+    const m = (mode||'newest');
+    if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
+    if(m==='name_asc') return items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+    if(m==='name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
+    return items.sort((a,b)=>(b.publishedAt||b.updatedAt||'').localeCompare(a.publishedAt||a.updatedAt||''));
+  }
 
-function computeAutoSummary(state){
-  const ms = pickMilestones(state);
-  const app = pickApplication(state);
-  const parts=[];
-  if(ms.count) parts.push(`Project execution is at ${ms.progressPct}% completion (${ms.count} milestones).`);
-  if(app.userStories) parts.push(`User Stories: ${app.userStories} (Open ${app.usOpen}).`);
-  if(app.bugs) parts.push(`Bugs: ${app.bugs} (Open ${app.bugsOpen}).`);
-  return parts.join(' ').trim();
-}
+  async function jget(url){
+    const r = await fetch(url, { headers:{'Accept':'application/json'}, credentials:'same-origin' });
+    const t = await r.text();
+    let j;
+    try{ j = JSON.parse(t || '{}'); }catch(e){
+      throw new Error('Invalid JSON from '+url+' (HTTP '+r.status+'): '+t.slice(0,250));
+    }
+    if(!r.ok){
+      throw new Error(j.error || j.message || ('Request failed ('+r.status+')'));
+    }
+    return j;
+  }
 
-function milestoneJourneyHtml(msObj){
-  const milestones = Array.isArray(msObj && msObj.milestones) ? msObj.milestones : [];
-  if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
-  const pct = Math.max(0, Math.min(100, Number(msObj && msObj.progressPct) || 0));
+  function showErr(msg){
+    const e = $('err');
+    if(!e) return;
+    e.textContent = String(msg||'Error');
+    e.classList.remove('hidden');
+  }
 
-  const nodes = milestones.map(m => {
-    const phase = esc(m.phase || 'Milestone');
-    const st = milestoneStatusFromDates(m);
+  function clearErr(){
+    const e = $('err');
+    if(!e) return;
+    e.classList.add('hidden');
+    e.textContent = '';
+  }
+
+  function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
+
+  function milestoneStatusFromDates(m){
+    const plannedEnd = toDate(m.endDate);
+    const actualEnd = toDate(m.actualEndDate);
+    const actualStart = toDate(m.actualStartDate);
+    const today = new Date();
+
+    if(actualEnd) return { label:'Completed', dot:'bg-green-500', ring:'ring-green-500/70' };
+    if(actualStart){
+      if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70' };
+      return { label:'In Progress', dot:'bg-blue-500', ring:'ring-blue-500/70' };
+    }
+    if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70' };
+    return { label:'Planned', dot:'bg-blue-500', ring:'ring-blue-500/70' };
+  }
+
+  function pickMilestones(state){
+    const src = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
+    const milestones = src.map(m => ({
+      phase: safeText(m?.phase || m?.Activity || m?.title || m?.name || 'Milestone'),
+      startDate: safeText(m?.startDate || m?.plannedStart || m?.start || m?.['Start Date'] || ''),
+      endDate: safeText(m?.endDate || m?.plannedEnd || m?.end || m?.['End Date'] || ''),
+      actualStartDate: safeText(m?.actualStartDate || m?.actualStart || m?.['Actual Start Date'] || ''),
+      actualEndDate: safeText(m?.actualEndDate || m?.actualEnd || m?.['Actual End Date'] || ''),
+      owner: safeText(m?.owner || m?.Owner || ''),
+      remark: safeText(m?.remark || m?.Remark || '')
+    }));
+    const completed = milestones.filter(x => !!safeText(x.actualEndDate)).length;
+    const progressPct = milestones.length ? Math.round((completed/milestones.length)*100) : 0;
+    return { count: milestones.length, progressPct, milestones };
+  }
+
+  function pickApplication(state){
+    const us = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
+    const bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
+    const usOpen = countOpen(us);
+    const bugsOpen = countOpen(bugs);
+    return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen };
+  }
+
+  function computeAutoSummary(state){
+    const ms = pickMilestones(state);
+    const app = pickApplication(state);
+    const parts=[];
+    if(ms.count) parts.push(`Project execution is at ${ms.progressPct}% completion (${ms.count} milestones).`);
+    if(app.userStories) parts.push(`User Stories: ${app.userStories} (Open ${app.usOpen}).`);
+    if(app.bugs) parts.push(`Bugs: ${app.bugs} (Open ${app.bugsOpen}).`);
+    return parts.join(' ').trim();
+  }
+
+  function milestoneJourneyHtml(ms){
+    const milestones = Array.isArray(ms?.milestones) ? ms.milestones : [];
+    if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
+
+    const pct = Math.max(0, Math.min(100, Number(ms.progressPct)||0));
+
+    const nodes = milestones.map(m => {
+      const phase = esc(m.phase || 'Milestone');
+      const st = milestoneStatusFromDates(m);
+      return `
+        <div class='flex flex-col items-center' style='width:150px'>
+          <div class='w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${st.dot} ring-2 ${st.ring} ring-offset-2 ring-offset-slate-950'>✓</div>
+          <div class='mt-2 text-xs font-semibold text-slate-200 text-center break-words leading-tight'>${phase}</div>
+        </div>`;
+    }).join('');
+
     return `
-      <div class='flex flex-col items-center relative' style='width:150px'>
-        <div class='w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${st.dot} ring-2 ring-offset-2 ring-offset-slate-950 ${st.ring}'>✓</div>
-        <div class='mt-2 text-xs font-semibold text-slate-200 text-center break-words leading-tight'>${phase}</div>
-      </div>`;
-  }).join('');
-
-  return `
-    <div class='bg-white/5 border border-white/10 rounded-2xl p-4'>
-      <div class='relative overflow-x-auto custom-scroll'>
-        <div class='relative' style='min-width:max-content'>
-          <div class='absolute top-5 left-6 right-6 h-1 bg-white/10'></div>
-          <div class='absolute top-5 left-6 h-1 bg-blue-500/80' style='width:${pct}%;'></div>
-          <div class='flex items-start gap-8 px-6 pt-0 pb-2'>${nodes}</div>
-        </div>
-      </div>
-    </div>`;
-}
-
-function milestoneCardsHtml(msObj){
-  const milestones = Array.isArray(msObj && msObj.milestones) ? msObj.milestones : [];
-  if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
-  return milestones.slice(0, 24).map(m => {
-    const phase=esc(m.phase||'Milestone');
-    const start=esc(m.startDate||'—');
-    const end=esc(m.endDate||'—');
-    const actS=esc(m.actualStartDate||'—');
-    const actE=esc(m.actualEndDate||'—');
-    const owner=esc(m.owner||'—');
-    const remark=esc(m.remark||'');
-    const st=milestoneStatusFromDates(m);
-    return `
-      <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
-        <div class='flex items-start justify-between gap-2'>
-          <div class='min-w-0'>
-            <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
-            <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
-            <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
-            <div class='mt-1 text-xs text-slate-400'>Owner: ${owner}</div>
-            ${remark ? `<div class='mt-1 text-xs text-slate-300 line-clamp-2'>${remark}</div>` : ''}
+      <div class='bg-white/5 border border-white/10 rounded-2xl p-4'>
+        <div class='relative overflow-x-auto custom-scroll'>
+          <div class='relative' style='min-width:max-content'>
+            <div class='absolute top-5 left-6 right-6 h-1 bg-white/10'></div>
+            <div class='absolute top-5 left-6 h-1 bg-blue-500/80' style='width:${pct}%;'></div>
+            <div class='flex items-start gap-8 px-6 pt-0 pb-2'>${nodes}</div>
           </div>
-          <span class='shrink-0 px-2 py-1 rounded-full border text-xs font-semibold ${st.cls}'>${st.label}</span>
         </div>
       </div>`;
-  }).join('');
-}
+  }
 
-function renderMilestoneSection(item){
-  const ms=item.milestones||{};
-  const app=item.application||{};
-  // IMPORTANT: no nudges/chips like Total/Completed/InProgress; only journey + tracker counts
-  return `
-    <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
-      <div class='px-4 py-3 border-b border-white/10'>
-        <div class='text-base font-extrabold text-blue-300'>Project Milestones - Application Tracker</div>
-        <div class='mt-1 text-sm text-slate-200'>User Stories: <b>${app.userStories||0}</b> (Open ${app.usOpen||0}) • Bugs: <b>${app.bugs||0}</b> (Open ${app.bugsOpen||0})</div>
-      </div>
-      <div class='p-4'>
-        ${milestoneJourneyHtml(ms)}
-        <div class='mt-4 flex justify-end'>
-          <button type='button' data-inner-toggle='mscards' class='px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>View Details</button>
-        </div>
-        <div data-inner-panel='mscards' class='hidden mt-4'>
-          <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${milestoneCardsHtml(ms)}</div>
-        </div>
-      </div>
-    </div>`;
-}
+  function milestoneCardsHtml(ms){
+    const milestones = Array.isArray(ms?.milestones) ? ms.milestones : [];
+    if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
 
-function renderDetailsFromItem(item){
-  return renderMilestoneSection(item);
-}
+    return milestones.slice(0, 24).map(m => {
+      const phase = esc(m.phase||'Milestone');
+      const start = esc(m.startDate||'—');
+      const end = esc(m.endDate||'—');
+      const actS = esc(m.actualStartDate||'—');
+      const actE = esc(m.actualEndDate||'—');
+      const owner = esc(m.owner||'—');
+      const remark = esc(m.remark||'');
+      const st = milestoneStatusFromDates(m);
 
-function card(d){
-  const dashId = String(d.id || '');
-  const name = esc(d.name || d.id || 'Dashboard');
-  const published = fmt(d.publishedAt || d.updatedAt);
-  const owner = esc(d.ownerId || '');
-  const summary = esc(d.summary || 'No summary');
-  const detailsId = `details-${encodeURIComponent(dashId).replace(/%/g,'_')}`;
-
-  return `
-    <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
-      <div class='p-4 flex flex-col gap-3'>
-        <div class='flex items-start justify-between gap-3'>
-          <div class='min-w-0'>
-            <div class='text-base font-bold truncate' title='${name}'>${name}</div>
-            <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
-              <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
-              <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
+      return `
+        <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+          <div class='flex items-start justify-between gap-2'>
+            <div class='min-w-0'>
+              <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
+              <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
+              <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
+              <div class='mt-1 text-xs text-slate-400'>Owner: ${owner}</div>
+              ${remark ? `<div class='mt-1 text-xs text-slate-300 line-clamp-4'>${remark}</div>` : ''}
             </div>
-            <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap'>${summary}</div>
+            <span class='shrink-0 px-2 py-1 rounded-full border border-white/10 text-xs font-semibold text-slate-200 bg-white/5'>${st.label}</span>
           </div>
-          <div class='flex flex-wrap gap-2 justify-end shrink-0'>
-            <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
-            <button type='button' data-toggle='${detailsId}' data-dash='${encodeURIComponent(dashId)}'
-              class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Details</button>
+        </div>`;
+    }).join('');
+  }
+
+  function renderMilestoneSection(item){
+    const ms = item.milestones;
+    const app = item.application;
+
+    return `
+      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
+        <div class='px-4 py-3 border-b border-white/10'>
+          <div class='text-base font-extrabold text-blue-300'>Project Milestones - Application Tracker</div>
+          <div class='mt-1 text-sm text-slate-200'>User Stories: <b>${app.userStories||0}</b> (Open ${app.usOpen||0}) • Bugs: <b>${app.bugs||0}</b> (Open ${app.bugsOpen||0})</div>
+        </div>
+        <div class='p-4'>
+          ${milestoneJourneyHtml(ms)}
+          <div class='mt-4 flex justify-end'>
+            <button type='button' data-inner-toggle='mscards' class='px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>View Details</button>
+          </div>
+          <div data-inner-panel='mscards' class='hidden mt-4'>
+            <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${milestoneCardsHtml(ms)}</div>
           </div>
         </div>
-      </div>
-      <div id='${detailsId}' class='hidden p-4 space-y-3 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
-        <div class='text-sm text-slate-300'>Loading…</div>
-      </div>
-    </div>`;
-}
-
-function applySearch(){
-  const q = (document.getElementById('q').value||'').trim().toLowerCase();
-  document.querySelectorAll('#grid [data-name]').forEach(el=>{
-    const n = el.getAttribute('data-name')||'';
-    el.style.display = (!q || n.includes(q)) ? '' : 'none';
-  });
-}
-
-const __itemsById = new Map();
-
-async function apiList(){
-  return jget('/api/state?list=1');
-}
-async function apiGetDash(id){
-  return jget(`/api/state?dash=${encodeURIComponent(id)}`);
-}
-
-async function load(){
-  const status=document.getElementById('status');
-  const err=document.getElementById('err');
-  err.classList.add('hidden');
-
-  status.textContent='Checking access…';
-  const me = await jget('/api/auth/me');
-  if(!me.authenticated){ location.href='/login.html?next='+encodeURIComponent('/executive-board.html'); return; }
-
-  const perms = me.permissions || {};
-  if(!(me.role==='admin' || perms.executiveBoard)){
-    err.textContent='Access denied: Executive Board access required.';
-    err.classList.remove('hidden');
-    status.textContent='—';
-    return;
+      </div>`;
   }
 
-  status.textContent='Loading…';
-  const sort=document.getElementById('sort').value;
+  function card(d){
+    const dashId = String(d.id || '');
+    const name = esc(d.name || d.id || 'Dashboard');
+    const published = fmt(d.publishedAt || d.updatedAt);
+    const owner = esc(d.ownerId || '');
+    const summary = esc(d.summary || 'No summary');
+    const detailsId = `details-${encodeURIComponent(dashId).replace(/%/g,'_')}`;
 
-  const listRes = await apiList();
-  const dashboards = Array.isArray(listRes.dashboards) ? listRes.dashboards : [];
-
-  // Prefer published-only from list if available, else fetch meta to filter
-  const publishedDashboards = dashboards.filter(d => d && (d.published === true || d.published === 1 || d.published === 'true'));
-  const sourceList = publishedDashboards.length ? publishedDashboards : dashboards;
-
-  const pool = 4;
-  let idx = 0;
-  const items = [];
-
-  async function worker(){
-    while(idx < sourceList.length){
-      const i = idx++;
-      const d = sourceList[i];
-      if(!d || !d.id) continue;
-      try{
-        const resp = await apiGetDash(d.id);
-        const meta = resp.meta || {};
-        const state = resp.state || {};
-        if(publishedDashboards.length === 0 && !meta.published) continue;
-
-        const milestones = pickMilestones(state);
-        const application = pickApplication(state);
-        const saved = safeText(state?.executive?.savedSummaryText || '');
-        const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
-
-        items.push({
-          id: d.id,
-          name: resp.name || d.name || d.id,
-          ownerId: meta.ownerId || '',
-          publishedAt: meta.publishedAt || d.publishedAt || d.updatedAt,
-          updatedAt: d.updatedAt,
-          summary,
-          milestones,
-          application
-        });
-      }catch(e){}
-    }
+    return `
+      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
+        <div class='p-4 flex flex-col gap-3'>
+          <div class='flex items-start justify-between gap-3'>
+            <div class='min-w-0'>
+              <div class='text-base font-bold truncate' title='${name}'>${name}</div>
+              <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
+                <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
+                <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
+              </div>
+              <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap'>${summary}</div>
+            </div>
+            <div class='flex flex-wrap gap-2 justify-end shrink-0'>
+              <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
+              <button type='button' data-toggle='${detailsId}' data-dash='${encodeURIComponent(dashId)}'
+                class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Details</button>
+            </div>
+          </div>
+        </div>
+        <div id='${detailsId}' class='hidden p-4 space-y-3 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
+          <div class='text-sm text-slate-300'>Loading…</div>
+        </div>
+      </div>`;
   }
 
-  await Promise.all(Array.from({length: pool}, worker));
-
-  sortItems(items, sort);
-  __itemsById.clear();
-  items.forEach(it => { if(it && it.id) __itemsById.set(String(it.id), it); });
-
-  const grid=document.getElementById('grid');
-  grid.innerHTML = items.length
-    ? items.map(d => `<div data-name='${esc((d.name||'').toLowerCase())}'>${card(d)}</div>`).join('')
-    : "<div class='text-slate-400 text-sm'>No published dashboards available.</div>";
-
-  status.textContent = `Showing ${items.length} published dashboard(s).`;
-  applySearch();
-}
-
-function wireExecBoardToggles(){
-  const grid=document.getElementById('grid');
-  if(!grid || grid.__wired) return;
-  grid.__wired = true;
-
-  grid.addEventListener('click', (e)=>{
-    const innerBtn = e.target.closest && e.target.closest('[data-inner-toggle]');
-    if(innerBtn){
-      const key = innerBtn.getAttribute('data-inner-toggle');
-      const root = innerBtn.closest('[data-loaded]') || innerBtn.closest('div');
-      const panel = root && root.querySelector ? root.querySelector('[data-inner-panel="'+key+'"]') : null;
-      if(panel){ panel.classList.toggle('hidden'); return; }
-    }
-
-    const btn = e.target.closest && e.target.closest('[data-toggle]');
-    if(!btn) return;
-    const id = btn.getAttribute('data-toggle');
-    const dashEnc = btn.getAttribute('data-dash');
-    const dashId = dashEnc ? decodeURIComponent(dashEnc) : '';
-    const panel = document.getElementById(id);
-    if(!panel) return;
-
-    const willOpen = panel.classList.contains('hidden');
-    panel.classList.toggle('hidden');
-    btn.textContent = panel.classList.contains('hidden') ? 'Details' : 'Hide';
-
-    if(willOpen && panel.getAttribute('data-loaded') !== '1'){
-      const item = __itemsById.get(dashId);
-      panel.innerHTML = item ? renderDetailsFromItem(item) : `<div class='text-sm text-slate-300'>No details available.</div>`;
-      panel.setAttribute('data-loaded','1');
-    }
-  });
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  try {
-    const sortEl = document.getElementById('sort');
-    if (sortEl) sortEl.addEventListener('change', load);
-    const qEl = document.getElementById('q');
-    if (qEl) qEl.addEventListener('input', applySearch);
-
-    wireExecBoardToggles();
-
-    load().catch(e => {
-      const err=document.getElementById('err');
-      if (err){
-        err.textContent = (e && (e.message||e)) || String(e);
-        err.classList.remove('hidden');
-      }
-      const status=document.getElementById('status');
-      if (status) status.textContent = '—';
+  function applySearch(){
+    const q = ($('q')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('#grid [data-name]').forEach(el=>{
+      const n = el.getAttribute('data-name')||'';
+      el.style.display = (!q || n.includes(q)) ? '' : 'none';
     });
-  } catch (e) {
-    const err=document.getElementById('err');
-    if (err){
-      err.textContent = 'Init error: ' + ((e && (e.message||e)) || String(e));
-      err.classList.remove('hidden');
-    }
   }
-});
+
+  const itemsById = new Map();
+
+  async function apiList(){ return jget('/api/state?list=1'); }
+  async function apiGetDash(id){ return jget(`/api/state?dash=${encodeURIComponent(id)}`); }
+
+  async function loadBoard(){
+    clearErr();
+    const status=$('status');
+    if(status) status.textContent = 'Checking access…';
+
+    const me = await jget('/api/auth/me');
+    if(!me.authenticated){
+      location.href='/login.html?next='+encodeURIComponent('/executive-board.html');
+      return;
+    }
+
+    const perms = me.permissions || {};
+    if(!(me.role==='admin' || perms.executiveBoard)){
+      showErr('Access denied: Executive Board access required.');
+      if(status) status.textContent = '—';
+      return;
+    }
+
+    if(status) status.textContent = 'Loading dashboards…';
+
+    const sortMode = $('sort')?.value || 'newest';
+    const listRes = await apiList();
+    const dashboards = Array.isArray(listRes.dashboards) ? listRes.dashboards : [];
+
+    const publishedFromList = dashboards.filter(d => d && (d.published === true || d.published === 1 || d.published === 'true'));
+    const source = publishedFromList.length ? publishedFromList : dashboards;
+
+    const pool = 4;
+    let idx = 0;
+    const items = [];
+
+    async function worker(){
+      while(idx < source.length){
+        const i = idx++;
+        const d = source[i];
+        if(!d || !d.id) continue;
+        try{
+          const resp = await apiGetDash(d.id);
+          const meta = resp.meta || {};
+          const state = resp.state || {};
+          if(publishedFromList.length === 0 && !meta.published) continue;
+
+          const milestones = pickMilestones(state);
+          const application = pickApplication(state);
+          const saved = safeText(state?.executive?.savedSummaryText || '');
+          const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
+
+          items.push({
+            id: d.id,
+            name: resp.name || d.name || d.id,
+            ownerId: meta.ownerId || '',
+            publishedAt: meta.publishedAt || d.publishedAt || d.updatedAt,
+            updatedAt: d.updatedAt,
+            summary,
+            milestones,
+            application
+          });
+        }catch(e){}
+      }
+    }
+
+    await Promise.all(Array.from({length: pool}, worker));
+
+    sortItems(items, sortMode);
+    itemsById.clear();
+    items.forEach(it => { if(it && it.id) itemsById.set(String(it.id), it); });
+
+    const grid=$('grid');
+    if(grid){
+      grid.innerHTML = items.length
+        ? items.map(d => `<div data-name='${esc((d.name||'').toLowerCase())}'>${card(d)}</div>`).join('')
+        : "<div class='text-slate-400 text-sm'>No published dashboards available.</div>";
+    }
+
+    if(status) status.textContent = `Showing ${items.length} published dashboard(s).`;
+    applySearch();
+  }
+
+  function wireToggles(){
+    const grid=$('grid');
+    if(!grid || grid.__wired) return;
+    grid.__wired = true;
+
+    grid.addEventListener('click', (e)=>{
+      const innerBtn = e.target.closest && e.target.closest('[data-inner-toggle]');
+      if(innerBtn){
+        const key = innerBtn.getAttribute('data-inner-toggle');
+        const root = innerBtn.closest('[data-loaded]') || innerBtn.closest('div');
+        const panel = root && root.querySelector ? root.querySelector('[data-inner-panel="'+key+'"]') : null;
+        if(panel){ panel.classList.toggle('hidden'); return; }
+      }
+
+      const btn = e.target.closest && e.target.closest('[data-toggle]');
+      if(!btn) return;
+
+      const id = btn.getAttribute('data-toggle');
+      const dashEnc = btn.getAttribute('data-dash');
+      const dashId = dashEnc ? decodeURIComponent(dashEnc) : '';
+      const panel = document.getElementById(id);
+      if(!panel) return;
+
+      const willOpen = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden');
+      btn.textContent = panel.classList.contains('hidden') ? 'Details' : 'Hide';
+
+      if(willOpen && panel.getAttribute('data-loaded') !== '1'){
+        const item = itemsById.get(dashId);
+        panel.innerHTML = item ? renderMilestoneSection(item) : `<div class='text-sm text-slate-300'>No details available.</div>`;
+        panel.setAttribute('data-loaded','1');
+      }
+    });
+  }
+
+  function init(){
+    const sortEl = $('sort');
+    if(sortEl) sortEl.addEventListener('change', loadBoard);
+    const qEl = $('q');
+    if(qEl) qEl.addEventListener('input', applySearch);
+    wireToggles();
+
+    loadBoard().catch(e=>{
+      showErr(e && (e.message||e) || String(e));
+      const status=$('status');
+      if(status) status.textContent = '—';
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', init);
+})();
 </script>
-</body></html>
+
+</body>
+</html>
