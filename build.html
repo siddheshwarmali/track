@@ -94,66 +94,6 @@
 </head>
 <body class="text-gray-800">
 
-<!-- Toast (Run-style) -->
-<div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
-
-<!-- ===== New Header (Run-style) for Build ===== -->
-<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
-  <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-    <div class="min-w-0">
-      <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
-      <div class="text-xs text-slate-500 truncate">Workspace: <span id="dashPill" class="font-mono">—</span> • <span id="filePill">Ready</span></div>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap justify-end">
-      <select id="ws-select" class="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"><option value="">Loading…</option></select>
-      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
-      <div class="relative">
-        <button id="ws-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 flex items-center gap-2">Actions</button>
-        <div id="ws-actions-backdrop" class="hidden fixed inset-0 z-40"></div>
-        <div id="ws-actions-menu" class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
-          <div class="p-2">
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="new">Create New</button>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="rename">Rename</button>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="save">Save</button>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-red-50 text-red-700" data-ws-action="delete">Delete</button>
-            <div class="my-1 border-t"></div>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="export">Export (JSON)</button>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="exportExcel">Export (Excel)</button>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="import">Import</button>
-            <div class="my-1 border-t"></div>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="publish">Publish</button>
-            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="unpublish">Unpublish</button>
-          </div>
-        </div>
-      </div>
-      <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-1">Not saved</span>
-      <div class="relative">
-        <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">&#9776;</button>
-        <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
-          <div class="px-4 py-3 border-b bg-slate-50">
-            <div class="text-xs text-slate-500">Signed in as</div>
-            <div id="tw-userpill" class="mt-1 text-sm font-semibold">Checking…</div>
-          </div>
-          <div class="p-2">
-            <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-            <a id="nav-build" href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
-            <a id="nav-run" href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
-            <a id="tw-execboard" href="/executive-board.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
-          </div>
-          <div class="p-2 border-t">
-            <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
-            <a id="tw-usermgr" href="/user-manager.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">👥 User Manager</a>
-            <button id="tw-logout" class="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-700">⎋ Logout</button>
-          </div>
-        </div>
-      </div>
-      <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
-    </div>
-  </div>
-</div>
-<!-- ===== /New Header ===== -->
-
-
 <!-- App Loader Overlay -->
 <div id="tw-app-loader" class="fixed inset-0 z-[99999] bg-slate-950/50 backdrop-blur-sm hidden">
   <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(520px,92vw)] bg-white rounded-2xl shadow-2xl border border-slate-200 p-5">
@@ -178,8 +118,99 @@
         <!-- Header -->
 
 
+<!-- Top Bar (Advanced Hamburger) -->
+<div class="mb-4 flex items-center justify-end">
+  <div class="relative">
+    <button id="tw-menu-btn" type="button"
+      class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50"
+      aria-label="Open menu">
+      <span class="sr-only">Menu</span>
+      <span class="text-slate-700 text-xl leading-none">☰</span>
+    </button>
+
+    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+      <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
+        <div class="text-xs text-slate-500">Signed in as</div>
+        <div id="tw-userpill" class="mt-1 text-sm font-semibold text-slate-900">Checking login…</div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="p-2">
+        <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
+        <button type="button"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+          <span class="text-base">🛠️</span><span>Build</span>
+        </button>
+        <button type="button"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+          <span href="/build.html" class="text-base">▶️</span><span>Run</span>
+        </button>
+      
+        <a id="tw-execboard" href="/executive-board.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
+          <span class="text-base">🗂️</span><span>Executive Board</span>
+        </a>
+</div>
+
+      <!-- Account -->
+      <div class="p-2 border-t border-slate-100">
+        <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
+        <a id="tw-usermgr" href="/user-manager.html" class="hidden w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
+          <span class="text-base">👥</span><span>User Manager</span>
+        </a>
+        <button id="tw-logout" type="button" class="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-red-50 border border-red-200 text-red-700 hover:bg-red-100">
+          <span class="text-base">⎋</span><span>Logout</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Workspace Manager (NEW: Multi-dashboard + Local Save/Load) -->
-        
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6 animate-fade-in">
+            <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <i data-lucide="folder" class="w-5 h-5 text-blue-600"></i>
+                    <span class="font-semibold text-gray-800">Workspace</span>
+                    <select id="ws-select" class="ml-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Loading…</option>
+                    </select>
+                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-2">Not saved</span>
+                </div>
+
+                
+<div class="flex flex-wrap gap-2 items-center">
+  
+<div class="relative">
+  <button id="ws-actions-btn" type="button"
+    class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 active:scale-[0.99] transition"
+    aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">
+    <span class="text-base">⚙️</span><span>Actions</span>
+    <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
+  </button>
+  <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-30" aria-hidden="true"></div>
+  <div id="ws-actions-menu" class="hidden z-40 fixed inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden" role="menu" aria-label="Workspace actions">
+    <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
+    <div class="p-2">
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="new" role="menuitem">New workspace</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="rename" role="menuitem">Rename</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="save" role="menuitem">Save</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-red-50 active:bg-red-100 text-red-700" data-ws-action="delete" role="menuitem">Delete</button>
+      <div class="my-2 h-px bg-slate-100"></div>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem">Publish</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem">Unpublish</button>
+    </div>
+    <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
+  </div>
+</div>
+
+  <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
+</div>
+
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                Workspaces are saved locally in this browser. Use <span class="font-medium">Export</span> to back up or share, and <span class="font-medium">Import</span> to restore.
+            </p>
         </div>
 <!-- Main Card -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -3317,27 +3348,6 @@ async function wsModalPrimary() {
     if(action==='publish'){ e.preventDefault(); openPublish(); }
     if(action==='unpublish'){ e.preventDefault(); doUnpublish(); }
   }, true);
-})();
-</script>
-
-
-<script>
-(function(){
-  const qs=(id)=>document.getElementById(id);
-  const esc=(s)=>String(s||'').replace(/[&<>\"']/g,c=>({'&':'&','<':'<','>':'>','\"':'\"','\'':'&#39;'}[c]));
-  function toast(msg,kind){ const t=qs('toast'); if(!t) return; t.textContent=msg; t.classList.remove('hidden'); t.classList.remove('bg-emerald-600','bg-red-600','bg-slate-900','bg-amber-700'); t.classList.add(kind==='error'?'bg-red-600':(kind==='ok'?'bg-emerald-600':(kind==='warn'?'bg-amber-700':'bg-slate-900'))); clearTimeout(toast._timer); toast._timer=setTimeout(()=>t.classList.add('hidden'),2600); }
-  function dashId(){ try{ return new URL(location.href).searchParams.get('dash') || ''; }catch(e){ return ''; } }
-  function setDash(id){ try{ const u=new URL(location.href); if(id) u.searchParams.set('dash', id); else u.searchParams.delete('dash'); history.pushState({},'',u.pathname+u.search); }catch(e){} const dp=qs('dashPill'); if(dp) dp.textContent=id||'—'; }
-  const Cache={ keyIndex:'tw_dash_index_v1', keyBuild:(d)=>`tw_build_state_${d}`, saveIndex(l){ try{ localStorage.setItem(this.keyIndex, JSON.stringify({list:l,cachedAt:Date.now()})); }catch(e){} }, loadIndex(){ try{ const r=localStorage.getItem(this.keyIndex); return r?JSON.parse(r):null; }catch(e){ return null; } }, saveBuild(d,st,u){ try{ localStorage.setItem(this.keyBuild(d), JSON.stringify({state:st,updatedAt:u,cachedAt:Date.now()})); }catch(e){} }, loadBuild(d){ try{ const r=localStorage.getItem(this.keyBuild(d)); return r?JSON.parse(r):null; }catch(e){ return null; } } };
-  let token=0;
-  function serialize(){ return { milestones:window.milestones||[], userStories:window.userStories||[], bugs:window.bugs||[], blockers:window.blockers||[], kpiData:window.kpiData||[], taskDisciplines:window.taskDisciplines||[], l2Columns:window.l2Columns||[], l2Data:window.l2Data||{'DMT':[],'Tech':[],'Content Mgmt.':[],'QA':[]}, l3Data:window.l3Data||[], bauData:window.bauData||{totalTickets:0,withinSLA:0,breachedSLA:0,slaPercentage:0}, savedSummaryText: (typeof window.savedSummaryText==='undefined'?null:window.savedSummaryText) }; }
-  function apply(st){ try{ window.milestones=st.milestones||[]; window.userStories=st.userStories||[]; window.bugs=st.bugs||[]; window.blockers=st.blockers||[]; window.kpiData=st.kpiData||[]; if(st.taskDisciplines) window.taskDisciplines=st.taskDisciplines; if(st.l2Columns) window.l2Columns=st.l2Columns; window.l2Data=st.l2Data||{'DMT':[],'Tech':[],'Content Mgmt.':[],'QA':[]}; window.l3Data=st.l3Data||[]; if(st.bauData) window.bauData=st.bauData; if(typeof st.savedSummaryText!=='undefined') window.savedSummaryText=st.savedSummaryText; }catch(e){} if(typeof renderAll==='function') renderAll(); }
-  async function updateIndicator(id){ const el=qs('ws-indicator'); if(!el) return; if(!id){ el.textContent=''; el.className='text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200'; return; } try{ const resp=await window.StateApi.get(id); const meta=(resp&&resp.meta)?resp.meta:{}; if(meta.published){ el.textContent=meta.publishedToAll?'Published (All)':'Published'; el.className='text-xs text-emerald-700 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200'; } else { el.textContent='Private'; el.className='text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200'; } }catch(e){ el.textContent=''; } }
-  async function saveNow(){ const d=dashId(); if(!d){ toast('Select/Create a workspace first','error'); throw new Error('No workspace selected'); } toast('Saving…','info'); const st=serialize(); const updatedAt=new Date().toISOString(); await window.StateApi.merge(d,{ build:{ state:st, updatedAt } }); Cache.saveBuild(d,st,updatedAt); const ind=qs('ws-saved-indicator'); if(ind){ ind.textContent='Saved'; ind.className='text-xs text-green-700 ml-1'; } toast('Saved','ok'); window.dispatchEvent(new CustomEvent('tw:refreshIndicator',{detail:{dash:d}})); }
-  async function loadWS(id){ const d=id||dashId(); const t=++token; const dp=qs('dashPill'); if(dp) dp.textContent=d||'—'; if(!d){ apply({}); return; } const cached=Cache.loadBuild(d); if(cached&&cached.state) apply(cached.state); try{ const resp=await window.StateApi.get(d); if(t!==token) return; const st=resp&&resp.state?resp.state:{}; const b=(st.build && (st.build.state||st.build)) ? (st.build.state||st.build) : null; const updatedAt=st.build&&st.build.updatedAt?st.build.updatedAt:null; if(b){ apply(b); Cache.saveBuild(d,b,updatedAt); } const ind=qs('ws-saved-indicator'); if(ind){ ind.textContent='Saved'; ind.className='text-xs text-green-700 ml-1'; } }catch(e){ toast('Failed to load workspace: '+(e.message||String(e)),'error'); } }
-  async function initWS(){ const sel=qs('ws-select'); const current=dashId(); const dp=qs('dashPill'); if(dp) dp.textContent=current||'—'; const cached=Cache.loadIndex(); if(cached && Array.isArray(cached.list) && cached.list.length){ sel.innerHTML=(cached.list||[]).map(d=>`<option value="${esc(String(d.id))}">${esc(d.name||d.id)}</option>`).join(''); sel.value=current || (cached.list[0]&&cached.list[0].id) || ''; } try{ const list=await window.StateApi.list(); Cache.saveIndex(list); sel.innerHTML=(list||[]).map(d=>`<option value="${esc(String(d.id))}">${esc(d.name||d.id)}</option>`).join('') || '<option value="">No workspaces</option>'; sel.value=current || (list[0]&&list[0].id) || ''; let chosen=sel.value||current; if(!chosen && list.length) chosen=list[0].id; if(chosen && chosen!==current) setDash(chosen); if(dp) dp.textContent=chosen||'—'; await updateIndicator(chosen); await loadWS(chosen); }catch(e){ toast('Failed to load workspaces: '+(e.message||String(e)),'error'); } sel?.addEventListener('change', async e=>{ const id=e.target.value; setDash(id); await updateIndicator(id); await loadWS(id); }); }
-  function wireActions(){ const btn=qs('ws-actions-btn'), menu=qs('ws-actions-menu'), back=qs('ws-actions-backdrop'); const open=()=>{menu?.classList.remove('hidden'); back?.classList.remove('hidden');}; const close=()=>{menu?.classList.add('hidden'); back?.classList.add('hidden');}; btn?.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); if(menu?.classList.contains('hidden')) open(); else close(); }); back?.addEventListener('click', close); document.addEventListener('click', e=>{ if(menu && !menu.classList.contains('hidden')){ const inside = menu.contains(e.target) || (btn && btn.contains(e.target)); if(!inside) close(); } }); menu?.addEventListener('click', async e=>{ const it=e.target.closest?.('[data-ws-action]'); if(!it) return; e.preventDefault(); close(); const act = it.getAttribute('data-ws-action'); try{ if(act==='new'){ const name=prompt('New workspace name:'); if(!name) return; const id='dash-'+Math.random().toString(36).slice(2,8)+'-'+Date.now().toString(36); const st={ __meta:{name}, build:{ state: serialize(), updatedAt:null } }; await window.StateApi.save(id, st, name); toast('Workspace created','ok'); setDash(id); await initWS(); } else if(act==='rename'){ const id=dashId(); if(!id){ toast('Select workspace first','error'); return; } const resp=await window.StateApi.get(id); const current=resp?.name||id; const name=prompt('Rename workspace:', current); if(!name || name===current) return; const st=resp?.state||{}; st.__meta=st.__meta||{}; st.__meta.name=name; await window.StateApi.save(id, st, name); toast('Renamed','ok'); await initWS(); } else if(act==='save'){ await saveNow(); } else if(act==='delete'){ const id=dashId(); if(!id) return; if(!confirm('Delete workspace '+id+'?')) return; await window.StateApi.remove(id); toast('Deleted','ok'); setDash(''); await initWS(); } else if(act==='export'){ const id=dashId(); if(!id){ toast('Select workspace first','error'); return; } const resp=await window.StateApi.get(id); const blob=new Blob([JSON.stringify(resp,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=(resp.name||id)+'-workspace.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast('Exported','ok'); } else if(act==='exportExcel'){ alert('Export (Excel) handled elsewhere.'); } else if(act==='import'){ qs('ws-import-file')?.click(); } else if(act==='publish'){ alert('Use Executive app to publish Build workspaces.'); } else if(act==='unpublish'){ const id=dashId(); await window.StateApi.unpublish(id); toast('Unpublished','ok'); await updateIndicator(id); } }catch(err){ toast((err?.message)||String(err),'error'); } }); qs('ws-import-file')?.addEventListener('change', async e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; try{ const text=await f.text(); const data=JSON.parse(text); const id=data.id||('dash-'+Math.random().toString(36).slice(2,8)); const name=data.name||id; const st=data.state||{}; await window.StateApi.save(id, st, name); toast('Imported','ok'); setDash(id); await initWS(); }catch(err){ toast('Import failed: '+(err?.message||String(err)),'error'); } finally { e.target.value=''; } }); }
-  window.addEventListener('DOMContentLoaded', function(){ wireActions(); initWS(); });
 })();
 </script>
 
