@@ -7,6 +7,7 @@
     <title>Executive Board</title>
 <!-- COPILOT_EXECBOARD_MILESTONE_UI: 2026-01-23 14:59:10 IST | build-style milestone journey + keep application tracker + remove nudges -->
 <!-- COPILOT_ESC_FIX: 2026-01-23 15:03:25 IST -->
+<!-- COPILOT_NULL_LISTENER_FIX: 2026-01-23 15:11:23 IST | guard addEventListener + DOMContentLoaded init -->
 
 <!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
     
@@ -385,15 +386,31 @@ function wireExecBoardToggles(){
   });
 }
 
-document.getElementById('sort').addEventListener('change', load);
-document.getElementById('q').addEventListener('input', applySearch);
-wireExecBoardToggles();
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const sortEl = document.getElementById('sort');
+    if (sortEl) sortEl.addEventListener('change', load);
+    const qEl = document.getElementById('q');
+    if (qEl) qEl.addEventListener('input', applySearch);
 
-load().catch(e=>{
-  const err=document.getElementById('err');
-  err.textContent = e.message || String(e);
-  err.classList.remove('hidden');
-  document.getElementById('status').textContent = '—';
+    wireExecBoardToggles();
+
+    load().catch(e => {
+      const err=document.getElementById('err');
+      if (err){
+        err.textContent = (e && (e.message||e)) || String(e);
+        err.classList.remove('hidden');
+      }
+      const status=document.getElementById('status');
+      if (status) status.textContent = '—';
+    });
+  } catch (e) {
+    const err=document.getElementById('err');
+    if (err){
+      err.textContent = 'Init error: ' + ((e && (e.message||e)) || String(e));
+      err.classList.remove('hidden');
+    }
+  }
 });
 </script>
 </body></html>
