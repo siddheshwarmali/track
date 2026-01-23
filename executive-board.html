@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Executive Board</title>
 <!-- COPILOT_EXECBOARD_MILESTONE_UI: 2026-01-23 14:59:10 IST | build-style milestone journey + keep application tracker + remove nudges -->
+<!-- COPILOT_ESC_FIX: 2026-01-23 15:03:25 IST -->
 
 <!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
     
@@ -65,8 +66,15 @@ async function jget(url){
 
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
 function esc(s){
-  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+  return String(s||'').replace(/[&<>"']/g, c => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[c]));
 }
+
 
 function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
 function normalizeStage(v){ return String(v||'').toLowerCase().trim(); }
