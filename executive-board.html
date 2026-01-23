@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Executive Board</title>
-  <!-- COPILOT_EXECBOARD_FULL: 2026-01-23 15:21:23 IST | full working file (robust init + error UI + milestones journey + app tracker, no nudges) -->
+  <!-- COPILOT_EXECBOARD_FULL_FEATURED: 2026-01-23 15:47:29 IST | overall-summary + discipline-status + milestone-journey (green/blue/gray YTB) + app tracker, status labels -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .line-clamp-4{ display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
@@ -105,19 +105,23 @@
 
   function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
 
-  function milestoneStatusFromDates(m){
+  // Completed=green, InProgress=blue, YTB=gray (not started), Delayed=red
+  function milestoneStatus(m){
     const plannedEnd = toDate(m.endDate);
     const actualEnd = toDate(m.actualEndDate);
     const actualStart = toDate(m.actualStartDate);
     const today = new Date();
 
-    if(actualEnd) return { label:'Completed', dot:'bg-green-500', ring:'ring-green-500/70' };
+    if(actualEnd) return { key:'COMPLETED', label:'Completed', dot:'bg-green-500', ring:'ring-green-500/70', pill:'text-green-200 border-green-400/30 bg-green-400/10' };
+
     if(actualStart){
-      if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70' };
-      return { label:'In Progress', dot:'bg-blue-500', ring:'ring-blue-500/70' };
+      if(plannedEnd && today > plannedEnd) return { key:'DELAYED', label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70', pill:'text-red-200 border-red-400/30 bg-red-400/10' };
+      return { key:'INPROGRESS', label:'In Progress', dot:'bg-blue-500', ring:'ring-blue-500/70', pill:'text-blue-200 border-blue-400/30 bg-blue-400/10' };
     }
-    if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70' };
-    return { label:'Planned', dot:'bg-blue-500', ring:'ring-blue-500/70' };
+
+    // Not started
+    if(plannedEnd && today > plannedEnd) return { key:'DELAYED', label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70', pill:'text-red-200 border-red-400/30 bg-red-400/10' };
+    return { key:'YTB', label:'YTB', dot:'bg-slate-500', ring:'ring-slate-500/70', pill:'text-slate-200 border-white/10 bg-white/5' };
   }
 
   function pickMilestones(state){
@@ -144,6 +148,17 @@
     return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen };
   }
 
+  function pickDiscipline(state){
+    const d = Array.isArray(state?.executive?.taskDisciplines) ? state.executive.taskDisciplines : [];
+    const pending = Array.isArray(state?.executive?.pendingDisciplineData) ? state.executive.pendingDisciplineData.length : 0;
+    // Some states might contain aggregates inside each discipline
+    const open = d.reduce((a,x)=>a + Number(x?.openTasks||0), 0);
+    const closed = d.reduce((a,x)=>a + Number(x?.closedTasks||0), 0);
+    const hold = d.reduce((a,x)=>a + Number(x?.holdTasks||0), 0);
+    const total = d.reduce((a,x)=>a + Number(x?.grandTotal||x?.totalTasks||0), 0);
+    return { disciplines: d.length, pending, total, open, closed, hold };
+  }
+
   function computeAutoSummary(state){
     const ms = pickMilestones(state);
     const app = pickApplication(state);
@@ -162,11 +177,12 @@
 
     const nodes = milestones.map(m => {
       const phase = esc(m.phase || 'Milestone');
-      const st = milestoneStatusFromDates(m);
+      const st = milestoneStatus(m);
       return `
         <div class='flex flex-col items-center' style='width:150px'>
           <div class='w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${st.dot} ring-2 ${st.ring} ring-offset-2 ring-offset-slate-950'>✓</div>
           <div class='mt-2 text-xs font-semibold text-slate-200 text-center break-words leading-tight'>${phase}</div>
+          <div class='mt-1 text-[10px] px-2 py-0.5 rounded-full border ${st.pill}'>${st.label}</div>
         </div>`;
     }).join('');
 
@@ -194,7 +210,7 @@
       const actE = esc(m.actualEndDate||'—');
       const owner = esc(m.owner||'—');
       const remark = esc(m.remark||'');
-      const st = milestoneStatusFromDates(m);
+      const st = milestoneStatus(m);
 
       return `
         <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
@@ -206,10 +222,41 @@
               <div class='mt-1 text-xs text-slate-400'>Owner: ${owner}</div>
               ${remark ? `<div class='mt-1 text-xs text-slate-300 line-clamp-4'>${remark}</div>` : ''}
             </div>
-            <span class='shrink-0 px-2 py-1 rounded-full border border-white/10 text-xs font-semibold text-slate-200 bg-white/5'>${st.label}</span>
+            <div class='shrink-0 text-right'>
+              <div class='text-[10px] px-2 py-0.5 rounded-full border ${st.pill} inline-block'>${st.label}</div>
+            </div>
           </div>
         </div>`;
     }).join('');
+  }
+
+  function renderOverallSummary(item){
+    return `
+      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
+        <div class='px-4 py-3 border-b border-white/10'>
+          <div class='text-base font-extrabold text-blue-300'>Overall Summary</div>
+        </div>
+        <div class='p-4 text-sm text-slate-200 whitespace-pre-wrap leading-relaxed'>${esc(item.summary || 'No summary')}</div>
+      </div>`;
+  }
+
+  function renderDisciplineStatus(item){
+    const d = item.discipline || {disciplines:0,pending:0,total:0,open:0,closed:0,hold:0};
+    return `
+      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
+        <div class='px-4 py-3 border-b border-white/10'>
+          <div class='text-base font-extrabold text-blue-300'>Task Discipline Status</div>
+        </div>
+        <div class='p-4'>
+          <div class='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
+            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Disciplines<br><b class='text-slate-100'>${d.disciplines||0}</b></div>
+            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Total Tasks<br><b class='text-slate-100'>${d.total||0}</b></div>
+            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Open<br><b class='text-slate-100'>${d.open||0}</b></div>
+            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Closed<br><b class='text-slate-100'>${d.closed||0}</b></div>
+          </div>
+          <div class='mt-3 text-sm text-slate-300'>Pending ADO items: <b class='text-slate-100'>${d.pending||0}</b></div>
+        </div>
+      </div>`;
   }
 
   function renderMilestoneSection(item){
@@ -261,7 +308,7 @@
             </div>
           </div>
         </div>
-        <div id='${detailsId}' class='hidden p-4 space-y-3 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
+        <div id='${detailsId}' class='hidden p-4 space-y-4 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
           <div class='text-sm text-slate-300'>Loading…</div>
         </div>
       </div>`;
@@ -324,6 +371,8 @@
 
           const milestones = pickMilestones(state);
           const application = pickApplication(state);
+          const discipline = pickDiscipline(state);
+
           const saved = safeText(state?.executive?.savedSummaryText || '');
           const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
 
@@ -335,7 +384,8 @@
             updatedAt: d.updatedAt,
             summary,
             milestones,
-            application
+            application,
+            discipline
           });
         }catch(e){}
       }
@@ -387,7 +437,9 @@
 
       if(willOpen && panel.getAttribute('data-loaded') !== '1'){
         const item = itemsById.get(dashId);
-        panel.innerHTML = item ? renderMilestoneSection(item) : `<div class='text-sm text-slate-300'>No details available.</div>`;
+        panel.innerHTML = item
+          ? (renderOverallSummary(item) + renderDisciplineStatus(item) + renderMilestoneSection(item))
+          : `<div class='text-sm text-slate-300'>No details available.</div>`;
         panel.setAttribute('data-loaded','1');
       }
     });
