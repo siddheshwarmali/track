@@ -120,8 +120,12 @@
     .no-print.mobile-stack-actions{ flex-direction: column !important; align-items: stretch !important; }
     .no-print.mobile-stack-actions > button{ width: 100% !important; justify-content: center !important; }
 
-    /* Make the top header controls wrap nicely */
+    /* Workspace select full width */
     #ws-select{ width: 100% !important; max-width: none !important; }
+
+    /* Allow header controls to wrap without clipping */
+    .tw-sticky-header-fix{ position: sticky; top: 0; }
+    .tw-sticky-header-fix *{ max-width: 100%; }
   }
 </style>
 
@@ -132,27 +136,27 @@
 <div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
 
 <!-- ===== Header (Run-style layout + Build workspace actions) ===== -->
-<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
-  <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-    <div class="min-w-0">
-      <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
+<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 tw-sticky-header-fix">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="min-w-0 w-full sm:w-auto">
+      <div class="text-base sm:text-lg font-extrabold truncate">Executive Dashboard — Build</div>
       <div class="text-xs text-slate-500 truncate">
         Workspace: <span id="dashPill" class="font-mono">—</span>
       </div>
     </div>
 
-    <div class="flex items-center gap-2 flex-wrap justify-end">
-      <select id="ws-select" class="ml-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <div class="w-full sm:w-auto flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+      <select id="ws-select" class="ml-0 sm:ml-1 flex-1 min-w-[12rem] w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">Loading…</option>
                     </select>
-                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-2">Not saved</span>
+                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-0 sm:ml-2 w-full sm:w-auto text-right">Not saved</span>
 
       <!-- Publish/Private pill (optional, reused from Run ids) -->
-      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
+      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200 w-full sm:w-auto text-right"></span>
 
       <div class="relative">
   <button id="ws-actions-btn" type="button"
-    class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 active:scale-[0.99] transition"
+    class="w-full sm:w-auto px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center justify-center sm:justify-start gap-2 active:scale-[0.99] transition"
     aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">
     <span class="text-base">⚙️</span><span>Actions</span>
     <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
@@ -168,6 +172,8 @@
       <div class="my-2 h-px bg-slate-100"></div>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportReport" role="menuitem">Export Report</button>
+
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem">Publish</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem">Unpublish</button>
@@ -177,7 +183,7 @@
 </div>
 
       <div class="relative">
-          <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
+          <button id="tw-menu-btn" class="w-10 h-10 shrink-0 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
           <div id="tw-menu" class="hidden absolute right-0 mt-2 w-[min(20rem,92vw)] max-h-[80vh] overflow-auto bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl">
             <div class="px-4 py-3 border-b bg-slate-50">
               <div class="text-xs text-slate-500">Signed in as</div>
@@ -252,10 +258,7 @@
                     <button onclick="openReportModal()" class="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm text-sm font-medium">
                         <i data-lucide="sliders-horizontal" class="w-4 h-4"></i><span>Customize View</span>
                     </button>
-                    <button onclick="exportReport()" class="flex items-center space-x-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm text-sm font-medium">
-                        <i data-lucide="download" class="w-4 h-4"></i><span>Export Report</span>
-                    </button>
-                </div>
+</div>
 
                 <!-- 0. Overall Summary Section -->
                 <div id="summary-section" class="mb-8 border-b pb-8 border-gray-200 hidden">
@@ -819,10 +822,13 @@
         }
 
         async function exportReport() {
-            const btn = document.querySelector('button[onclick="exportReport()"]');
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generating...`;
-            lucide.createIcons();
+            // Button may now live inside the Actions menu; fall back safely if not found
+            const btn = document.querySelector('[data-ws-action="exportReport"]') || document.querySelector('button[onclick="exportReport()"]');
+            const originalContent = btn ? btn.innerHTML : null;
+            if (btn) {
+                btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generating...`;
+                lucide.createIcons();
+            }
             try {
                 await new Promise(r => setTimeout(r, 100)); // UI settle
                 const element = document.getElementById('content-build');
@@ -832,7 +838,7 @@
                 link.href = canvas.toDataURL('image/jpeg', 0.9);
                 link.click();
             } catch (err) { console.error(err); alert("Failed: " + err.message); } 
-            finally { btn.innerHTML = originalContent; lucide.createIcons(); }
+            finally { if (btn && originalContent !== null) { btn.innerHTML = originalContent; lucide.createIcons(); } }
         }
 
         // --- DASHBOARD TABS ---
@@ -3041,6 +3047,10 @@ async function wsModalPrimary() {
       }
       if (action === 'export') return wsExportCurrent && wsExportCurrent();
       if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
+  if (action === 'exportReport') {
+    twLoader.show('Generating report…', 'Exporting JPG', 45);
+    return await Promise.resolve(window.exportReport && window.exportReport());
+  }
       if (action === 'import') {
         const inp = document.getElementById('ws-import-file');
         if (inp) inp.click();
@@ -3157,6 +3167,7 @@ async function wsModalPrimary() {
     if(action==='delete')      return window.wsDeleteCurrent?.();
     if(action==='export')      return window.wsExportCurrent?.();
     if(action==='exportExcel') return window.wsExportCurrentExcel?.();
+    if(action==='exportReport') return window.exportReport?.();
     if(action==='import'){ const inp=qs('ws-import-file'); inp && inp.click(); return; }
     if(action==='publish')     return window.wsOpenPublishModal?.();
     if(action==='unpublish')   return window.wsUnpublishCurrent?.();
