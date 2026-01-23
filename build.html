@@ -1952,11 +1952,11 @@ function renderBlockers() {
         function wsUpdateDashPill() {
             const pill = document.getElementById('dashPill');
             if (!pill) return;
-            const select = document.getElementById('ws-select');
-            if (select && select.value) {
-                const opt = (select.options && select.selectedIndex >= 0) ? select.options[select.selectedIndex] : null;
-                const name = opt ? opt.textContent : select.value;
-                pill.textContent = (name && name.trim()) ? name.trim() : select.value;
+            const sel = document.getElementById('ws-select');
+            if (sel && sel.value) {
+                const opt = (sel.options && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex] : null;
+                const name = opt ? opt.textContent : sel.value;
+                pill.textContent = (name && name.trim()) ? name.trim() : sel.value;
             } else {
                 pill.textContent = '—';
             }
@@ -1979,61 +1979,12 @@ function renderBlockers() {
             items.forEach(w => {
                 const opt = document.createElement('option');
                 opt.value = w.id;
-                opt.textContent = w.name;
+                opt.textContent = w.name || w.id;
                 select.appendChild(opt);
             });
             if (wsCurrentId) select.value = wsCurrentId;
             wsUpdateDashPill();
             try { window.twSyncWsSelectFromMain && window.twSyncWsSelectFromMain(); } catch(e) {}
-        }
-
-        function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
-            if (!id) return;
-    if (!force && id === wsCurrentId) return;
-            if (saveCurrent && wsCurrentId) wsSaveNow();
-            const store = wsLoadStore();
-            const w = store.workspaces[id];
-            if (!w) return;
-            wsCurrentId = id;
-    try { const sel=document.getElementById('ws-select'); if(sel) sel.value=id; } catch(e) {}
-    try { window.wsUpdateDashPill && window.wsUpdateDashPill(); } catch(e) {}
-            localStorage.setItem(WS_LAST_KEY, id);
-            wsApplyState(w.state);
-            wsRefreshSelect();
-            wsSetIndicator(`Loaded: ${w.name}`, true);
-        }
-
-        function wsSaveNow() {
-            if (wsIsApplying) return;
-            if (!wsCurrentId) return;
-            const state = wsGetState();
-            wsUpdateWorkspace(wsCurrentId, state);
-            wsLastSerialized = JSON.stringify(state);
-            wsSetIndicator('Saved ✓ ' + new Date().toLocaleTimeString(), true);
-        }
-
-        function wsAutoSaveTick() {
-            if (!wsCurrentId || wsIsApplying) return;
-            try {
-                const state = wsGetState();
-                const ser = JSON.stringify(state);
-                if (wsLastSerialized === null) {
-                    wsLastSerialized = ser;
-                    return;
-                }
-                if (ser !== wsLastSerialized) {
-                    wsUpdateWorkspace(wsCurrentId, state);
-                    wsLastSerialized = ser;
-                    wsSetIndicator('Auto-saved ✓ ' + new Date().toLocaleTimeString(), true);
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        function wsStartAutoSave() {
-            if (wsAutoSaveTimer) return;
-            wsAutoSaveTimer = setInterval(wsAutoSaveTick, 8000);
         }
 
         function wsInitWorkspaceManager() {
@@ -2668,6 +2619,8 @@ async function wsSelectWorkspace(id, { saveCurrent=true, force=false } = {}) {
     const seq = ++gh6LoadSeq;
 
     wsCurrentId = id;
+
+    // Keep header + selects in sync
     try { const sel=document.getElementById('ws-select'); if(sel) sel.value=id; } catch(e) {}
     try { window.wsUpdateDashPill && window.wsUpdateDashPill(); } catch(e) {}
     gh6SetDashInUrl(id);
@@ -2838,7 +2791,7 @@ async function wsDeleteCurrent() {
         wsRefreshSelect();
         const first = wsList()[0];
         wsCurrentId = first ? first.id : null;
-        if (wsCurrentId) await wsSelectWorkspace(wsCurrentId, { saveCurrent:false, force:true });
+        if (wsCurrentId) await wsSelectWorkspace(wsCurrentId, { saveCurrent:false });
         else { wsApplyState(gh6BlankState(), { silent:false }); }
     } catch(e) {
         console.error(e);
@@ -2877,12 +2830,13 @@ async function wsInitWorkspaceManager() {
     const urlId = gh6GetDashFromUrl();
     const store = wsLoadStore();
     const first = dashboards[0] ? dashboards[0].id : (wsList()[0] ? wsList()[0].id : null);
-    wsCurrentId = (urlId && store.workspaces[urlId]) ? urlId : first;
+    const chosenId = (urlId && store.workspaces[urlId]) ? urlId : first;
 
-    if (wsCurrentId) {
+    if (chosenId) {
         const sel = document.getElementById('ws-select');
-        if (sel) sel.value = wsCurrentId;
-        await wsSelectWorkspace(wsCurrentId, { saveCurrent:false });
+        if (sel) sel.value = chosenId;
+        // Force-load on refresh (do not rely on wsCurrentId pre-set)
+        await wsSelectWorkspace(chosenId, { saveCurrent:false, force:true });
     } else {
         // none exists: create default
         await wsCreateWorkspace('Default', null);
@@ -3141,45 +3095,39 @@ async function wsModalPrimary() {
 
 <script>
 // ===== Workspace Actions Menu (responsive) =====
-// Fix: make Actions button behave like Run dashboard (open/close, backdrop, outside click, Esc)
+// Run-style Actions menu: reliable open/close + backdrop + outside click + Esc
 (function(){
   function qs(id){ return document.getElementById(id); }
-  function isOpen(){ const m = qs('ws-actions-menu'); return !!(m && !m.classList.contains('hidden')); }
+  function isOpen(){ const m=qs('ws-actions-menu'); return !!(m && !m.classList.contains('hidden')); }
   function openMenu(){
     const menu = qs('ws-actions-menu');
     const btn  = qs('ws-actions-btn');
     const back = qs('ws-actions-backdrop');
     if(!menu || !btn) return;
     menu.classList.remove('hidden');
-    if(back) back.classList.remove('hidden');
+    back && back.classList.remove('hidden');
     btn.setAttribute('aria-expanded','true');
   }
   function closeMenu(){
     const menu = qs('ws-actions-menu');
     const btn  = qs('ws-actions-btn');
     const back = qs('ws-actions-backdrop');
-    if(menu) menu.classList.add('hidden');
-    if(back) back.classList.add('hidden');
-    if(btn) btn.setAttribute('aria-expanded','false');
+    menu && menu.classList.add('hidden');
+    back && back.classList.add('hidden');
+    btn && btn.setAttribute('aria-expanded','false');
   }
-
   async function perform(action){
-    if(action==='new')         return (window.wsOpenCreateModal?.() || window.createWorkspace?.());
-    if(action==='rename')      return (window.wsRenameCurrent?.()   || window.renameWorkspace?.());
-    if(action==='save')        return (window.wsSaveNow?.({prompt:true}) || window.saveWorkspace?.());
-    if(action==='delete')      return (window.wsDeleteCurrent?.()   || window.deleteWorkspace?.());
-    if(action==='export')      return (window.wsExportCurrent?.()   || window.exportWorkspace?.());
-    if(action==='exportExcel') return (window.wsExportCurrentExcel?.() || window.exportWorkspaceExcel?.());
-    if(action==='import'){
-      const inp = qs('ws-import-file');
-      if(inp) inp.click();
-      return;
-    }
-    if(action==='publish')     return (window.wsOpenPublishModal?.() || window.openPublishModal?.());
-    if(action==='unpublish')   return (window.wsUnpublishCurrent?.() || window.doUnpublish?.());
+    if(action==='new')         return window.wsOpenCreateModal?.();
+    if(action==='rename')      return window.wsRenameCurrent?.();
+    if(action==='save')        return window.wsSaveNow?.({prompt:true});
+    if(action==='delete')      return window.wsDeleteCurrent?.();
+    if(action==='export')      return window.wsExportCurrent?.();
+    if(action==='exportExcel') return window.wsExportCurrentExcel?.();
+    if(action==='import'){ const inp=qs('ws-import-file'); inp && inp.click(); return; }
+    if(action==='publish')     return window.wsOpenPublishModal?.();
+    if(action==='unpublish')   return window.wsUnpublishCurrent?.();
   }
-
-  function bindOnce(){
+  function bind(){
     const btn  = qs('ws-actions-btn');
     const menu = qs('ws-actions-menu');
     const back = qs('ws-actions-backdrop');
@@ -3187,38 +3135,24 @@ async function wsModalPrimary() {
     if(btn.dataset.twBound==='1') return;
     btn.dataset.twBound='1';
 
-    btn.addEventListener('click', (e)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      isOpen() ? closeMenu() : openMenu();
-    });
-
-    back?.addEventListener('click', closeMenu);
+    btn.addEventListener('click',(e)=>{ e.preventDefault(); e.stopPropagation(); isOpen()?closeMenu():openMenu(); });
+    back && back.addEventListener('click', closeMenu);
 
     menu.addEventListener('click', async (e)=>{
-      const closeBtn = e.target?.closest?.('[data-ws-close]');
+      const closeBtn=e.target?.closest?.('[data-ws-close]');
       if(closeBtn){ e.preventDefault(); closeMenu(); return; }
-      const item = e.target?.closest?.('[data-ws-action]');
+      const item=e.target?.closest?.('[data-ws-action]');
       if(!item) return;
       e.preventDefault();
-      const action = item.getAttribute('data-ws-action');
+      const action=item.getAttribute('data-ws-action');
       closeMenu();
-      try{ await perform(action); }
-      catch(err){ console.error(err); alert(err?.message || String(err)); }
+      try{ await perform(action); }catch(err){ console.error(err); alert(err?.message||String(err)); }
     });
 
-    document.addEventListener('click', (e)=>{
-      if(!isOpen()) return;
-      const inside = menu.contains(e.target) || btn.contains(e.target);
-      if(!inside) closeMenu();
-    });
-
-    document.addEventListener('keydown', (e)=>{
-      if(e.key==='Escape') closeMenu();
-    });
+    document.addEventListener('click',(e)=>{ if(!isOpen()) return; const inside=menu.contains(e.target)||btn.contains(e.target); if(!inside) closeMenu(); });
+    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeMenu(); });
   }
-
-  window.addEventListener('DOMContentLoaded', bindOnce);
+  window.addEventListener('DOMContentLoaded', bind);
 })();
 </script>
 
