@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Executive Dashboard - Build</title>
+<!-- COPILOT_BUGFIX_STAMP: 2026-01-23 11:38:56 IST | responsive-header + actions-menu-scroll + publish-toggle + exportReport-blob-unique-cachebust -->
+
 <!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
     
     <!-- Tailwind CSS -->
@@ -91,6 +93,35 @@
 
   <script src="/assets/js/state-client.js" defer></script>
   <script src="/assets/js/build-extras.js" defer></script>
+
+<style id="tw-responsive-overrides">
+  /* Copilot bugfix overrides */
+  @media (max-width: 640px){
+    .tw-sticky-header-fix{ position: sticky; top: 0; }
+    .tw-sticky-header-fix *{ max-width: 100%; }
+
+    /* Actions bottom-sheet should not overflow */
+    #ws-actions-menu{ max-height: 85vh; }
+
+    /* Fullscreen heavy modals */
+    #modal-l3 > div,
+    #modal-us-details > div,
+    #modal-discipline > div,
+    #modal-mapping > div{
+      width: 100vw !important;
+      max-width: none !important;
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* Stack report controls */
+    .no-print.mobile-stack-actions{ flex-direction: column !important; align-items: stretch !important; }
+    .no-print.mobile-stack-actions > button{ width: 100% !important; justify-content: center !important; }
+  }
+</style>
+
 </head>
 <body class="text-gray-800">
 
@@ -98,8 +129,8 @@
 <div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
 
 <!-- ===== Header (Run-style layout + Build workspace actions) ===== -->
-<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
-  <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 tw-sticky-header-fix">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div class="min-w-0">
       <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
       <div class="text-xs text-slate-500 truncate">
@@ -107,8 +138,8 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-2 flex-wrap justify-end">
-      <select id="ws-select" class="ml-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <div class="w-full sm:w-auto grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:justify-end">
+      <select id="ws-select" class="ml-0 sm:ml-1 col-span-2 sm:col-auto w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">Loading…</option>
                     </select>
                     <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-2">Not saved</span>
@@ -124,9 +155,9 @@
     <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
   </button>
   <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-40" aria-hidden="true"></div>
-  <div id="ws-actions-menu" class="hidden z-50 fixed inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden" role="menu" aria-label="Workspace actions">
+  <div id="ws-actions-menu" class="hidden z-50 fixed pb-[env(safe-area-inset-bottom)] inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-none" role="menu" aria-label="Workspace actions">
     <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
-    <div class="p-2">
+    <div class="p-2 overflow-y-auto flex-1 custom-scroll">
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="new" role="menuitem">New workspace</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="rename" role="menuitem">Rename</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="save" role="menuitem">Save</button>
@@ -134,9 +165,10 @@
       <div class="my-2 h-px bg-slate-100"></div>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportReport" role="menuitem">Export Report (JPG)</button>
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem">Publish</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem">Unpublish</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem" id="ws-action-publish">Publish</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem" id="ws-action-unpublish">Unpublish</button>
     </div>
     <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
   </div>
@@ -214,14 +246,11 @@
             <div id="content-build" class="animate-fade-in">
                 
                 <!-- Report Controls -->
-                <div class="flex justify-end gap-3 mb-4 no-print">
+                <div class="flex flex-col sm:flex-row sm:justify-end gap-3 mb-4 no-print mobile-stack-actions">
                     <button onclick="openReportModal()" class="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm text-sm font-medium">
                         <i data-lucide="sliders-horizontal" class="w-4 h-4"></i><span>Customize View</span>
                     </button>
-                    <button onclick="exportReport()" class="flex items-center space-x-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm text-sm font-medium">
-                        <i data-lucide="download" class="w-4 h-4"></i><span>Export Report</span>
-                    </button>
-                </div>
+</div>
 
                 <!-- 0. Overall Summary Section -->
                 <div id="summary-section" class="mb-8 border-b pb-8 border-gray-200 hidden">
@@ -785,16 +814,13 @@
         }
 
         async function exportReport() {
-            // Close menus/backdrops/overlays so they don't interfere with rendering
+            // Close menus/backdrops so they don't get captured
             try {
                 document.getElementById('ws-actions-menu')?.classList.add('hidden');
                 document.getElementById('ws-actions-backdrop')?.classList.add('hidden');
                 document.getElementById('tw-menu')?.classList.add('hidden');
-                document.getElementById('gh-reset-overlay')?.style && (document.getElementById('gh-reset-overlay').style.display = 'none');
-                document.getElementById('tw-app-loader')?.classList.add('hidden');
             } catch (e) {}
 
-            // Run-style download: use toBlob + objectURL (more reliable + avoids base64 memory)
             const btn = document.querySelector('[data-ws-action="exportReport"]') || document.querySelector('button[onclick="exportReport()"]');
             const originalContent = btn ? btn.innerHTML : null;
 
@@ -804,8 +830,8 @@
                     try { lucide.createIcons(); } catch (e) {}
                 }
 
-                // Let UI settle (close animations / layout)
-                await new Promise(r => setTimeout(r, 200));
+                // settle layout
+                await new Promise(r => setTimeout(r, 220));
 
                 const element = document.getElementById('content-build');
                 if (!element) throw new Error('Build content not found');
@@ -816,17 +842,15 @@
                     useCORS: true,
                     cacheBust: true,
                     ignoreElements: (el) => {
-                        // Ignore buttons and any UI-only elements
                         if (el.tagName === 'BUTTON') return true;
                         if (el.classList && el.classList.contains('no-print')) return true;
                         const id = (el.id || '').toLowerCase();
                         if (id.includes('modal') || id.includes('toast') || id.includes('menu') || id.includes('backdrop') || id.includes('loader') || id.includes('overlay')) return true;
-                        if (el.classList && (el.classList.contains('modal') || el.classList.contains('hidden-by-report'))) return true;
                         return false;
                     }
                 });
 
-                // IMPORTANT: use unique filename (timestamp) to avoid mobile/OS caching the previous file
+                // Use UNIQUE filename to avoid Android/iOS caching/overwriting showing old image
                 const pad = (n) => String(n).padStart(2,'0');
                 const now = new Date();
                 const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
@@ -844,17 +868,14 @@
                             document.body.appendChild(a);
                             a.click();
                             a.remove();
-
-                            // Revoke later (Safari/iOS may need more time to start the download)
-                            setTimeout(() => {
-                                try { URL.revokeObjectURL(url); } catch (e) {}
-                            }, 30000);
+                            // revoke later for Safari reliability
+                            setTimeout(() => { try { URL.revokeObjectURL(url); } catch(e) {} }, 30000);
                             resolve();
                         } catch (e) { reject(e); }
                     }, 'image/jpeg', 0.92);
                 });
 
-                // Explicit cleanup to reduce chance of stale/blank exports on mobile browsers
+                // Cleanup canvas memory
                 try { canvas.width = 1; canvas.height = 1; } catch (e) {}
             } catch (err) {
                 console.error(err);
@@ -3073,6 +3094,10 @@ async function wsModalPrimary() {
       }
       if (action === 'export') return wsExportCurrent && wsExportCurrent();
       if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
+  if (action === 'exportReport') {
+    twLoader.show('Generating report…', 'Exporting JPG', 45);
+    return await Promise.resolve(window.exportReport && window.exportReport());
+  }
       if (action === 'import') {
         const inp = document.getElementById('ws-import-file');
         if (inp) inp.click();
@@ -3189,6 +3214,7 @@ async function wsModalPrimary() {
     if(action==='delete')      return window.wsDeleteCurrent?.();
     if(action==='export')      return window.wsExportCurrent?.();
     if(action==='exportExcel') return window.wsExportCurrentExcel?.();
+    if(action==='exportReport') return window.exportReport?.();
     if(action==='import'){ const inp=qs('ws-import-file'); inp && inp.click(); return; }
     if(action==='publish')     return window.wsOpenPublishModal?.();
     if(action==='unpublish')   return window.wsUnpublishCurrent?.();
@@ -3340,6 +3366,8 @@ async function wsModalPrimary() {
       const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb=>cb.checked).map(cb=>cb.value);
       await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&publish=1`, { method:'POST', body: JSON.stringify({ all, users }) });
       showOk('Published successfully.');
+      try { window.wsCurrentMeta = Object.assign({}, window.wsCurrentMeta||{}, { published:true, visibility:'public', status:'published' }); } catch(e) {}
+      try { window.wsUpdatePublishUI && window.wsUpdatePublishUI(window.wsCurrentMeta); } catch(e) {}
       setTimeout(()=>closeModal('modal-publish'), 350);
     } catch(e){
       showErr(e.message || String(e));
@@ -3354,6 +3382,8 @@ async function wsModalPrimary() {
       if(!confirm('Unpublish this dashboard?')) return;
       await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&unpublish=1`, { method:'POST', body: '{}' });
       alert('Unpublished successfully.');
+      try { window.wsCurrentMeta = Object.assign({}, window.wsCurrentMeta||{}, { published:false, visibility:'private', status:'private' }); } catch(e) {}
+      try { window.wsUpdatePublishUI && window.wsUpdatePublishUI(window.wsCurrentMeta); } catch(e) {}
     } catch(e){
       alert(e.message || String(e));
     }
@@ -3399,6 +3429,39 @@ async function wsModalPrimary() {
     menu.querySelectorAll('[data-ws-close]').forEach(x=>x.addEventListener('click', close));
   });
 })();
+</script>
+
+
+<script id="ws-publish-ui">
+  // Toggle Publish/Unpublish buttons + update pill based on current meta
+  window.wsIsPublished = function(meta){
+    const m = meta || window.wsCurrentMeta || {};
+    return !!(
+      m.published === true || m.isPublished === true || m.public === true ||
+      m.visibility === 'public' || m.visibility === 'published' ||
+      m.access === 'public' || m.access === 'published' ||
+      m.status === 'published'
+    );
+  };
+
+  window.wsUpdatePublishUI = function(meta){
+    const published = window.wsIsPublished(meta);
+    const pill = document.getElementById('ws-indicator');
+    if (pill){
+      pill.textContent = published ? 'Published' : 'Private';
+      pill.className = published
+        ? 'text-xs text-green-700 px-2 py-1 rounded-full bg-green-50 border border-green-200'
+        : 'text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200';
+    }
+    const btnPub = document.getElementById('ws-action-publish') || document.querySelector('[data-ws-action="publish"]');
+    const btnUnp = document.getElementById('ws-action-unpublish') || document.querySelector('[data-ws-action="unpublish"]');
+    if (btnPub) btnPub.classList.toggle('hidden', published);
+    if (btnUnp) btnUnp.classList.toggle('hidden', !published);
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    try { window.wsUpdatePublishUI(window.wsCurrentMeta); } catch(e) {}
+  });
 </script>
 
 </body>
