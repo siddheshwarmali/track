@@ -94,6 +94,68 @@
 </head>
 <body class="text-gray-800">
 
+<style>body > div.sticky + *{margin-top:0!important;}#ws-actions-menu{z-index:50;}#ws-actions-backdrop{z-index:40;}</style>
+
+<!-- Toast (Run-style) -->
+<div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
+
+<!-- ===== New Header (Run-style) for Build ===== -->
+<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+    <div class="min-w-0">
+      <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
+      <div class="text-xs text-slate-500 truncate">Workspace: <span id="dashPill" class="font-mono">—</span> • <span id="filePill">Ready</span></div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      <select id="ws-select" class="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"><option value="">Loading…</option></select>
+      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
+      <div class="relative">
+        <button id="ws-actions-btn" type="button" class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 flex items-center gap-2" aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">Actions</button>
+        <div id="ws-actions-backdrop" class="hidden fixed inset-0"></div>
+        <div id="ws-actions-menu" class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+          <div class="p-2">
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="new">Create New</button>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="rename">Rename</button>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="save">Save</button>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-red-50 text-red-700" data-ws-action="delete">Delete</button>
+            <div class="my-1 border-t"></div>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="export">Export (JSON)</button>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="exportExcel">Export (Excel)</button>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="import">Import</button>
+            <div class="my-1 border-t"></div>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="publish">Publish</button>
+            <button type="button" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50" data-ws-action="unpublish">Unpublish</button>
+          </div>
+        </div>
+      </div>
+      <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-1">Not saved</span>
+      <div class="relative">
+        <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">&#9776;</button>
+        <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+          <div class="px-4 py-3 border-b bg-slate-50">
+            <div class="text-xs text-slate-500">Signed in as</div>
+            <div id="tw-userpill" class="mt-1 text-sm font-semibold">Checking…</div>
+          </div>
+          <div class="p-2">
+            <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
+            <a id="nav-build" href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
+            <a id="nav-run" href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
+            <a id="tw-execboard" href="/executive-board.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
+          </div>
+          <div class="p-2 border-t">
+            <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
+            <a id="tw-usermgr" href="/user-manager.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">👥 User Manager</a>
+            <button id="tw-logout" class="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-700">⎋ Logout</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
+    </div>
+  </div>
+</div>
+<!-- ===== /New Header ===== -->
+
+
 <!-- App Loader Overlay -->
 <div id="tw-app-loader" class="fixed inset-0 z-[99999] bg-slate-950/50 backdrop-blur-sm hidden">
   <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(520px,92vw)] bg-white rounded-2xl shadow-2xl border border-slate-200 p-5">
@@ -118,23 +180,7 @@
         <!-- Header -->
 
 
-<!-- Top Bar (Advanced Hamburger) -->
-<div class="mb-4 flex items-center justify-end">
-  <div class="relative">
-    <button id="tw-menu-btn" type="button"
-      class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50"
-      aria-label="Open menu">
-      <span class="sr-only">Menu</span>
-      <span class="text-slate-700 text-xl leading-none">☰</span>
-    </button>
-
-    <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
-      <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
-        <div class="text-xs text-slate-500">Signed in as</div>
-        <div id="tw-userpill" class="mt-1 text-sm font-semibold text-slate-900">Checking login…</div>
-      </div>
-
-      <!-- Navigation -->
+<!-- Navigation -->
       <div class="p-2">
         <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
         <button type="button"  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-slate-50">
@@ -164,53 +210,7 @@
 </div>
 
 <!-- Workspace Manager (NEW: Multi-dashboard + Local Save/Load) -->
-        <div class="bg-white rounded-lg shadow-md p-4 mb-6 animate-fade-in">
-            <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <i data-lucide="folder" class="w-5 h-5 text-blue-600"></i>
-                    <span class="font-semibold text-gray-800">Workspace</span>
-                    <select id="ws-select" class="ml-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Loading…</option>
-                    </select>
-                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-2">Not saved</span>
-                </div>
-
-                
-<div class="flex flex-wrap gap-2 items-center">
-  
-<div class="relative">
-  <button id="ws-actions-btn" type="button"
-    class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 active:scale-[0.99] transition"
-    aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">
-    <span class="text-base">⚙️</span><span>Actions</span>
-    <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
-  </button>
-  <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-30" aria-hidden="true"></div>
-  <div id="ws-actions-menu" class="hidden z-40 fixed inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden" role="menu" aria-label="Workspace actions">
-    <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
-    <div class="p-2">
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="new" role="menuitem">New workspace</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="rename" role="menuitem">Rename</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="save" role="menuitem">Save</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-red-50 active:bg-red-100 text-red-700" data-ws-action="delete" role="menuitem">Delete</button>
-      <div class="my-2 h-px bg-slate-100"></div>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem">Publish</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem">Unpublish</button>
-    </div>
-    <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
-  </div>
-</div>
-
-  <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
-</div>
-
-            </div>
-            <p class="text-xs text-gray-500 mt-2">
-                Workspaces are saved locally in this browser. Use <span class="font-medium">Export</span> to back up or share, and <span class="font-medium">Import</span> to restore.
-            </p>
+        
         </div>
 <!-- Main Card -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -3348,6 +3348,23 @@ async function wsModalPrimary() {
     if(action==='publish'){ e.preventDefault(); openPublish(); }
     if(action==='unpublish'){ e.preventDefault(); doUnpublish(); }
   }, true);
+})();
+</script>
+
+
+<script>
+(function(){
+  const qs=(id)=>document.getElementById(id);
+  // Header actions toggle only (no save/load override)
+  window.addEventListener('DOMContentLoaded', function(){
+    const btn=qs('ws-actions-btn'), menu=qs('ws-actions-menu'), back=qs('ws-actions-backdrop');
+    if(!btn||!menu||!back) return;
+    const open=()=>{menu.classList.remove('hidden');back.classList.remove('hidden');btn.setAttribute('aria-expanded','true');};
+    const close=()=>{menu.classList.add('hidden');back.classList.add('hidden');btn.setAttribute('aria-expanded','false');};
+    btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); menu.classList.contains('hidden')?open():close();});
+    back.addEventListener('click', close);
+    document.addEventListener('click', (e)=>{ if(!menu.classList.contains('hidden')){ const inside=menu.contains(e.target)||btn.contains(e.target); if(!inside) close(); }});
+  });
 })();
 </script>
 
