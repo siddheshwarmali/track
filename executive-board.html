@@ -4,13 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Executive Board</title>
-  <!-- COPILOT_EXECBOARD_FULL_FEATURED: 2026-01-23 15:47:29 IST | overall-summary + discipline-status + milestone-journey (green/blue/gray YTB) + app tracker, status labels -->
+  <!-- COPILOT_EXECBOARD_REQUIREMENTS: 2026-01-23 16:27:30 IST | Card: Overall Summary (default). Details: Milestones+App Tracker + Task Discipline L2 (build-like). -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .line-clamp-4{ display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
-    .custom-scroll::-webkit-scrollbar{ width:6px; height:6px; }
-    .custom-scroll::-webkit-scrollbar-track{ background:#0b1220; }
-    .custom-scroll::-webkit-scrollbar-thumb{ background:#334155; border-radius:999px; }
+    /* fallback line-clamp */
+    .line-clamp-4{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+    .custom-scroll::-webkit-scrollbar{width:6px;height:6px}
+    .custom-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+    .custom-scroll::-webkit-scrollbar-track{background:#f1f1f1}
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
@@ -52,254 +53,206 @@
 <script>
 (function(){
   const $ = (id)=>document.getElementById(id);
+  const itemsById = new Map();
 
+  // --- utilities ---
   function esc(s){
-    return String(s||'').replace(/[&<>"']/g, c => ({
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
-    }[c]));
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
+  function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
+
+  function showErr(msg){ const e=$('err'); if(!e) return; e.textContent=String(msg||'Error'); e.classList.remove('hidden'); }
+  function clearErr(){ const e=$('err'); if(!e) return; e.classList.add('hidden'); e.textContent=''; }
+
+  async function jget(url){
+    const r = await fetch(url, { headers:{'Accept':'application/json'}, credentials:'same-origin' });
+    const t = await r.text();
+    let j; try{ j = JSON.parse(t||'{}'); } catch(e){ throw new Error('Invalid JSON from '+url+' (HTTP '+r.status+'): '+t.slice(0,250)); }
+    if(!r.ok) throw new Error(j.error || j.message || ('Request failed ('+r.status+')'));
+    return j;
   }
 
-  function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
-  function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
-  function normalizeStage(v){ return String(v||'').toLowerCase().trim(); }
-  function countOpen(items){ return (items||[]).filter(x => normalizeStage(x?.stage||x?.status) !== 'closed').length; }
-
+  // --- sorting/search ---
   function sortItems(items, mode){
-    const m = (mode||'newest');
+    const m=(mode||'newest');
     if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
     if(m==='name_asc') return items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
     if(m==='name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
     return items.sort((a,b)=>(b.publishedAt||b.updatedAt||'').localeCompare(a.publishedAt||a.updatedAt||''));
   }
-
-  async function jget(url){
-    const r = await fetch(url, { headers:{'Accept':'application/json'}, credentials:'same-origin' });
-    const t = await r.text();
-    let j;
-    try{ j = JSON.parse(t || '{}'); }catch(e){
-      throw new Error('Invalid JSON from '+url+' (HTTP '+r.status+'): '+t.slice(0,250));
-    }
-    if(!r.ok){
-      throw new Error(j.error || j.message || ('Request failed ('+r.status+')'));
-    }
-    return j;
+  function applySearch(){
+    const q = ($('q')?.value||'').trim().toLowerCase();
+    document.querySelectorAll('#grid [data-name]').forEach(el=>{
+      const n = el.getAttribute('data-name')||'';
+      el.style.display = (!q || n.includes(q)) ? '' : 'none';
+    });
   }
 
-  function showErr(msg){
-    const e = $('err');
-    if(!e) return;
-    e.textContent = String(msg||'Error');
-    e.classList.remove('hidden');
-  }
-
-  function clearErr(){
-    const e = $('err');
-    if(!e) return;
-    e.classList.add('hidden');
-    e.textContent = '';
-  }
-
+  // --- Milestones: build-like journey (Completed green, InProgress blue, YTB gray) ---
   function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
-
-  // Completed=green, InProgress=blue, YTB=gray (not started), Delayed=red
   function milestoneStatus(m){
     const plannedEnd = toDate(m.endDate);
     const actualEnd = toDate(m.actualEndDate);
     const actualStart = toDate(m.actualStartDate);
     const today = new Date();
 
-    if(actualEnd) return { key:'COMPLETED', label:'Completed', dot:'bg-green-500', ring:'ring-green-500/70', pill:'text-green-200 border-green-400/30 bg-green-400/10' };
-
+    if(actualEnd) return { status:'completed', color:'bg-green-500', label:'Completed' };
     if(actualStart){
-      if(plannedEnd && today > plannedEnd) return { key:'DELAYED', label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70', pill:'text-red-200 border-red-400/30 bg-red-400/10' };
-      return { key:'INPROGRESS', label:'In Progress', dot:'bg-blue-500', ring:'ring-blue-500/70', pill:'text-blue-200 border-blue-400/30 bg-blue-400/10' };
+      if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500', label:'Delayed' };
+      return { status:'inprogress', color:'bg-blue-500', label:'In Progress' };
     }
-
-    // Not started
-    if(plannedEnd && today > plannedEnd) return { key:'DELAYED', label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70', pill:'text-red-200 border-red-400/30 bg-red-400/10' };
-    return { key:'YTB', label:'YTB', dot:'bg-slate-500', ring:'ring-slate-500/70', pill:'text-slate-200 border-white/10 bg-white/5' };
-  }
-
-  function pickMilestones(state){
-    const src = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
-    const milestones = src.map(m => ({
-      phase: safeText(m?.phase || m?.Activity || m?.title || m?.name || 'Milestone'),
-      startDate: safeText(m?.startDate || m?.plannedStart || m?.start || m?.['Start Date'] || ''),
-      endDate: safeText(m?.endDate || m?.plannedEnd || m?.end || m?.['End Date'] || ''),
-      actualStartDate: safeText(m?.actualStartDate || m?.actualStart || m?.['Actual Start Date'] || ''),
-      actualEndDate: safeText(m?.actualEndDate || m?.actualEnd || m?.['Actual End Date'] || ''),
-      owner: safeText(m?.owner || m?.Owner || ''),
-      remark: safeText(m?.remark || m?.Remark || '')
-    }));
-    const completed = milestones.filter(x => !!safeText(x.actualEndDate)).length;
-    const progressPct = milestones.length ? Math.round((completed/milestones.length)*100) : 0;
-    return { count: milestones.length, progressPct, milestones };
-  }
-
-  function pickApplication(state){
-    const us = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
-    const bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
-    const usOpen = countOpen(us);
-    const bugsOpen = countOpen(bugs);
-    return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen };
-  }
-
-  function pickDiscipline(state){
-    const d = Array.isArray(state?.executive?.taskDisciplines) ? state.executive.taskDisciplines : [];
-    const pending = Array.isArray(state?.executive?.pendingDisciplineData) ? state.executive.pendingDisciplineData.length : 0;
-    // Some states might contain aggregates inside each discipline
-    const open = d.reduce((a,x)=>a + Number(x?.openTasks||0), 0);
-    const closed = d.reduce((a,x)=>a + Number(x?.closedTasks||0), 0);
-    const hold = d.reduce((a,x)=>a + Number(x?.holdTasks||0), 0);
-    const total = d.reduce((a,x)=>a + Number(x?.grandTotal||x?.totalTasks||0), 0);
-    return { disciplines: d.length, pending, total, open, closed, hold };
-  }
-
-  function computeAutoSummary(state){
-    const ms = pickMilestones(state);
-    const app = pickApplication(state);
-    const parts=[];
-    if(ms.count) parts.push(`Project execution is at ${ms.progressPct}% completion (${ms.count} milestones).`);
-    if(app.userStories) parts.push(`User Stories: ${app.userStories} (Open ${app.usOpen}).`);
-    if(app.bugs) parts.push(`Bugs: ${app.bugs} (Open ${app.bugsOpen}).`);
-    return parts.join(' ').trim();
-  }
-
-  function milestoneJourneyHtml(ms){
-    const milestones = Array.isArray(ms?.milestones) ? ms.milestones : [];
-    if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
-
-    const pct = Math.max(0, Math.min(100, Number(ms.progressPct)||0));
-
-    const nodes = milestones.map(m => {
-      const phase = esc(m.phase || 'Milestone');
-      const st = milestoneStatus(m);
-      return `
-        <div class='flex flex-col items-center' style='width:150px'>
-          <div class='w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${st.dot} ring-2 ${st.ring} ring-offset-2 ring-offset-slate-950'>✓</div>
-          <div class='mt-2 text-xs font-semibold text-slate-200 text-center break-words leading-tight'>${phase}</div>
-          <div class='mt-1 text-[10px] px-2 py-0.5 rounded-full border ${st.pill}'>${st.label}</div>
-        </div>`;
-    }).join('');
-
-    return `
-      <div class='bg-white/5 border border-white/10 rounded-2xl p-4'>
-        <div class='relative overflow-x-auto custom-scroll'>
-          <div class='relative' style='min-width:max-content'>
-            <div class='absolute top-5 left-6 right-6 h-1 bg-white/10'></div>
-            <div class='absolute top-5 left-6 h-1 bg-blue-500/80' style='width:${pct}%;'></div>
-            <div class='flex items-start gap-8 px-6 pt-0 pb-2'>${nodes}</div>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function milestoneCardsHtml(ms){
-    const milestones = Array.isArray(ms?.milestones) ? ms.milestones : [];
-    if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
-
-    return milestones.slice(0, 24).map(m => {
-      const phase = esc(m.phase||'Milestone');
-      const start = esc(m.startDate||'—');
-      const end = esc(m.endDate||'—');
-      const actS = esc(m.actualStartDate||'—');
-      const actE = esc(m.actualEndDate||'—');
-      const owner = esc(m.owner||'—');
-      const remark = esc(m.remark||'');
-      const st = milestoneStatus(m);
-
-      return `
-        <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
-          <div class='flex items-start justify-between gap-2'>
-            <div class='min-w-0'>
-              <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
-              <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
-              <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
-              <div class='mt-1 text-xs text-slate-400'>Owner: ${owner}</div>
-              ${remark ? `<div class='mt-1 text-xs text-slate-300 line-clamp-4'>${remark}</div>` : ''}
-            </div>
-            <div class='shrink-0 text-right'>
-              <div class='text-[10px] px-2 py-0.5 rounded-full border ${st.pill} inline-block'>${st.label}</div>
-            </div>
-          </div>
-        </div>`;
-    }).join('');
-  }
-
-  function renderOverallSummary(item){
-    return `
-      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
-        <div class='px-4 py-3 border-b border-white/10'>
-          <div class='text-base font-extrabold text-blue-300'>Overall Summary</div>
-        </div>
-        <div class='p-4 text-sm text-slate-200 whitespace-pre-wrap leading-relaxed'>${esc(item.summary || 'No summary')}</div>
-      </div>`;
-  }
-
-  function renderDisciplineStatus(item){
-    const d = item.discipline || {disciplines:0,pending:0,total:0,open:0,closed:0,hold:0};
-    return `
-      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
-        <div class='px-4 py-3 border-b border-white/10'>
-          <div class='text-base font-extrabold text-blue-300'>Task Discipline Status</div>
-        </div>
-        <div class='p-4'>
-          <div class='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
-            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Disciplines<br><b class='text-slate-100'>${d.disciplines||0}</b></div>
-            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Total Tasks<br><b class='text-slate-100'>${d.total||0}</b></div>
-            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Open<br><b class='text-slate-100'>${d.open||0}</b></div>
-            <div class='rounded-xl border border-white/10 bg-white/5 p-3'>Closed<br><b class='text-slate-100'>${d.closed||0}</b></div>
-          </div>
-          <div class='mt-3 text-sm text-slate-300'>Pending ADO items: <b class='text-slate-100'>${d.pending||0}</b></div>
-        </div>
-      </div>`;
+    if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500', label:'Delayed' };
+    return { status:'ytb', color:'bg-slate-400', label:'YTB' };
   }
 
   function renderMilestoneSection(item){
-    const ms = item.milestones;
-    const app = item.application;
+    const state=item._state || {};
+    const milestones=Array.isArray(state?.executive?.milestones)?state.executive.milestones:[];
+    const us=Array.isArray(state?.executive?.userStories)?state.executive.userStories:[];
+    const bugs=Array.isArray(state?.executive?.bugs)?state.executive.bugs:[];
+    const usOpen=us.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
+    const bugsOpen=bugs.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
+
+    const mapped=milestones.map(m=>({
+      phase: safeText(m?.phase||m?.Activity||m?.title||m?.name||'Milestone'),
+      startDate: safeText(m?.startDate||m?.plannedStart||m?.start||''),
+      endDate: safeText(m?.endDate||m?.plannedEnd||m?.end||''),
+      actualStartDate: safeText(m?.actualStartDate||m?.actualStart||''),
+      actualEndDate: safeText(m?.actualEndDate||m?.actualEnd||'')
+    }));
+
+    if(mapped.length===0){
+      return `
+        <div class="mb-8 border-b pb-8 border-gray-200">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold text-gray-700">Project Milestones - Application Tracker</h3>
+          </div>
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6">No milestones</div>
+        </div>`;
+    }
+
+    const completedCount = mapped.filter(m=>milestoneStatus(m).status==='completed').length;
+    const pct = (completedCount/mapped.length)*100;
+
+    let nodes=`<div class="relative min-w-max px-4 pt-8 pb-4"><div class="absolute top-12 left-4 right-4 h-1 bg-gray-300 z-0"></div><div class="absolute top-12 left-4 h-1 bg-blue-500 z-0 transition-all duration-500" style="width:${pct}%"></div><div class="flex justify-between items-start">`;
+    mapped.forEach((m)=>{
+      const st=milestoneStatus(m);
+      nodes += `<div class="flex flex-col items-center z-10 relative mx-2" style="width: 120px"><div class="w-8 h-8 rounded-full flex items-center justify-center mb-2 text-white shadow-sm ${st.color}">✓</div><p class="text-xs font-bold text-gray-700 text-center leading-tight mb-1 break-words w-full">${esc(m.phase)}</p></div>`;
+    });
+    nodes += `</div></div>`;
 
     return `
-      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
-        <div class='px-4 py-3 border-b border-white/10'>
-          <div class='text-base font-extrabold text-blue-300'>Project Milestones - Application Tracker</div>
-          <div class='mt-1 text-sm text-slate-200'>User Stories: <b>${app.userStories||0}</b> (Open ${app.usOpen||0}) • Bugs: <b>${app.bugs||0}</b> (Open ${app.bugsOpen||0})</div>
+      <div class="mb-8 border-b pb-8 border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-700 cursor-pointer hover:text-blue-600 select-none transition-colors" title="Project Milestones - Application Tracker">
+            Project Milestones - Application Tracker
+          </h3>
         </div>
-        <div class='p-4'>
-          ${milestoneJourneyHtml(ms)}
-          <div class='mt-4 flex justify-end'>
-            <button type='button' data-inner-toggle='mscards' class='px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>View Details</button>
-          </div>
-          <div data-inner-panel='mscards' class='hidden mt-4'>
-            <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${milestoneCardsHtml(ms)}</div>
-          </div>
+        <div class="text-sm text-slate-200 mb-3">User Stories: <b>${us.length}</b> (Open ${usOpen}) • Bugs: <b>${bugs.length}</b> (Open ${bugsOpen})</div>
+        <div id="milestone-container" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll">${nodes}</div>
+      </div>`;
+  }
+
+  // --- Discipline: build-like L1 + inline L2 view ---
+  function renderDisciplineSection(item){
+    const state=item._state || {};
+    const taskDisciplines=Array.isArray(state?.executive?.taskDisciplines)?state.executive.taskDisciplines:[];
+    const l2Columns=Array.isArray(state?.executive?.l2Columns)?state.executive.l2Columns: (Array.isArray(state?.l2Columns)?state.l2Columns:[]);
+    const l2Data=(state?.executive?.l2Data && typeof state.executive.l2Data==='object')?state.executive.l2Data: (state?.l2Data && typeof state.l2Data==='object'?state.l2Data:{});
+
+    const cols = (l2Columns && l2Columns.length) ? l2Columns : [{id:'c1',name:'Col 1'},{id:'c2',name:'Col 2'},{id:'c3',name:'Col 3'}];
+
+    // L1 rows
+    let tbody = '';
+    let grand = {t:0,o:0,c:0,h:0,g:0};
+    (taskDisciplines||[]).forEach(d=>{
+      grand.t += +d.totalTasks; grand.o += +d.openTasks; grand.c += +d.closedTasks; grand.h += +d.holdTasks; grand.g += +(d.grandTotal ?? (d.openTasks + d.closedTasks + d.holdTasks));
+      tbody += `<tr class="hover:bg-gray-50 text-sm transition-colors">
+        <td class="px-6 py-4 font-medium cursor-pointer" data-l2-toggle="${esc(d.discipline)}">${esc(d.discipline)}</td>
+        <td class="px-6 py-4 text-center text-blue-600 font-bold">${d.totalTasks||0}</td>
+        <td class="px-6 py-4 text-center text-gray-600">${d.openTasks||0}</td>
+        <td class="px-6 py-4 text-center text-gray-600">${d.closedTasks||0}</td>
+        <td class="px-6 py-4 text-center text-gray-600">${d.holdTasks||0}</td>
+        <td class="px-6 py-4 text-center font-bold">${d.grandTotal ?? (d.openTasks + d.closedTasks + d.holdTasks) || 0}</td>
+      </tr>`;
+      // L2 container row
+      tbody += `<tr class="hidden" data-l2-panel="${esc(d.discipline)}"><td colspan="6" class="px-6 pb-4">
+        <div class="mt-2 rounded-lg border border-gray-200 bg-white overflow-x-auto custom-scroll">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50"><tr>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Feature/Scope</th>
+              ${cols.map(c=>`<th class="px-3 py-2 text-center text-xs font-medium text-gray-500">${esc(c.name||c.id)}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${(Array.isArray(l2Data?.[d.discipline])?l2Data[d.discipline]:[]).map(r=>{
+                const feat = esc(r.feature||r.Feature||'');
+                const cells = cols.map(c=>`<td class="px-3 py-2 text-center text-gray-700">${esc(r[c.id]||'')}</td>`).join('');
+                return `<tr class="border-t"><td class="px-3 py-2 font-medium">${feat}</td>${cells}</tr>`;
+              }).join('') || `<tr><td colspan="${1+len(cols)}" class="px-3 py-2 text-slate-500">No L2 items</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </td></tr>`;
+    });
+
+    tbody += `<tr class="bg-gray-100 font-bold text-sm"><td class="px-6 py-4">Grand Total</td><td class="px-6 py-4 text-center">${grand.t}</td><td class="px-6 py-4 text-center">${grand.o}</td><td class="px-6 py-4 text-center">${grand.c}</td><td class="px-6 py-4 text-center">${grand.h}</td><td class="px-6 py-4 text-center">${grand.g}</td></tr>`;
+
+    return `
+      <div class="mb-8 border-b pb-8 border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-700 flex items-center">Task Discipline Status</h3>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
+          <table class="min-w-full divide-y divide-gray-200" id="discipline-table">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
+              </tr>
+            </thead>
+            <tbody id="discipline-tbody" class="bg-white divide-y divide-gray-200">${tbody}</tbody>
+          </table>
         </div>
       </div>`;
   }
 
-  function card(d){
-    const dashId = String(d.id || '');
-    const name = esc(d.name || d.id || 'Dashboard');
-    const published = fmt(d.publishedAt || d.updatedAt);
-    const owner = esc(d.ownerId || '');
-    const summary = esc(d.summary || 'No summary');
+  function overallSummaryCard(summaryText){
+    return `
+      <div class="mb-3">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xl font-semibold text-gray-700 flex items-center">Overall Summary</h3>
+        </div>
+        <div class="bg-purple-50 p-4 rounded-lg border border-purple-100 text-gray-700 text-sm whitespace-pre-wrap">${esc(summaryText||'No summary')}</div>
+      </div>`;
+  }
+
+  function card(item){
+    const dashId = String(item.id||'');
+    const name = esc(item.name||dashId||'Dashboard');
+    const published = fmt(item.publishedAt||item.updatedAt);
+    const owner = esc(item.ownerId||'');
+    const summary = item.summary || 'No summary';
     const detailsId = `details-${encodeURIComponent(dashId).replace(/%/g,'_')}`;
 
     return `
       <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
         <div class='p-4 flex flex-col gap-3'>
           <div class='flex items-start justify-between gap-3'>
-            <div class='min-w-0'>
+            <div class='min-w-0 flex-1'>
               <div class='text-base font-bold truncate' title='${name}'>${name}</div>
               <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
                 <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
                 <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
               </div>
-              <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap'>${summary}</div>
+              <!-- Card default view: Overall Summary -->
+              <div class='mt-4 bg-white rounded-xl p-4'>
+                ${overallSummaryCard(summary)}
+              </div>
             </div>
             <div class='flex flex-wrap gap-2 justify-end shrink-0'>
               <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
@@ -308,21 +261,11 @@
             </div>
           </div>
         </div>
-        <div id='${detailsId}' class='hidden p-4 space-y-4 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
-          <div class='text-sm text-slate-300'>Loading…</div>
+        <div id='${detailsId}' class='hidden p-4 space-y-6 border-t border-white/10 bg-white' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
+          <div class='text-sm text-slate-600'>Loading…</div>
         </div>
       </div>`;
   }
-
-  function applySearch(){
-    const q = ($('q')?.value || '').trim().toLowerCase();
-    document.querySelectorAll('#grid [data-name]').forEach(el=>{
-      const n = el.getAttribute('data-name')||'';
-      el.style.display = (!q || n.includes(q)) ? '' : 'none';
-    });
-  }
-
-  const itemsById = new Map();
 
   async function apiList(){ return jget('/api/state?list=1'); }
   async function apiGetDash(id){ return jget(`/api/state?dash=${encodeURIComponent(id)}`); }
@@ -330,27 +273,23 @@
   async function loadBoard(){
     clearErr();
     const status=$('status');
-    if(status) status.textContent = 'Checking access…';
+    if(status) status.textContent='Checking access…';
 
     const me = await jget('/api/auth/me');
-    if(!me.authenticated){
-      location.href='/login.html?next='+encodeURIComponent('/executive-board.html');
-      return;
-    }
+    if(!me.authenticated){ location.href='/login.html?next='+encodeURIComponent('/executive-board.html'); return; }
 
     const perms = me.permissions || {};
     if(!(me.role==='admin' || perms.executiveBoard)){
       showErr('Access denied: Executive Board access required.');
-      if(status) status.textContent = '—';
+      if(status) status.textContent='—';
       return;
     }
 
-    if(status) status.textContent = 'Loading dashboards…';
+    if(status) status.textContent='Loading dashboards…';
 
     const sortMode = $('sort')?.value || 'newest';
     const listRes = await apiList();
     const dashboards = Array.isArray(listRes.dashboards) ? listRes.dashboards : [];
-
     const publishedFromList = dashboards.filter(d => d && (d.published === true || d.published === 1 || d.published === 'true'));
     const source = publishedFromList.length ? publishedFromList : dashboards;
 
@@ -369,12 +308,8 @@
           const state = resp.state || {};
           if(publishedFromList.length === 0 && !meta.published) continue;
 
-          const milestones = pickMilestones(state);
-          const application = pickApplication(state);
-          const discipline = pickDiscipline(state);
-
           const saved = safeText(state?.executive?.savedSummaryText || '');
-          const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
+          const summary = saved || 'No summary';
 
           items.push({
             id: d.id,
@@ -383,29 +318,36 @@
             publishedAt: meta.publishedAt || d.publishedAt || d.updatedAt,
             updatedAt: d.updatedAt,
             summary,
-            milestones,
-            application,
-            discipline
+            _state: state
           });
         }catch(e){}
       }
     }
 
     await Promise.all(Array.from({length: pool}, worker));
-
     sortItems(items, sortMode);
+
     itemsById.clear();
     items.forEach(it => { if(it && it.id) itemsById.set(String(it.id), it); });
 
     const grid=$('grid');
     if(grid){
       grid.innerHTML = items.length
-        ? items.map(d => `<div data-name='${esc((d.name||'').toLowerCase())}'>${card(d)}</div>`).join('')
+        ? items.map(it => `<div data-name='${esc((it.name||'').toLowerCase())}'>${card(it)}</div>`).join('')
         : "<div class='text-slate-400 text-sm'>No published dashboards available.</div>";
     }
 
     if(status) status.textContent = `Showing ${items.length} published dashboard(s).`;
     applySearch();
+  }
+
+  function closeAllDetails(exceptId){
+    document.querySelectorAll('#grid [id^="details-"]').forEach(p=>{
+      if(exceptId && p.id===exceptId) return;
+      p.classList.add('hidden');
+      const btn = document.querySelector(`[data-toggle="${p.id}"]`);
+      if(btn) btn.textContent='Details';
+    });
   }
 
   function wireToggles(){
@@ -414,12 +356,12 @@
     grid.__wired = true;
 
     grid.addEventListener('click', (e)=>{
-      const innerBtn = e.target.closest && e.target.closest('[data-inner-toggle]');
-      if(innerBtn){
-        const key = innerBtn.getAttribute('data-inner-toggle');
-        const root = innerBtn.closest('[data-loaded]') || innerBtn.closest('div');
-        const panel = root && root.querySelector ? root.querySelector('[data-inner-panel="'+key+'"]') : null;
-        if(panel){ panel.classList.toggle('hidden'); return; }
+      const l2toggle = e.target.closest && e.target.closest('[data-l2-toggle]');
+      if(l2toggle){
+        const disc = l2toggle.getAttribute('data-l2-toggle');
+        const panel = grid.querySelector(`[data-l2-panel="${CSS.escape(disc)}"]`);
+        if(panel) panel.classList.toggle('hidden');
+        return;
       }
 
       const btn = e.target.closest && e.target.closest('[data-toggle]');
@@ -432,31 +374,28 @@
       if(!panel) return;
 
       const willOpen = panel.classList.contains('hidden');
+      closeAllDetails(id);
+
       panel.classList.toggle('hidden');
       btn.textContent = panel.classList.contains('hidden') ? 'Details' : 'Hide';
 
       if(willOpen && panel.getAttribute('data-loaded') !== '1'){
         const item = itemsById.get(dashId);
         panel.innerHTML = item
-          ? (renderOverallSummary(item) + renderDisciplineStatus(item) + renderMilestoneSection(item))
-          : `<div class='text-sm text-slate-300'>No details available.</div>`;
+          ? (renderMilestoneSection(item) + renderDisciplineSection(item))
+          : `<div class='text-sm text-slate-600'>No details available.</div>`;
         panel.setAttribute('data-loaded','1');
       }
     });
   }
 
   function init(){
-    const sortEl = $('sort');
+    const sortEl=$('sort');
     if(sortEl) sortEl.addEventListener('change', loadBoard);
-    const qEl = $('q');
+    const qEl=$('q');
     if(qEl) qEl.addEventListener('input', applySearch);
     wireToggles();
-
-    loadBoard().catch(e=>{
-      showErr(e && (e.message||e) || String(e));
-      const status=$('status');
-      if(status) status.textContent = '—';
-    });
+    loadBoard().catch(err=>{ showErr(err.message||String(err)); const s=$('status'); if(s) s.textContent='—'; });
   }
 
   window.addEventListener('DOMContentLoaded', init);
