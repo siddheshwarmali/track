@@ -4,15 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Executive Board</title>
-  <!-- COPILOT_EXECBOARD_REQUIREMENTS_FIXED: 2026-01-23 16:35:38 IST | fixes template literal syntax + card overall summary + details milestones+discipline -->
+  <!-- COPILOT_EXECBOARD_BUILDLIKE: 2026-01-23 16:44:44 IST | Card=Overall Summary, Details=Build-like Milestones + Discipline(L2) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    /* fallback line-clamp */
-    .line-clamp-4{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body{font-family:'Inter',sans-serif;}
     .custom-scroll::-webkit-scrollbar{width:6px;height:6px}
-    .custom-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
-    .custom-scroll::-webkit-scrollbar-track{background:#f1f1f1}
+    .custom-scroll::-webkit-scrollbar-track{background:#0b1220}
+    .custom-scroll::-webkit-scrollbar-thumb{background:#334155;border-radius:999px}
+    .line-clamp-4{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
@@ -57,13 +57,7 @@
   const itemsById = new Map();
 
   function esc(s){
-    return String(s||'').replace(/[&<>"']/g, c => ({
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
-    }[c]));
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
   function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
   function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
@@ -79,7 +73,6 @@
     return j;
   }
 
-  // Sorting/search
   function sortItems(items, mode){
     const m=(mode||'newest');
     if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
@@ -87,6 +80,7 @@
     if(m==='name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
     return items.sort((a,b)=>(b.publishedAt||b.updatedAt||'').localeCompare(a.publishedAt||a.updatedAt||''));
   }
+
   function applySearch(){
     const q = ($('q')?.value||'').trim().toLowerCase();
     document.querySelectorAll('#grid [data-name]').forEach(el=>{
@@ -95,26 +89,191 @@
     });
   }
 
-  // ---------- Section 1 (Card): Overall Summary (Build-like look) ----------
-  function overallSummaryCard(summaryText){
+  // ====== BUILD-LIKE SECTION 1: Overall Summary (CARD DEFAULT) ======
+  function overallSummaryMarkup(summaryText){
+    // Matches build look (purple box)
     return `
-      <div class="mb-3">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="text-xl font-semibold text-gray-700 flex items-center">
-            <span class="mr-2">📝</span>Overall Summary
-          </h3>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xl font-semibold text-gray-700 flex items-center">
+          <span class="inline-flex w-5 h-5 mr-2 items-center justify-center text-purple-600">📄</span>Overall Summary
+        </h3>
+      </div>
+      <div class="bg-purple-50 p-4 rounded-lg border border-purple-100 text-gray-700 text-sm whitespace-pre-wrap">${esc(summaryText||'No summary')}</div>`;
+  }
+
+  // ====== BUILD-LIKE SECTION 2: Project Milestones - Application Tracker (DETAILS) ======
+  function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
+  function calcMilestoneColor(m){
+    // Completed green, InProgress blue, YTB gray (as requested)
+    const actualEnd = toDate(m.actualEndDate);
+    const actualStart = toDate(m.actualStartDate);
+    if(actualEnd) return 'bg-green-500';
+    if(actualStart) return 'bg-blue-500';
+    return 'bg-gray-400';
+  }
+
+  function renderMilestonesInto(containerId, state){
+    const container = document.getElementById(containerId);
+    if(!container) return;
+
+    const milestonesRaw = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
+    if(milestonesRaw.length === 0){
+      container.innerHTML = `<div class="text-center py-10"><p class="text-gray-500 mt-2">Add Milestone</p></div>`;
+      return;
+    }
+
+    const milestones = milestonesRaw.map(m => ({
+      phase: safeText(m?.phase||m?.Activity||m?.title||m?.name||'Milestone'),
+      startDate: safeText(m?.startDate||m?.plannedStart||m?.start||''),
+      endDate: safeText(m?.endDate||m?.plannedEnd||m?.end||''),
+      actualStartDate: safeText(m?.actualStartDate||m?.actualStart||''),
+      actualEndDate: safeText(m?.actualEndDate||m?.actualEnd||'')
+    }));
+
+    const completedCount = milestones.filter(m => toDate(m.actualEndDate)).length;
+    const pct = (completedCount / milestones.length) * 100;
+
+    let html = `<div class="relative min-w-max px-4 pt-8 pb-4">`;
+    html += `<div class="absolute top-12 left-4 right-4 h-1 bg-gray-300 z-0"></div>`;
+    html += `<div class="absolute top-12 left-4 h-1 bg-blue-500 z-0 transition-all duration-500" style="width: ${pct}%"></div>`;
+    html += `<div class="flex justify-between items-start">`;
+
+    milestones.forEach((m) => {
+      const color = calcMilestoneColor(m);
+      html += `<div class="flex flex-col items-center z-10 relative mx-2" style="width: 120px">`;
+      html += `<div class="w-8 h-8 rounded-full flex items-center justify-center mb-2 text-white shadow-sm ${color}">✓</div>`;
+      html += `<p class="text-xs font-bold text-gray-700 text-center leading-tight mb-1 break-words w-full">${esc(m.phase)}</p>`;
+      html += `</div>`;
+    });
+
+    html += `</div></div>`;
+    container.innerHTML = html;
+  }
+
+  function buildMilestoneSectionHTML(dashId, state){
+    const us = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
+    const bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
+    const usOpen = us.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
+    const bugsOpen = bugs.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
+
+    const containerId = `milestone-container-${dashId}`;
+
+    return `
+      <div class="mb-8 border-b pb-8 border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-700">Project Milestones - Application Tracker</h3>
         </div>
-        <div class="bg-purple-50 p-4 rounded-lg border border-purple-100 text-gray-700 text-sm whitespace-pre-wrap">${esc(summaryText||'No summary')}</div>
+        <div class="text-sm text-slate-600 mb-3">User Stories: <b>${us.length}</b> (Open ${usOpen}) • Bugs: <b>${bugs.length}</b> (Open ${bugsOpen})</div>
+        <div id="${containerId}" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll"></div>
       </div>`;
   }
 
+  // ====== BUILD-LIKE SECTION 3: Task Discipline Status L2 view (DETAILS) ======
+  function buildDisciplineSectionHTML(dashId){
+    const tbodyId = `discipline-tbody-${dashId}`;
+    return `
+      <div class="mb-2">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-700 flex items-center">
+            <span class="inline-flex w-5 h-5 mr-2 items-center justify-center text-teal-600">📊</span>Task Discipline Status
+          </h3>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
+          <table class="min-w-full divide-y divide-gray-200" id="discipline-table-${dashId}">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
+              </tr>
+            </thead>
+            <tbody id="${tbodyId}" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  function renderDisciplineInto(dashId, state){
+    const tbody = document.getElementById(`discipline-tbody-${dashId}`);
+    if(!tbody) return;
+
+    const taskDisciplines = Array.isArray(state?.executive?.taskDisciplines) ? state.executive.taskDisciplines : [];
+    const l2Columns = Array.isArray(state?.executive?.l2Columns) ? state.executive.l2Columns : (Array.isArray(state?.l2Columns)?state.l2Columns:[]);
+    const l2Data = (state?.executive?.l2Data && typeof state.executive.l2Data==='object') ? state.executive.l2Data : ((state?.l2Data && typeof state.l2Data==='object')?state.l2Data:{});
+
+    const cols = (l2Columns && l2Columns.length) ? l2Columns : [{id:'c1',name:'Col 1'},{id:'c2',name:'Col 2'},{id:'c3',name:'Col 3'}];
+    const colSpan = 1 + cols.length;
+
+    let grand = {t:0,o:0,c:0,h:0,g:0};
+    let rowsHtml = '';
+
+    taskDisciplines.forEach(d=>{
+      const disc = safeText(d.discipline,'');
+      grand.t += +d.totalTasks; grand.o += +d.openTasks; grand.c += +d.closedTasks; grand.h += +d.holdTasks;
+      const gtot = +(d.grandTotal ?? (d.openTasks + d.closedTasks + d.holdTasks));
+      grand.g += gtot;
+
+      const safeDisc = esc(disc);
+      const key = encodeURIComponent(disc);
+
+      rowsHtml += `
+        <tr class="hover:bg-gray-50 text-sm transition-colors">
+          <td class="px-6 py-4 font-medium cursor-pointer" data-l2-toggle="${key}">
+            <span class="text-teal-700">${safeDisc}</span>
+            <span class="ml-2 text-xs text-slate-400">(tap for L2)</span>
+          </td>
+          <td class="px-6 py-4 text-center text-blue-600 font-bold">${d.totalTasks||0}</td>
+          <td class="px-6 py-4 text-center text-gray-600">${d.openTasks||0}</td>
+          <td class="px-6 py-4 text-center text-gray-600">${d.closedTasks||0}</td>
+          <td class="px-6 py-4 text-center text-gray-600">${d.holdTasks||0}</td>
+          <td class="px-6 py-4 text-center font-bold">${gtot||0}</td>
+        </tr>`;
+
+      // L2 panel row
+      const head = cols.map(c=>`<th class="px-3 py-2 text-center text-xs font-medium text-gray-500">${esc(c.name||c.id)}</th>`).join('');
+      const l2rows = Array.isArray(l2Data && l2Data[disc]) ? l2Data[disc] : [];
+      let l2Body='';
+      if(l2rows.length===0){
+        l2Body = `<tr><td colspan="${colSpan}" class="px-3 py-2 text-slate-500">No L2 items</td></tr>`;
+      } else {
+        l2rows.forEach(r=>{
+          const feat = esc(r.feature || r.Feature || '');
+          let cells='';
+          cols.forEach(c=>{ cells += `<td class="px-3 py-2 text-center text-gray-700">${esc(r[c.id]||'')}</td>`; });
+          l2Body += `<tr class="border-t"><td class="px-3 py-2 font-medium">${feat}</td>${cells}</tr>`;
+        });
+      }
+
+      rowsHtml += `
+        <tr class="hidden" data-l2-panel="${key}">
+          <td colspan="6" class="px-6 pb-4">
+            <div class="mt-2 rounded-lg border border-gray-200 bg-white overflow-x-auto custom-scroll">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50"><tr><th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Feature/Scope</th>${head}</tr></thead>
+                <tbody>${l2Body}</tbody>
+              </table>
+            </div>
+          </td>
+        </tr>`;
+    });
+
+    rowsHtml += `<tr class="bg-gray-100 font-bold text-sm"><td class="px-6 py-4">Grand Total</td><td class="px-6 py-4 text-center">${grand.t}</td><td class="px-6 py-4 text-center">${grand.o}</td><td class="px-6 py-4 text-center">${grand.c}</td><td class="px-6 py-4 text-center">${grand.h}</td><td class="px-6 py-4 text-center">${grand.g}</td></tr>`;
+
+    tbody.innerHTML = rowsHtml;
+  }
+
+  // ====== Card + Details container ======
   function card(item){
     const dashId = String(item.id||'');
+    const safeDashId = encodeURIComponent(dashId);
     const name = esc(item.name||dashId||'Dashboard');
     const published = fmt(item.publishedAt||item.updatedAt);
     const owner = esc(item.ownerId||'');
-    const summary = item.summary || 'No summary';
-    const detailsId = `details-${encodeURIComponent(dashId).replace(/%/g,'_')}`;
+
+    const detailsId = `details-${safeDashId.replace(/%/g,'_')}`;
 
     return `
       <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
@@ -126,175 +285,28 @@
                 <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
                 <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
               </div>
-              <!-- Default view in card: Overall Summary only -->
+
+              <!-- Card default: Overall Summary only -->
               <div class='mt-4 bg-white rounded-xl p-4'>
-                ${overallSummaryCard(summary)}
+                ${overallSummaryMarkup(item.summary || 'No summary')}
               </div>
             </div>
+
             <div class='flex flex-wrap gap-2 justify-end shrink-0'>
-              <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
-              <button type='button' data-toggle='${detailsId}' data-dash='${encodeURIComponent(dashId)}'
+              <a href='/index.html?dash=${safeDashId}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
+              <button type='button' data-toggle='${detailsId}' data-dash='${safeDashId}'
                 class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Details</button>
             </div>
           </div>
         </div>
-        <div id='${detailsId}' class='hidden p-4 space-y-6 border-t border-white/10 bg-white' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
+
+        <div id='${detailsId}' class='hidden p-4 space-y-6 border-t border-white/10 bg-white' data-loaded='0'>
           <div class='text-sm text-slate-600'>Loading…</div>
         </div>
       </div>`;
   }
 
-  // ---------- Section 2 (Details): Project Milestones - Application Tracker (build-like) ----------
-  function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
-  function milestoneStatus(m){
-    const plannedEnd = toDate(m.endDate);
-    const actualEnd = toDate(m.actualEndDate);
-    const actualStart = toDate(m.actualStartDate);
-    const today = new Date();
-
-    // completed green, in progress blue, YTB gray
-    if(actualEnd) return { status:'completed', color:'bg-green-500' };
-    if(actualStart){
-      if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500' };
-      return { status:'inprogress', color:'bg-blue-500' };
-    }
-    if(plannedEnd && today>plannedEnd) return { status:'delayed', color:'bg-red-500' };
-    return { status:'ytb', color:'bg-slate-400' };
-  }
-
-  function renderMilestoneSection(item){
-    const state=item._state || {};
-    const milestonesRaw=Array.isArray(state?.executive?.milestones)?state.executive.milestones:[];
-    const userStories=Array.isArray(state?.executive?.userStories)?state.executive.userStories:[];
-    const bugs=Array.isArray(state?.executive?.bugs)?state.executive.bugs:[];
-
-    const usOpen=userStories.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
-    const bugsOpen=bugs.filter(x=>String(x?.stage||x?.status||'').toLowerCase()!=='closed').length;
-
-    const milestones = milestonesRaw.map(m => ({
-      phase: safeText(m?.phase||m?.Activity||m?.title||m?.name||'Milestone'),
-      startDate: safeText(m?.startDate||m?.plannedStart||m?.start||''),
-      endDate: safeText(m?.endDate||m?.plannedEnd||m?.end||''),
-      actualStartDate: safeText(m?.actualStartDate||m?.actualStart||''),
-      actualEndDate: safeText(m?.actualEndDate||m?.actualEnd||'')
-    }));
-
-    let bodyHtml='';
-    if(milestones.length===0){
-      bodyHtml = `<div class="text-center py-10"><p class="text-gray-500 mt-2">Add Milestone</p></div>`;
-    } else {
-      const completedCount = milestones.filter(m => milestoneStatus(m).status === 'completed').length;
-      const pct = (completedCount / milestones.length) * 100;
-      let track = `<div class="relative min-w-max px-4 pt-8 pb-4">`;
-      track += `<div class="absolute top-12 left-4 right-4 h-1 bg-gray-300 z-0"></div>`;
-      track += `<div class="absolute top-12 left-4 h-1 bg-blue-500 z-0 transition-all duration-500" style="width:${pct}%"></div>`;
-      track += `<div class="flex justify-between items-start">`;
-
-      milestones.forEach((m) => {
-        const st = milestoneStatus(m);
-        track += `<div class="flex flex-col items-center z-10 relative mx-2" style="width: 120px">`;
-        track += `<div class="w-8 h-8 rounded-full flex items-center justify-center mb-2 text-white shadow-sm ${st.color}">`;
-        track += `<span class="text-sm font-bold">✓</span></div>`;
-        track += `<p class="text-xs font-bold text-gray-700 text-center leading-tight mb-1 break-words w-full">${esc(m.phase)}</p>`;
-        track += `</div>`;
-      });
-
-      track += `</div></div>`;
-      bodyHtml = track;
-    }
-
-    return `
-      <div class="mb-8 border-b pb-8 border-gray-200">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold text-gray-700 cursor-pointer hover:text-blue-600 select-none transition-colors">Project Milestones - Application Tracker</h3>
-        </div>
-        <div class="text-sm text-slate-600 mb-3">User Stories: <b>${userStories.length}</b> (Open ${usOpen}) • Bugs: <b>${bugs.length}</b> (Open ${bugsOpen})</div>
-        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll">${bodyHtml}</div>
-      </div>`;
-  }
-
-  // ---------- Section 3 (Details): Task Discipline Status (L2 view inline) ----------
-  function renderDisciplineSection(item){
-    const state=item._state || {};
-    const taskDisciplines=Array.isArray(state?.executive?.taskDisciplines)?state.executive.taskDisciplines:[];
-
-    const l2Columns=Array.isArray(state?.executive?.l2Columns)?state.executive.l2Columns:
-                    (Array.isArray(state?.l2Columns)?state.l2Columns:[]);
-    const l2Data=(state?.executive?.l2Data && typeof state.executive.l2Data==='object')?state.executive.l2Data:
-                ((state?.l2Data && typeof state.l2Data==='object')?state.l2Data:{});
-
-    const cols = (l2Columns && l2Columns.length) ? l2Columns : [{id:'c1',name:'Col 1'},{id:'c2',name:'Col 2'},{id:'c3',name:'Col 3'}];
-    const colSpan = 1 + cols.length;
-
-    let tbodyHtml='';
-    let grand={t:0,o:0,c:0,h:0,g:0};
-
-    (taskDisciplines||[]).forEach(d=>{
-      const discipline = safeText(d.discipline,'');
-      grand.t += +d.totalTasks; grand.o += +d.openTasks; grand.c += +d.closedTasks; grand.h += +d.holdTasks;
-      const gtot = +(d.grandTotal ?? (d.openTasks + d.closedTasks + d.holdTasks));
-      grand.g += gtot;
-
-      const discKey = esc(discipline);
-      tbodyHtml += `<tr class="hover:bg-gray-50 text-sm transition-colors">`;
-      tbodyHtml += `<td class="px-6 py-4 font-medium cursor-pointer" data-l2-toggle="${discKey}">${discKey}</td>`;
-      tbodyHtml += `<td class="px-6 py-4 text-center text-blue-600 font-bold">${d.totalTasks||0}</td>`;
-      tbodyHtml += `<td class="px-6 py-4 text-center text-gray-600">${d.openTasks||0}</td>`;
-      tbodyHtml += `<td class="px-6 py-4 text-center text-gray-600">${d.closedTasks||0}</td>`;
-      tbodyHtml += `<td class="px-6 py-4 text-center text-gray-600">${d.holdTasks||0}</td>`;
-      tbodyHtml += `<td class="px-6 py-4 text-center font-bold">${gtot||0}</td>`;
-      tbodyHtml += `</tr>`;
-
-      // L2
-      const rows = Array.isArray(l2Data && l2Data[discipline]) ? l2Data[discipline] : [];
-      let l2Rows='';
-      if(rows.length===0){
-        l2Rows = `<tr><td colspan="${colSpan}" class="px-3 py-2 text-slate-500">No L2 items</td></tr>`;
-      } else {
-        rows.forEach(r=>{
-          const feat = esc(r.feature || r.Feature || '');
-          let cells='';
-          cols.forEach(c=>{ cells += `<td class="px-3 py-2 text-center text-gray-700">${esc(r[c.id]||'')}</td>`; });
-          l2Rows += `<tr class="border-t"><td class="px-3 py-2 font-medium">${feat}</td>${cells}</tr>`;
-        });
-      }
-
-      const head = cols.map(c=>`<th class="px-3 py-2 text-center text-xs font-medium text-gray-500">${esc(c.name||c.id)}</th>`).join('');
-      tbodyHtml += `<tr class="hidden" data-l2-panel="${discKey}">`;
-      tbodyHtml += `<td colspan="6" class="px-6 pb-4">`;
-      tbodyHtml += `<div class="mt-2 rounded-lg border border-gray-200 bg-white overflow-x-auto custom-scroll">`;
-      tbodyHtml += `<table class="min-w-full text-sm">`;
-      tbodyHtml += `<thead class="bg-gray-50"><tr><th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Feature/Scope</th>${head}</tr></thead>`;
-      tbodyHtml += `<tbody>${l2Rows}</tbody>`;
-      tbodyHtml += `</table></div></td></tr>`;
-    });
-
-    tbodyHtml += `<tr class="bg-gray-100 font-bold text-sm"><td class="px-6 py-4">Grand Total</td><td class="px-6 py-4 text-center">${grand.t}</td><td class="px-6 py-4 text-center">${grand.o}</td><td class="px-6 py-4 text-center">${grand.c}</td><td class="px-6 py-4 text-center">${grand.h}</td><td class="px-6 py-4 text-center">${grand.g}</td></tr>`;
-
-    return `
-      <div class="mb-8 border-b pb-8 border-gray-200">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold text-gray-700 flex items-center">Task Discipline Status</h3>
-        </div>
-        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
-          <table class="min-w-full divide-y divide-gray-200" id="discipline-table">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">${tbodyHtml}</tbody>
-          </table>
-        </div>
-      </div>`;
-  }
-
-  // ---------- Data loading ----------
+  // ====== Data loading (from your working approach) ======
   async function apiList(){ return jget('/api/state?list=1'); }
   async function apiGetDash(id){ return jget(`/api/state?dash=${encodeURIComponent(id)}`); }
 
@@ -336,8 +348,7 @@
           const state = resp.state || {};
           if(publishedFromList.length === 0 && !meta.published) continue;
 
-          const saved = safeText(state?.executive?.savedSummaryText || '');
-          const summary = saved || 'No summary';
+          const summary = safeText(state?.executive?.savedSummaryText || '', 'No summary');
 
           items.push({
             id: d.id,
@@ -384,38 +395,47 @@
     grid.__wired = true;
 
     grid.addEventListener('click', (e)=>{
-      // L2 toggles
+      // L2 toggles inside details
       const l2toggle = e.target.closest && e.target.closest('[data-l2-toggle]');
       if(l2toggle){
-        const disc = l2toggle.getAttribute('data-l2-toggle');
-        const panel = grid.querySelector(`[data-l2-panel="${CSS.escape(disc)}"]`);
+        const key = l2toggle.getAttribute('data-l2-toggle');
+        const panel = grid.querySelector(`[data-l2-panel="${key}"]`);
         if(panel) panel.classList.toggle('hidden');
         return;
       }
 
-      // Details toggle
       const btn = e.target.closest && e.target.closest('[data-toggle]');
       if(!btn) return;
 
-      const id = btn.getAttribute('data-toggle');
+      const detailsId = btn.getAttribute('data-toggle');
       const dashEnc = btn.getAttribute('data-dash');
       const dashId = dashEnc ? decodeURIComponent(dashEnc) : '';
-      const panel = document.getElementById(id);
+      const panel = document.getElementById(detailsId);
       if(!panel) return;
 
       const willOpen = panel.classList.contains('hidden');
-      closeAllDetails(id);
+      closeAllDetails(detailsId);
 
       panel.classList.toggle('hidden');
       btn.textContent = panel.classList.contains('hidden') ? 'Details' : 'Hide';
 
       if(willOpen && panel.getAttribute('data-loaded') !== '1'){
         const item = itemsById.get(dashId);
-        panel.innerHTML = item
-          ? (renderMilestoneSection(item) + renderDisciplineSection(item))
-          : `<div class='text-sm text-slate-600'>No details available.</div>`;
+        if(!item){
+          panel.innerHTML = `<div class='text-sm text-slate-600'>No details available.</div>`;
+          panel.setAttribute('data-loaded','1');
+          return;
+        }
+
+        // Build-like sections 2 & 3 in details
+        panel.innerHTML = buildMilestoneSectionHTML(encodeURIComponent(dashId), item._state)
+                        + buildDisciplineSectionHTML(encodeURIComponent(dashId));
+
+        // After inserting HTML, render actual content
+        renderMilestonesInto(`milestone-container-${encodeURIComponent(dashId)}`, item._state);
+        renderDisciplineInto(encodeURIComponent(dashId), item._state);
+
         panel.setAttribute('data-loaded','1');
-        try{ window.lucide && lucide.createIcons(); }catch(e){}
       }
     });
   }
