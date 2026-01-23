@@ -123,8 +123,8 @@
     <span class="text-base">⚙️</span><span>Actions</span>
     <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
   </button>
-  <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-30" aria-hidden="true"></div>
-  <div id="ws-actions-menu" class="hidden z-40 fixed inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden" role="menu" aria-label="Workspace actions">
+  <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-40" aria-hidden="true"></div>
+  <div id="ws-actions-menu" class="hidden z-50 fixed inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden" role="menu" aria-label="Workspace actions">
     <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
     <div class="p-2">
       <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="new" role="menuitem">New workspace</button>
@@ -3123,63 +3123,88 @@ async function wsModalPrimary() {
 </script>
 
 <script>
-
 // ===== Workspace Actions Menu (responsive) =====
+// Fix: make Actions button behave like Run dashboard (open/close, backdrop, outside click, Esc)
 (function(){
   function qs(id){ return document.getElementById(id); }
-  function isOpen(){ const m=qs('ws-actions-menu'); return m && !m.classList.contains('hidden'); }
+  function isOpen(){ const m = qs('ws-actions-menu'); return !!(m && !m.classList.contains('hidden')); }
   function openMenu(){
     const menu = qs('ws-actions-menu');
-    const btn = qs('ws-actions-btn');
+    const btn  = qs('ws-actions-btn');
     const back = qs('ws-actions-backdrop');
     if(!menu || !btn) return;
     menu.classList.remove('hidden');
-    btn.setAttribute('aria-expanded','true');
     if(back) back.classList.remove('hidden');
+    btn.setAttribute('aria-expanded','true');
   }
   function closeMenu(){
     const menu = qs('ws-actions-menu');
-    const btn = qs('ws-actions-btn');
+    const btn  = qs('ws-actions-btn');
     const back = qs('ws-actions-backdrop');
     if(menu) menu.classList.add('hidden');
     if(back) back.classList.add('hidden');
     if(btn) btn.setAttribute('aria-expanded','false');
   }
+
   async function perform(action){
-    if(action==='new') return window.wsOpenCreateModal && window.wsOpenCreateModal();
-    if(action==='rename') return window.wsRenameCurrent && window.wsRenameCurrent();
-    if(action==='save') return window.wsSaveNow && window.wsSaveNow({prompt:true});
-    if(action==='delete') return window.wsDeleteCurrent && window.wsDeleteCurrent();
-    if(action==='export') return window.wsExportCurrent && window.wsExportCurrent();
-    if(action==='exportExcel') return window.wsExportCurrentExcel && window.wsExportCurrentExcel();
+    // Prefer Build's workspace manager API (ws*) but keep fallbacks to older names.
+    if(action==='new')         return (window.wsOpenCreateModal?.() || window.createWorkspace?.());
+    if(action==='rename')      return (window.wsRenameCurrent?.()   || window.renameWorkspace?.());
+    if(action==='save')        return (window.wsSaveNow?.({prompt:true}) || window.saveWorkspace?.());
+    if(action==='delete')      return (window.wsDeleteCurrent?.()   || window.deleteWorkspace?.());
+    if(action==='export')      return (window.wsExportCurrent?.()   || window.exportWorkspace?.());
+    if(action==='exportExcel') return (window.wsExportCurrentExcel?.() || window.exportWorkspaceExcel?.());
     if(action==='import'){
       const inp = qs('ws-import-file');
       if(inp) inp.click();
       return;
     }
+    if(action==='publish')     return (window.wsOpenPublishModal?.() || window.openPublishModal?.());
+    if(action==='unpublish')   return (window.wsUnpublishCurrent?.() || window.doUnpublish?.());
   }
-  window.addEventListener('DOMContentLoaded', ()=>{
-    const btn = qs('ws-actions-btn');
+
+  function bindOnce(){
+    const btn  = qs('ws-actions-btn');
     const menu = qs('ws-actions-menu');
     const back = qs('ws-actions-backdrop');
-    if(btn) btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); isOpen()?closeMenu():openMenu(); });
-    if(back) back.addEventListener('click', closeMenu);
-    if(menu) menu.addEventListener('click', async (e)=>{
-      const t=e.target;
-      const c=t && t.closest ? t.closest('[data-ws-close]') : null;
-      if(c){ e.preventDefault(); closeMenu(); return; }
-      const item=t && t.closest ? t.closest('[data-ws-action]') : null;
+    if(!btn || !menu) return;
+    if(btn.dataset.twBound==='1') return; // prevent double-binding
+    btn.dataset.twBound='1';
+
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      isOpen() ? closeMenu() : openMenu();
+    });
+
+    back?.addEventListener('click', closeMenu);
+
+    menu.addEventListener('click', async (e)=>{
+      const closeBtn = e.target?.closest?.('[data-ws-close]');
+      if(closeBtn){ e.preventDefault(); closeMenu(); return; }
+      const item = e.target?.closest?.('[data-ws-action]');
       if(!item) return;
       e.preventDefault();
-      const action=item.getAttribute('data-ws-action');
+      const action = item.getAttribute('data-ws-action');
       closeMenu();
-      try{ await perform(action); }catch(err){ console.error(err); alert(err.message||String(err)); }
+      try{ await perform(action); }
+      catch(err){ console.error(err); alert(err?.message || String(err)); }
     });
-    document.addEventListener('click', (e)=>{ if(!isOpen()) return; const inside = (menu && menu.contains(e.target)) || (btn && btn.contains(e.target)); if(!inside) closeMenu(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-  });
-})();
 
+    document.addEventListener('click', (e)=>{
+      if(!isOpen()) return;
+      const inside = menu.contains(e.target) || btn.contains(e.target);
+      if(!inside) closeMenu();
+    });
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape') closeMenu();
+    });
+  }
+
+  // Bind after DOM is ready (mirrors Run dashboard behavior)
+  window.addEventListener('DOMContentLoaded', bindOnce);
+})();
 </script>
 
 
