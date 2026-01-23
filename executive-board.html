@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Executive Dashboard - Build</title>
-<!-- COPILOT_RESPONSIVE_PATCH: 2026-01-23 11:35:31 IST | actions-menu-scroll + publish-toggle + export-blob-unique -->
+<!-- COPILOT_BUGFIX_STAMP: 2026-01-23 11:38:56 IST | responsive-header + actions-menu-scroll + publish-toggle + exportReport-blob-unique-cachebust -->
 
 <!-- TW_BUILD_STAMP: 2026-01-16 15:28 IST (rename-db-fix) -->
     
@@ -95,15 +95,15 @@
   <script src="/assets/js/build-extras.js" defer></script>
 
 <style id="tw-responsive-overrides">
-  /* Responsive overrides added by Copilot */
+  /* Copilot bugfix overrides */
   @media (max-width: 640px){
     .tw-sticky-header-fix{ position: sticky; top: 0; }
     .tw-sticky-header-fix *{ max-width: 100%; }
 
-    /* Bottom-sheet menus should not overflow */
+    /* Actions bottom-sheet should not overflow */
     #ws-actions-menu{ max-height: 85vh; }
 
-    /* Make heavy modals full-screen on mobile */
+    /* Fullscreen heavy modals */
     #modal-l3 > div,
     #modal-us-details > div,
     #modal-discipline > div,
@@ -116,7 +116,7 @@
       margin: 0 !important;
     }
 
-    /* Stack report control buttons */
+    /* Stack report controls */
     .no-print.mobile-stack-actions{ flex-direction: column !important; align-items: stretch !important; }
     .no-print.mobile-stack-actions > button{ width: 100% !important; justify-content: center !important; }
   }
@@ -814,6 +814,7 @@
         }
 
         async function exportReport() {
+            // Close menus/backdrops so they don't get captured
             try {
                 document.getElementById('ws-actions-menu')?.classList.add('hidden');
                 document.getElementById('ws-actions-backdrop')?.classList.add('hidden');
@@ -829,7 +830,9 @@
                     try { lucide.createIcons(); } catch (e) {}
                 }
 
-                await new Promise(r => setTimeout(r, 200));
+                // settle layout
+                await new Promise(r => setTimeout(r, 220));
+
                 const element = document.getElementById('content-build');
                 if (!element) throw new Error('Build content not found');
 
@@ -847,6 +850,7 @@
                     }
                 });
 
+                // Use UNIQUE filename to avoid Android/iOS caching/overwriting showing old image
                 const pad = (n) => String(n).padStart(2,'0');
                 const now = new Date();
                 const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
@@ -864,12 +868,14 @@
                             document.body.appendChild(a);
                             a.click();
                             a.remove();
+                            // revoke later for Safari reliability
                             setTimeout(() => { try { URL.revokeObjectURL(url); } catch(e) {} }, 30000);
                             resolve();
                         } catch (e) { reject(e); }
                     }, 'image/jpeg', 0.92);
                 });
 
+                // Cleanup canvas memory
                 try { canvas.width = 1; canvas.height = 1; } catch (e) {}
             } catch (err) {
                 console.error(err);
@@ -3088,6 +3094,10 @@ async function wsModalPrimary() {
       }
       if (action === 'export') return wsExportCurrent && wsExportCurrent();
       if (action === 'exportExcel') return wsExportCurrentExcel && wsExportCurrentExcel();
+  if (action === 'exportReport') {
+    twLoader.show('Generating report…', 'Exporting JPG', 45);
+    return await Promise.resolve(window.exportReport && window.exportReport());
+  }
       if (action === 'import') {
         const inp = document.getElementById('ws-import-file');
         if (inp) inp.click();
@@ -3423,6 +3433,7 @@ async function wsModalPrimary() {
 
 
 <script id="ws-publish-ui">
+  // Toggle Publish/Unpublish buttons + update pill based on current meta
   window.wsIsPublished = function(meta){
     const m = meta || window.wsCurrentMeta || {};
     return !!(
