@@ -1954,13 +1954,14 @@ function renderBlockers() {
             if (!pill) return;
             const select = document.getElementById('ws-select');
             if (select && select.value) {
-                const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+                const opt = (select.options && select.selectedIndex >= 0) ? select.options[select.selectedIndex] : null;
                 const name = opt ? opt.textContent : select.value;
-                pill.textContent = name || select.value;
+                pill.textContent = (name && name.trim()) ? name.trim() : select.value;
             } else {
                 pill.textContent = '—';
             }
         }
+        window.wsUpdateDashPill = wsUpdateDashPill;
 
         function wsRefreshSelect() {
             const select = document.getElementById('ws-select');
@@ -1987,12 +1988,15 @@ function renderBlockers() {
         }
 
         function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
-            if (!id || id === wsCurrentId) return;
+            if (!id) return;
+    if (!force && id === wsCurrentId) return;
             if (saveCurrent && wsCurrentId) wsSaveNow();
             const store = wsLoadStore();
             const w = store.workspaces[id];
             if (!w) return;
             wsCurrentId = id;
+    try { const sel=document.getElementById('ws-select'); if(sel) sel.value=id; } catch(e) {}
+    try { window.wsUpdateDashPill && window.wsUpdateDashPill(); } catch(e) {}
             localStorage.setItem(WS_LAST_KEY, id);
             wsApplyState(w.state);
             wsRefreshSelect();
@@ -2641,8 +2645,9 @@ async function gh6SyncListIntoStore() {
 }
 
 // Override select workspace: full reset + fetch (race-safe)
-async function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
-    if (!id || id === wsCurrentId) return;
+async function wsSelectWorkspace(id, { saveCurrent=true, force=false } = {}) {
+    if (!id) return;
+    if (!force && id === wsCurrentId) return;
 
     // Ask ONLY if there are unsaved changes
     if (saveCurrent && wsCurrentId && wsIsDirty()) {
@@ -2663,6 +2668,8 @@ async function wsSelectWorkspace(id, { saveCurrent=true } = {}) {
     const seq = ++gh6LoadSeq;
 
     wsCurrentId = id;
+    try { const sel=document.getElementById('ws-select'); if(sel) sel.value=id; } catch(e) {}
+    try { window.wsUpdateDashPill && window.wsUpdateDashPill(); } catch(e) {}
     gh6SetDashInUrl(id);
 
     // Reset UI immediately
@@ -2831,7 +2838,7 @@ async function wsDeleteCurrent() {
         wsRefreshSelect();
         const first = wsList()[0];
         wsCurrentId = first ? first.id : null;
-        if (wsCurrentId) await wsSelectWorkspace(wsCurrentId, { saveCurrent:false });
+        if (wsCurrentId) await wsSelectWorkspace(wsCurrentId, { saveCurrent:false, force:true });
         else { wsApplyState(gh6BlankState(), { silent:false }); }
     } catch(e) {
         console.error(e);
@@ -2875,7 +2882,6 @@ async function wsInitWorkspaceManager() {
     if (wsCurrentId) {
         const sel = document.getElementById('ws-select');
         if (sel) sel.value = wsCurrentId;
-        try { window.wsUpdateDashPill && window.wsUpdateDashPill(); } catch(e) {}
         await wsSelectWorkspace(wsCurrentId, { saveCurrent:false });
     } else {
         // none exists: create default
