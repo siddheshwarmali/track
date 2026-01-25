@@ -54,13 +54,13 @@
   const $ = (id)=>document.getElementById(id);
 
   function esc(s){
- return String(s ?? '').replace(/[&<>"']/g, c => ({
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;'
- }[c]));
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
 }
   function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
   function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
@@ -144,49 +144,45 @@
   }
 
   function pickDiscipline(state){
- // Task Discipline status (ported from executive-board.html into FULL_WORKING)
- // Supports multiple state shapes for backward compatibility.
- const raw = state?.executive?.discipline ?? state?.executive?.taskDiscipline ?? state?.discipline ?? state?.taskDiscipline ?? null;
- if(!raw) return { disciplines: 0, pending: 0 };
+  // Task Discipline Status: same shape as executive-board.html (discipline.disciplines + discipline.pending)
+  // Prefer precomputed discipline block if present; else derive from arrays.
+  const raw = state?.executive?.discipline ?? state?.executive?.taskDiscipline ?? state?.discipline ?? state?.taskDiscipline ?? null;
+  if(!raw) return { disciplines: 0, pending: 0 };
 
- // If counts are already present
- const d0 = raw?.disciplines ?? raw?.count ?? raw?.total;
- const p0 = raw?.pending ?? raw?.open;
- if(Number.isFinite(Number(d0)) && Number.isFinite(Number(p0))){
-  return { disciplines: Number(d0), pending: Number(p0) };
- }
+  const d0 = raw?.disciplines ?? raw?.count ?? raw?.total;
+  const p0 = raw?.pending ?? raw?.open;
+  if(Number.isFinite(Number(d0)) && Number.isFinite(Number(p0))){
+    return { disciplines: Number(d0), pending: Number(p0) };
+  }
 
- // Else derive from arrays
- const arr = Array.isArray(raw)
-  ? raw
-  : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.tasks) ? raw.tasks : []));
+  const arr = Array.isArray(raw)
+    ? raw
+    : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.tasks) ? raw.tasks : []));
 
- const uniq = new Set();
- let pending = 0;
+  const uniq = new Set();
+  let pending = 0;
 
- for(const it of arr){
-  const disc = safeText(it?.discipline ?? it?.Discipline ?? it?.area ?? it?.type ?? it?.category ?? '', '');
-  if(disc) uniq.add(disc);
-  const st = normalizeStage(it?.stage ?? it?.status ?? it?.State ?? it?.Status);
-  // convention: anything not explicitly 'closed' is pending
-  if(st !== 'closed') pending += 1;
- }
+  for(const it of arr){
+    const disc = safeText(it?.discipline ?? it?.Discipline ?? it?.area ?? it?.type ?? it?.category ?? '', '');
+    if(disc) uniq.add(disc);
+    const st = normalizeStage(it?.stage ?? it?.status ?? it?.State ?? it?.Status);
+    if(st !== 'closed') pending += 1;
+  }
 
- const uniqueCount = uniq.size;
- const outDisc = uniqueCount ? uniqueCount : arr.length;
- return { disciplines: outDisc, pending };
+  const outDisc = uniq.size ? uniq.size : arr.length;
+  return { disciplines: outDisc, pending };
 }
 
 function computeAutoSummary(state){
     const ms = pickMilestones(state);
     const app = pickApplication(state);
- const disc = pickDiscipline(state);
+    const disc = pickDiscipline(state);
     const parts=[];
     if(ms.count) parts.push(`Project execution is at ${ms.progressPct}% completion (${ms.count} milestones).`);
     if(app.userStories) parts.push(`User Stories: ${app.userStories} (Open ${app.usOpen}).`);
     if(app.bugs) parts.push(`Bugs: ${app.bugs} (Open ${app.bugsOpen}).`);
     if(disc.disciplines) parts.push(`Task Disciplines: ${disc.disciplines} (Pending ${disc.pending}).`);
- return parts.join(' ').trim();
+    return parts.join(' ').trim();
   }
 
   function milestoneJourneyHtml(ms){
@@ -248,9 +244,9 @@ function computeAutoSummary(state){
   }
 
   function renderMilestoneSection(item){
- const ms = item.milestones;
- const app = item.application;
- const disc = item.discipline || {};
+  const ms = item.milestones;
+  const app = item.application;
+  const disc = item.discipline || {};
 
     return `
       <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
@@ -260,11 +256,11 @@ function computeAutoSummary(state){
         </div>
         <div class='p-4'>
           ${milestoneJourneyHtml(ms)}
-          <div class='mt-4 rounded-xl border border-white/10 bg-white/5 p-3'>
-            <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Task Discipline Summary</div>
-            <div class='mt-2 text-sm text-slate-200'>Disciplines: <b>${disc.disciplines||0}</b></div>
-            <div class='mt-1 text-sm text-slate-200'>Pending: <b>${disc.pending||0}</b></div>
-          </div>
+      <div class='mt-4 rounded-xl border border-white/10 bg-white/5 p-3'>
+        <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Task Discipline Summary</div>
+        <div class='mt-2 text-sm text-slate-200'>Disciplines: <b>${disc.disciplines||0}</b></div>
+        <div class='mt-1 text-sm text-slate-200'>Pending: <b>${disc.pending||0}</b></div>
+      </div>
           <div class='mt-4 flex justify-end'>
             <button type='button' data-inner-toggle='mscards' class='px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>View Details</button>
           </div>
@@ -298,7 +294,7 @@ function computeAutoSummary(state){
           <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Disciplines: ${d.discipline?.disciplines||0} (Pending ${d.discipline?.pending||0})</span>
               </div>
               <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap'>${summary}</div>
-        <div class='mt-2 text-xs text-slate-300'>Task Discipline: <b>${d.discipline?.disciplines||0}</b> (Pending ${d.discipline?.pending||0})</div>
+      <div class='mt-2 text-xs text-slate-300'>Task Discipline: <b>${d.discipline?.disciplines||0}</b> (Pending ${d.discipline?.pending||0})</div>
             </div>
             <div class='flex flex-wrap gap-2 justify-end shrink-0'>
               <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
@@ -318,14 +314,14 @@ function computeAutoSummary(state){
     document.querySelectorAll('#grid [data-name]').forEach(el=>{
       const n = el.getAttribute('data-name')||'';
       el.style.display = (!q || n.includes(q)) ? '' : 'none';
-          });
+    });
   }
 
   const itemsById = new Map();
 
   async function apiList(){ return jget('/api/state?list=1'); }
   async function apiGetDash(id){ return jget(`/api/state?dash=${encodeURIComponent(id)}`); }
-
+  async function apiBoard(sort){ return jget(`/api/board?sort=${encodeURIComponent(sort||'newest')}`); }
   async function loadBoard(){
     clearErr();
     const status=$('status');
@@ -353,6 +349,14 @@ function computeAutoSummary(state){
     const publishedFromList = dashboards.filter(d => d && (d.published === true || d.published === 1 || d.published === 'true'));
     const source = publishedFromList.length ? publishedFromList : dashboards;
 
+    // Best-effort: pull Task Discipline status from /api/board (same as executive-board.html)
+    const discById = new Map();
+    try{
+      const b = await apiBoard(sortMode);
+      const bItems = Array.isArray(b.items) ? b.items : [];
+      bItems.forEach(x => { if(x && x.id) discById.set(String(x.id), x.discipline || null); });
+    }catch(e){}
+
     const pool = 4;
     let idx = 0;
     const items = [];
@@ -370,7 +374,7 @@ function computeAutoSummary(state){
 
           const milestones = pickMilestones(state);
           const application = pickApplication(state);
- const discipline = pickDiscipline(state);
+          const discipline = discById.get(String(d.id)) || pickDiscipline(state);
           const saved = safeText(state?.executive?.savedSummaryText || '');
           const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
 
