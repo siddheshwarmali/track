@@ -312,7 +312,7 @@ function computeAutoSummary(state){
     document.querySelectorAll('#grid [data-name]').forEach(el=>{
       const n = el.getAttribute('data-name')||'';
       el.style.display = (!q || n.includes(q)) ? '' : 'none';
-    });
+          });
   }
 
   const itemsById = new Map();
@@ -376,9 +376,9 @@ function computeAutoSummary(state){
             updatedAt: d.updatedAt,
             summary,
             milestones,
-            application
-          discipline
- } );
+            application,
+            discipline
+          });
         }catch(e){}
       }
     }
