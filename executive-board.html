@@ -45,7 +45,17 @@
         .l3-row:hover { background-color: #f8fafc; }
         .l3-row:hover .delete-btn { opacity: 1; pointer-events: auto; }
         .delete-btn { opacity: 0; transition: opacity 0.2s; }
-    </style>
+    
+
+/* === Milestone timeline (data-driven from dashboard state) === */
+.ms-timeline{position:relative;padding:14px 6px 6px;}
+.ms-timeline .line{position:absolute;left:6px;right:6px;top:22px;height:3px;background:rgba(255,255,255,0.12);border-radius:999px;}
+.ms-node{position:absolute;top:12px;transform:translateX(-50%);width:22px;height:22px;border-radius:999px;display:grid;place-items:center;border:1px solid rgba(255,255,255,0.18);}
+.ms-node.completed{background:rgba(34,197,94,0.18);border-color:rgba(34,197,94,0.45);color:#bbf7d0;}
+.ms-node.pending{background:rgba(59,130,246,0.18);border-color:rgba(59,130,246,0.45);color:#bfdbfe;}
+.ms-node svg{width:14px;height:14px;}
+.ms-legend{margin-top:18px;font-size:12px;color:rgba(226,232,240,0.85);line-height:1.4;}
+</style>
 
     <style>
       @keyframes ghspin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
@@ -147,10 +157,6 @@ function card(d){
       <div class='flex items-start justify-between gap-3'>
         <div class='min-w-0'>
           <div class='text-base font-bold truncate' title='${name}'>${name}</div>
-          <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
-            <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
-            <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
-          </div>
           <!-- Only Overall Summary visible on the card -->
           <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap' data-card-summary='${encodeURIComponent(dashId)}'>${summary || '—'}</div>
         </div>
@@ -260,6 +266,56 @@ function countOpen(items){
   }).length;
 }
 
+
+
+function buildMilestoneTimeline(milestones){
+  const list = Array.isArray(milestones) ? milestones : [];
+  if(!list.length) return '';
+  const toDate = (v)=>{ try{ return v? new Date(v): null; }catch{ return null; } };
+
+  const points = list.map((m,i)=>{
+    const start = toDate(m.startDate || m.plannedStart || m.start);
+    const end = toDate(m.endDate || m.plannedEnd || m.end);
+    const anchor = end || start;
+    const completed = !!toDate(m.actualEndDate || m.actualEnd);
+    const label = String(m.phase || m.Activity || m.name || `Milestone ${i+1}`);
+    return { i, anchor, completed, label, start, end };
+  });
+
+  const dated = points.filter(p => p.anchor instanceof Date && !isNaN(+p.anchor));
+  let minT = dated.length ? Math.min(...dated.map(p => +p.anchor)) : null;
+  let maxT = dated.length ? Math.max(...dated.map(p => +p.anchor)) : null;
+  const useEven = !minT || !maxT || minT === maxT;
+
+  const checkSvg = `<svg viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"M20 6L9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>`;
+  const dotSvg = `<svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"5\"/></svg>`;
+
+  const nodes = points.map(p=>{
+    const leftPct = useEven
+      ? ((p.i+1)/(points.length+1))*100
+      : Math.max(0, Math.min(100, ((+p.anchor - minT)/(maxT-minT))*100));
+    const cls = p.completed ? 'completed' : 'pending';
+    const icon = p.completed ? checkSvg : dotSvg;
+    const planned = (p.start || p.end)
+      ? `Planned: ${p.start ? p.start.toLocaleDateString() : '—'} → ${p.end ? p.end.toLocaleDateString() : '—'}`
+      : '';
+    const tip = `${p.label}${planned ? ' • ' + planned : ''}`;
+    return `<div class=\"ms-node ${cls}\" style=\"left:${leftPct}%;\" title=\"${esc(tip)}\">${icon}</div>`;
+  }).join('');
+
+  return `
+    <div class=\"ms-timeline\">
+      <div class=\"line\"></div>
+      ${nodes}
+    </div>
+    <div class=\"ms-legend\">
+      <div>The horizontal bar is the project timeline, moving from left to right.</div>
+      <div>Each circular icon is a milestone in the lifecycle of the application.</div>
+      <div>Green circles with check marks are completed milestones; blue circles are pending or upcoming.</div>
+    </div>
+  `;
+}
+
 function renderDetailsFromState(state){
   // Normalize state shape across versions
   const root = (state && (state.state || state.data || state)) || state || {};
@@ -268,6 +324,7 @@ function renderDetailsFromState(state){
 
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
+ const timelineHtml = buildMilestoneTimeline(milestones);
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
@@ -369,17 +426,12 @@ function renderDetailsFromState(state){
         <span>
           <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Milestones & Application Tracker</div>
           <div class='mt-1 text-sm text-slate-200'>US: <b>${usTotal}</b> (Open ${usOpen}) • Bugs: <b>${bugTotal}</b> (Open ${bugOpen})</div>
-          <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
-            <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Total: <b>${msStats.total}</b></span>
-            <span class='px-2 py-1 rounded-full border border-green-400/30 bg-green-400/10 text-green-200'>Completed: <b>${msStats.completed}</b></span>
-            <span class='px-2 py-1 rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-200'>In Progress: <b>${msStats.inprogress}</b></span>
-            <span class='px-2 py-1 rounded-full border border-red-400/30 bg-red-400/10 text-red-200'>Delayed: <b>${msStats.delayed}</b></span>
-          </div>
         </span>
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
-        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
+        ${timelineHtml}
+<div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
 
