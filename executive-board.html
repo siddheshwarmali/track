@@ -49,11 +49,11 @@
 
 /* === Milestone timeline (data-driven from dashboard state) === */
 .ms-timeline{position:relative;padding:14px 6px 6px;}
-.ms-timeline .line{position:absolute;left:6px;right:6px;top:22px;height:3px;background:rgba(255,255,255,0.12);border-radius:999px;}
-.ms-node{position:absolute;top:12px;transform:translateX(-50%);width:22px;height:22px;border-radius:999px;display:grid;place-items:center;border:1px solid rgba(255,255,255,0.18);}
+.ms-timeline .line{position:absolute;left:6px;right:6px;top:27px;height:4px;background:rgba(255,255,255,0.12);border-radius:999px;}
+.ms-node{position:absolute;top:12px;transform:translateX(-50%);width:32px;height:32px;border-radius:999px;display:grid;place-items:center;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);}
 .ms-node.completed{background:rgba(34,197,94,0.18);border-color:rgba(34,197,94,0.45);color:#bbf7d0;}
 .ms-node.pending{background:rgba(59,130,246,0.18);border-color:rgba(59,130,246,0.45);color:#bfdbfe;}
-.ms-node svg{width:14px;height:14px;}
+.ms-node svg{width:18px;height:18px;}
 .ms-legend{margin-top:18px;font-size:12px;color:rgba(226,232,240,0.85);line-height:1.4;}
 </style>
 
@@ -140,7 +140,8 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+[c])); }
 
 function card(d){
   const dashId = String(d.id || '');
@@ -157,7 +158,7 @@ function card(d){
       <div class='flex items-start justify-between gap-3'>
         <div class='min-w-0'>
           <div class='text-base font-bold truncate' title='${name}'>${name}</div>
-          <!-- Only Overall Summary visible on the card -->
+<!-- Only Overall Summary visible on the card -->
           <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap' data-card-summary='${encodeURIComponent(dashId)}'>${summary || '—'}</div>
         </div>
         <div class='flex flex-wrap gap-2 justify-end shrink-0'>
@@ -426,11 +427,12 @@ function renderDetailsFromState(state){
         <span>
           <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Milestones & Application Tracker</div>
           <div class='mt-1 text-sm text-slate-200'>US: <b>${usTotal}</b> (Open ${usOpen}) • Bugs: <b>${bugTotal}</b> (Open ${bugOpen})</div>
-        </span>
+</span>
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
-        ${timelineHtml}
+        
+ ${timelineHtml}
 <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
