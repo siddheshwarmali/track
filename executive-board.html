@@ -140,8 +140,55 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-[c])); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function buildMilestoneTimeline(milestones){
+  const list = Array.isArray(milestones) ? milestones : [];
+  if(!list.length) return '';
+  const toDate = (v)=>{ try{ return v ? new Date(v) : null; }catch(e){ return null; } };
+
+  const points = list.map((m,i)=>{
+    const start = toDate(m.startDate || m.plannedStart || m.start);
+    const end = toDate(m.endDate || m.plannedEnd || m.end);
+    const anchor = end || start;
+    const completed = !!toDate(m.actualEndDate || m.actualEnd);
+    const label = String(m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
+    return { i, anchor, completed, label, start, end };
+  });
+
+  const dated = points.filter(p => (p.anchor instanceof Date) && !isNaN(+p.anchor));
+  let minT = dated.length ? Math.min(...dated.map(p => +p.anchor)) : null;
+  let maxT = dated.length ? Math.max(...dated.map(p => +p.anchor)) : null;
+  const useEven = !minT || !maxT || minT === maxT;
+
+  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +    '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +    '</svg>';
+  const dotSvg = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +    '<circle cx="12" cy="12" r="5"/>' +    '</svg>';
+
+  const nodes = points.map(p => {
+    const leftPct = useEven
+      ? ((p.i+1)/(points.length+1))*100
+      : Math.max(0, Math.min(100, ((+p.anchor - minT)/(maxT-minT))*100));
+    const cls = p.completed ? 'completed' : 'pending';
+    const icon = p.completed ? checkSvg : dotSvg;
+    const planned = (p.start || p.end)
+      ? ('Planned: ' + (p.start ? p.start.toLocaleDateString() : '—') + ' → ' + (p.end ? p.end.toLocaleDateString() : '—'))
+      : '';
+    const tip = p.label + (planned ? (' • ' + planned) : '');
+    return '<div class="ms-node ' + cls + '" style="left:' + leftPct + '%;" title="' + esc(tip) + '">' + icon + '</div>';
+  }).join('');
+
+  return '' +
+    '<div class="ms-timeline">' +
+      '<div class="line"></div>' +
+      nodes +
+    '</div>' +
+    '<div class="ms-legend">' +
+      '<div>The horizontal bar is the project timeline, moving from left to right.</div>' +
+      '<div>Each circular icon is a milestone in the lifecycle of the application.</div>' +
+      '<div>Green circles with check marks are completed milestones; blue circles are pending or upcoming.</div>' +
+    '</div>';
+}
+
 
 function card(d){
   const dashId = String(d.id || '');
@@ -158,7 +205,11 @@ function card(d){
       <div class='flex items-start justify-between gap-3'>
         <div class='min-w-0'>
           <div class='text-base font-bold truncate' title='${name}'>${name}</div>
-<!-- Only Overall Summary visible on the card -->
+          <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
+            <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
+            <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
+          </div>
+          <!-- Only Overall Summary visible on the card -->
           <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap' data-card-summary='${encodeURIComponent(dashId)}'>${summary || '—'}</div>
         </div>
         <div class='flex flex-wrap gap-2 justify-end shrink-0'>
@@ -267,56 +318,6 @@ function countOpen(items){
   }).length;
 }
 
-
-
-function buildMilestoneTimeline(milestones){
-  const list = Array.isArray(milestones) ? milestones : [];
-  if(!list.length) return '';
-  const toDate = (v)=>{ try{ return v? new Date(v): null; }catch{ return null; } };
-
-  const points = list.map((m,i)=>{
-    const start = toDate(m.startDate || m.plannedStart || m.start);
-    const end = toDate(m.endDate || m.plannedEnd || m.end);
-    const anchor = end || start;
-    const completed = !!toDate(m.actualEndDate || m.actualEnd);
-    const label = String(m.phase || m.Activity || m.name || `Milestone ${i+1}`);
-    return { i, anchor, completed, label, start, end };
-  });
-
-  const dated = points.filter(p => p.anchor instanceof Date && !isNaN(+p.anchor));
-  let minT = dated.length ? Math.min(...dated.map(p => +p.anchor)) : null;
-  let maxT = dated.length ? Math.max(...dated.map(p => +p.anchor)) : null;
-  const useEven = !minT || !maxT || minT === maxT;
-
-  const checkSvg = `<svg viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"M20 6L9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>`;
-  const dotSvg = `<svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"5\"/></svg>`;
-
-  const nodes = points.map(p=>{
-    const leftPct = useEven
-      ? ((p.i+1)/(points.length+1))*100
-      : Math.max(0, Math.min(100, ((+p.anchor - minT)/(maxT-minT))*100));
-    const cls = p.completed ? 'completed' : 'pending';
-    const icon = p.completed ? checkSvg : dotSvg;
-    const planned = (p.start || p.end)
-      ? `Planned: ${p.start ? p.start.toLocaleDateString() : '—'} → ${p.end ? p.end.toLocaleDateString() : '—'}`
-      : '';
-    const tip = `${p.label}${planned ? ' • ' + planned : ''}`;
-    return `<div class=\"ms-node ${cls}\" style=\"left:${leftPct}%;\" title=\"${esc(tip)}\">${icon}</div>`;
-  }).join('');
-
-  return `
-    <div class=\"ms-timeline\">
-      <div class=\"line\"></div>
-      ${nodes}
-    </div>
-    <div class=\"ms-legend\">
-      <div>The horizontal bar is the project timeline, moving from left to right.</div>
-      <div>Each circular icon is a milestone in the lifecycle of the application.</div>
-      <div>Green circles with check marks are completed milestones; blue circles are pending or upcoming.</div>
-    </div>
-  `;
-}
-
 function renderDetailsFromState(state){
   // Normalize state shape across versions
   const root = (state && (state.state || state.data || state)) || state || {};
@@ -325,7 +326,8 @@ function renderDetailsFromState(state){
 
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
- const timelineHtml = buildMilestoneTimeline(milestones);
+  let timelineHtml = '';
+  try{ timelineHtml = buildMilestoneTimeline(milestones); }catch(e){ timelineHtml=''; }
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
@@ -427,13 +429,14 @@ function renderDetailsFromState(state){
         <span>
           <div class='text-xs text-slate-400 font-semibold uppercase tracking-wide'>Milestones & Application Tracker</div>
           <div class='mt-1 text-sm text-slate-200'>US: <b>${usTotal}</b> (Open ${usOpen}) • Bugs: <b>${bugTotal}</b> (Open ${bugOpen})</div>
-</span>
+          
+
+        </span>
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
-        
- ${timelineHtml}
-<div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
+  ${timelineHtml}
+        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
 
