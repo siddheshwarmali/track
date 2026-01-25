@@ -47,14 +47,20 @@
         .delete-btn { opacity: 0; transition: opacity 0.2s; }
     
 
-/* === Milestone timeline (data-driven from dashboard state) === */
-.ms-timeline{position:relative;padding:14px 6px 6px;}
-.ms-timeline .line{position:absolute;left:6px;right:6px;top:27px;height:4px;background:rgba(255,255,255,0.12);border-radius:999px;}
-.ms-node{position:absolute;top:12px;transform:translateX(-50%);width:32px;height:32px;border-radius:999px;display:grid;place-items:center;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);}
-.ms-node.completed{background:rgba(34,197,94,0.18);border-color:rgba(34,197,94,0.45);color:#bbf7d0;}
-.ms-node.pending{background:rgba(59,130,246,0.18);border-color:rgba(59,130,246,0.45);color:#bfdbfe;}
-.ms-node svg{width:18px;height:18px;}
-.ms-legend{margin-top:18px;font-size:12px;color:rgba(226,232,240,0.85);line-height:1.4;}
+/* === Milestone Tracker UI (screenshot style) === */
+.ms-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:16px;color:#0f172a;}
+.ms-title{font-weight:800;font-size:18px;margin:0 0 12px 0;color:#0f172a;}
+.ms-track-wrap{--dot:36px;position:relative;padding:18px 0 8px 0;}
+.ms-track-bg{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:36px;height:6px;background:#d1d5db;border-radius:999px;}
+.ms-track-fg{position:absolute;left:calc(var(--dot)/2);top:36px;height:6px;background:#3b82f6;border-radius:999px;}
+.ms-items{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.ms-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.ms-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 2px 0 rgba(15,23,42,0.08);}
+.ms-dot.completed{background:#22c55e;}
+.ms-dot.pending{background:#3b82f6;}
+.ms-dot svg{width:18px;height:18px;}
+.ms-label{margin-top:8px;font-size:12px;font-weight:700;color:#0f172a;line-height:1.15;max-width:120px;word-break:break-word;}
+.ms-card .ms-legend{margin-top:12px;font-size:12px;color:#334155;line-height:1.35;}
 </style>
 
     <style>
@@ -140,55 +146,7 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-function buildMilestoneTimeline(milestones){
-  const list = Array.isArray(milestones) ? milestones : [];
-  if(!list.length) return '';
-  const toDate = (v)=>{ try{ return v ? new Date(v) : null; }catch(e){ return null; } };
-
-  const points = list.map((m,i)=>{
-    const start = toDate(m.startDate || m.plannedStart || m.start);
-    const end = toDate(m.endDate || m.plannedEnd || m.end);
-    const anchor = end || start;
-    const completed = !!toDate(m.actualEndDate || m.actualEnd);
-    const label = String(m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
-    return { i, anchor, completed, label, start, end };
-  });
-
-  const dated = points.filter(p => (p.anchor instanceof Date) && !isNaN(+p.anchor));
-  let minT = dated.length ? Math.min(...dated.map(p => +p.anchor)) : null;
-  let maxT = dated.length ? Math.max(...dated.map(p => +p.anchor)) : null;
-  const useEven = !minT || !maxT || minT === maxT;
-
-  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +    '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +    '</svg>';
-  const dotSvg = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +    '<circle cx="12" cy="12" r="5"/>' +    '</svg>';
-
-  const nodes = points.map(p => {
-    const leftPct = useEven
-      ? ((p.i+1)/(points.length+1))*100
-      : Math.max(0, Math.min(100, ((+p.anchor - minT)/(maxT-minT))*100));
-    const cls = p.completed ? 'completed' : 'pending';
-    const icon = p.completed ? checkSvg : dotSvg;
-    const planned = (p.start || p.end)
-      ? ('Planned: ' + (p.start ? p.start.toLocaleDateString() : '—') + ' → ' + (p.end ? p.end.toLocaleDateString() : '—'))
-      : '';
-    const tip = p.label + (planned ? (' • ' + planned) : '');
-    return '<div class="ms-node ' + cls + '" style="left:' + leftPct + '%;" title="' + esc(tip) + '">' + icon + '</div>';
-  }).join('');
-
-  return '' +
-    '<div class="ms-timeline">' +
-      '<div class="line"></div>' +
-      nodes +
-    '</div>' +
-    '<div class="ms-legend">' +
-      '<div>The horizontal bar is the project timeline, moving from left to right.</div>' +
-      '<div>Each circular icon is a milestone in the lifecycle of the application.</div>' +
-      '<div>Green circles with check marks are completed milestones; blue circles are pending or upcoming.</div>' +
-    '</div>';
-}
-
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
 function card(d){
   const dashId = String(d.id || '');
@@ -318,6 +276,34 @@ function countOpen(items){
   }).length;
 }
 
+
+
+function buildMilestoneTrackerUI(milestones){
+  const list = Array.isArray(milestones) ? milestones : [];
+  if(!list.length){
+    return "<div class='text-sm text-slate-300'>No milestones</div>";
+  }
+  const toDate = (v)=>{ try{ return v ? new Date(v) : null; }catch(e){ return null; } };
+  const isCompleted = (m)=> !!toDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+  let lastCompleted = -1;
+  for(let i=0;i<list.length;i++){ if(isCompleted(list[i])) lastCompleted = i; }
+  const denom = Math.max(1, (list.length-1));
+  const pct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
+
+  const checkSvg = '<svg viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\">'    + '<path d=\"M20 6L9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>'    + '</svg>';
+
+  const items = list.map((m,i)=>{
+    const label = esc(m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
+    const cls = isCompleted(m) ? 'completed' : 'pending';
+    const start = m.startDate || m.plannedStart || m.start || '';
+    const end = m.endDate || m.plannedEnd || m.end || '';
+    const tip = (label + (start||end ? (' • Planned: ' + (start||'—') + ' → ' + (end||'—')) : '')).replace(/\s+/g,' ').trim();
+    return "<div class='ms-item' title='" + esc(tip) + "'>" +      "<div class='ms-dot " + cls + "'>" + checkSvg + "</div>" +      "<div class='ms-label'>" + label + "</div>" +    "</div>";
+  }).join('');
+
+  return "<div class='ms-card'>" +    "<div class='ms-title'>Project Milestones - Application Tracker</div>" +    "<div class='ms-track-wrap'>" +      "<div class='ms-track-bg'></div>" +      "<div class='ms-track-fg' style='width:" + pct + "%'></div>" +      "<div class='ms-items'>" + items + "</div>" +    "</div>" +    "<div class='ms-legend'>" +      "<div>The horizontal bar is the project timeline, moving from left to right.</div>" +      "<div>Each circular icon is a milestone in the lifecycle of the application.</div>" +      "<div>Green circles with check marks are completed milestones; blue circles are pending or upcoming.</div>" +    "</div>" +  "</div>";
+}
+
 function renderDetailsFromState(state){
   // Normalize state shape across versions
   const root = (state && (state.state || state.data || state)) || state || {};
@@ -326,8 +312,8 @@ function renderDetailsFromState(state){
 
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
-  let timelineHtml = '';
-  try{ timelineHtml = buildMilestoneTimeline(milestones); }catch(e){ timelineHtml=''; }
+  let trackerHtml = '';
+  try{ trackerHtml = buildMilestoneTrackerUI(milestones); }catch(e){ trackerHtml=''; }
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
@@ -435,7 +421,8 @@ function renderDetailsFromState(state){
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
-  ${timelineHtml}
+  ${trackerHtml}
+
         <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
