@@ -4,50 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Executive Board</title>
-  <!-- COPILOT_EXECBOARD_BUILD_FEATURED: 2026-01-23 17:03:47 IST | Build sections reused in modal; card shows Overall Summary -->
-
-  <!-- Tailwind + Lucide -->
+  <!-- COPILOT_EXECBOARD_FULL: 2026-01-23 15:21:23 IST | full working file (robust init + error UI + milestones journey + app tracker, no nudges) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-
   <style>
-  
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .modal { display: none; }
-        .modal.open { display: flex; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms; }
-        .hidden-by-report { display: none !important; }
-        
-        .clickable-cell:hover { text-decoration: underline; cursor: pointer; color: #2563eb; font-weight: 600; }
-        [contenteditable] { padding: 4px 8px; border-radius: 4px; transition: all 0.2s; border: 1px solid transparent; }
-        [contenteditable]:hover { background-color: #f8fafc; border-color: #e2e8f0; }
-        [contenteditable]:focus { outline: none; background-color: #eff6ff; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
-        .l3-row:hover { background-color: #f8fafc; }
-        .l3-row:hover .delete-btn { opacity: 1; pointer-events: auto; }
-        .delete-btn { opacity: 0; transition: opacity 0.2s; }
-    
-
-/* Executive Board: modal behavior */
-#eb-modal { display:none; }
-#eb-modal.open { display:flex; }
-/* Ensure build sections fit inside modal */
-#eb-modal-body { max-height: 92vh; }
-
+    .line-clamp-4{ display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+    .custom-scroll::-webkit-scrollbar{ width:6px; height:6px; }
+    .custom-scroll::-webkit-scrollbar-track{ background:#0b1220; }
+    .custom-scroll::-webkit-scrollbar-thumb{ background:#334155; border-radius:999px; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
 
-  <!-- Header -->
   <div class="sticky top-0 z-40 bg-slate-950/70 backdrop-blur border-b border-white/10">
     <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between">
-      <div>
+      <div class="min-w-0">
         <div class="text-lg font-extrabold">Executive Board</div>
         <div class="text-xs text-slate-400">All published dashboards you can access — card view</div>
       </div>
@@ -73,467 +43,371 @@
     </div>
   </div>
 
-  <!-- Content -->
   <div class="max-w-6xl mx-auto px-4 py-4">
     <div id="status" class="text-sm text-slate-400">Loading…</div>
     <pre id="err" class="hidden mt-3 p-3 rounded-xl border border-red-400/30 bg-red-400/10 text-red-200 text-xs whitespace-pre-wrap"></pre>
     <div id="grid" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
   </div>
 
-  <!-- Details Modal (single instance so Build IDs are unique) -->
-  <div id="eb-modal" class="fixed inset-0 bg-black/60 z-50 p-3 items-center justify-center">
-    <div class="bg-white w-full max-w-6xl max-h-[92vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-      <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <div id="eb-modal-title" class="text-base sm:text-lg font-extrabold text-slate-900 truncate">Details</div>
-          <div class="text-xs text-slate-500">Build sections (read-only)</div>
-        </div>
-        <button id="eb-modal-close" class="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm">Close</button>
-      </div>
-      <div id="eb-modal-body" class="p-4 sm:p-6 overflow-y-auto custom-scroll bg-white">
-        <div id="section-milestones" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 cursor-pointer hover:text-blue-600 select-none transition-colors"
-                            onclick="handleHeaderClick(openMilestoneModal, 'milestone-upload-controls')"
-                            title="Click to Add Milestone | Double click to Toggle Upload">
-                            Project Milestones - Application Tracker
-                        </h3>
-                        <div id="milestone-upload-controls" class="hidden flex items-center space-x-2 no-print">
-                            <label class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition animate-fade-in">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span class="text-sm font-medium">Upload Excel</span>
-                                <input type="file" accept=".xlsx,.xls" onchange="handleFileUpload(this, 'milestones')" class="hidden" />
-                            </label>
-                        </div>
-                    </div>
-                    <div id="milestone-container" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll"></div>
-                    <div class="flex justify-center mt-4 pt-2 border-t border-blue-100 no-print">
-                        <button onclick="toggleTrackerDetails()" class="flex items-center justify-center p-2 rounded-full bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 shadow-sm border border-gray-200 transition-all hover:shadow-md">
-                            <i id="tracker-arrow" data-lucide="chevron-down" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                    <div id="milestone-details" class="mt-4 pt-4 border-t-2 border-blue-200 animate-fade-in hidden">
-                         <p class="text-sm font-semibold text-gray-700 mb-4">Application Tracker Status (Auto-calculated):</p>
-                         <div class="overflow-x-auto custom-scroll">
-                             <div id="milestone-cards" class="flex gap-3 pb-2" style="min-width: max-content"></div>
-                         </div>
-                    </div>
-                </div>
-
-                <!-- 2. Task Discipline Section -->
-                
-        <div id="section-discipline" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 flex items-center cursor-pointer hover:text-teal-600 select-none transition-colors"
-                            onclick="handleHeaderClick(null, 'discipline-controls')"
-                            title="Double-click to toggle upload/edit buttons">
-                            <i data-lucide="table" class="w-5 h-5 mr-2 text-teal-600"></i>Task Discipline Status
-                        </h3>
-                        <div id="discipline-controls" class="hidden flex space-x-2 animate-fade-in no-print">
-                            <button onclick="openAdoModal('discipline')" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm">
-                                <i data-lucide="cloud-lightning" class="w-4 h-4"></i><span class="text-sm font-medium">Sync ADO</span>
-                            </button>
-                            
-                            <label class="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg cursor-pointer hover:bg-teal-700 transition shadow-sm">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span class="text-sm font-medium">Upload Excel</span>
-                                <input type="file" accept=".xlsx,.xls" onchange="handleDisciplineUpload(this)" class="hidden" />
-                            </label>
-                            <button onclick="openDisciplineModal()" class="flex items-center space-x-2 px-4 py-2 bg-white text-teal-600 border border-teal-600 rounded-lg cursor-pointer hover:bg-teal-50 transition shadow-sm">
-                                <i data-lucide="edit-3" class="w-4 h-4"></i><span class="text-sm font-medium">Edit Data</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
-                        <table class="min-w-full divide-y divide-gray-200" id="discipline-table">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200" id="discipline-tbody"></tbody>
-                        </table>
-                        <div class="bg-gray-50 p-2 border-t border-gray-200 flex justify-center no-print">
-                            <button onclick="toggleL2Details('ALL')" class="text-xs flex items-center text-teal-700 hover:text-teal-900 font-medium px-3 py-1 rounded hover:bg-teal-100 transition">
-                               <i id="l2-eye-icon" data-lucide="eye" class="w-3 h-3 mr-1"></i><span id="l2-btn-text">View All L2 Details</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="l2-container" class="mt-4 animate-fade-in border-t-2 border-teal-100 pt-4 hidden">
-                         <h4 id="l2-header-text" class="text-lg font-medium text-teal-800 mb-4 pl-2 border-l-4 border-teal-500">Detailed Activities</h4>
-                         <div id="l2-content" class="space-y-6"></div>
-                    </div>
-                </div>
-
-                
-      </div>
-    </div>
-  </div>
-
 <script>
-(() => {
-  // Hide modal by default
-  const modal = document.getElementById('eb-modal');
-  modal.classList.add('hidden');
-
+(function(){
   const $ = (id)=>document.getElementById(id);
-  const itemsById = new Map();
 
-  function showErr(msg) { const e=$('err'); if(!e) return; e.textContent=String(msg||'Error'); e.classList.remove('hidden'); }
-  function clearErr() { const e=$('err'); if(!e) return; e.classList.add('hidden'); e.textContent=''; }
-
-  async function jget(url) {
-    const r = await fetch(url, { headers: {'Accept':'application/json'}, credentials:'same-origin' });
-    const t = await r.text();
-    let j;
-    try { j = JSON.parse(t||'{}'); } catch(e) { throw new Error('Invalid JSON from '+url+' (HTTP '+r.status+'): '+t.slice(0,250)); }
-    if(!r.ok) throw new Error(j.error || j.message || ('Request failed ('+r.status+')'));
-    return j;
+  function esc(s){
+    return String(s||'').replace(/[&<>"']/g, c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c]));
   }
 
-  function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-  function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
+  function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
+  function normalizeStage(v){ return String(v||'').toLowerCase().trim(); }
+  function countOpen(items){ return (items||[]).filter(x => normalizeStage(x?.stage||x?.status) !== 'closed').length; }
 
   function sortItems(items, mode){
-    const m=(mode||'newest');
+    const m = (mode||'newest');
     if(m==='oldest') return items.sort((a,b)=>(a.publishedAt||a.updatedAt||'').localeCompare(b.publishedAt||b.updatedAt||''));
     if(m==='name_asc') return items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
     if(m==='name_desc') return items.sort((a,b)=>String(b.name||'').localeCompare(String(a.name||'')));
     return items.sort((a,b)=>(b.publishedAt||b.updatedAt||'').localeCompare(a.publishedAt||a.updatedAt||''));
   }
 
+  async function jget(url){
+    const r = await fetch(url, { headers:{'Accept':'application/json'}, credentials:'same-origin' });
+    const t = await r.text();
+    let j;
+    try{ j = JSON.parse(t || '{}'); }catch(e){
+      throw new Error('Invalid JSON from '+url+' (HTTP '+r.status+'): '+t.slice(0,250));
+    }
+    if(!r.ok){
+      throw new Error(j.error || j.message || ('Request failed ('+r.status+')'));
+    }
+    return j;
+  }
+
+  function showErr(msg){
+    const e = $('err');
+    if(!e) return;
+    e.textContent = String(msg||'Error');
+    e.classList.remove('hidden');
+  }
+
+  function clearErr(){
+    const e = $('err');
+    if(!e) return;
+    e.classList.add('hidden');
+    e.textContent = '';
+  }
+
+  function toDate(v){ try{ return v? new Date(v): null; }catch{ return null; } }
+
+  function milestoneStatusFromDates(m){
+    const plannedEnd = toDate(m.endDate);
+    const actualEnd = toDate(m.actualEndDate);
+    const actualStart = toDate(m.actualStartDate);
+    const today = new Date();
+
+    if(actualEnd) return { label:'Completed', dot:'bg-green-500', ring:'ring-green-500/70' };
+    if(actualStart){
+      if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70' };
+      return { label:'In Progress', dot:'bg-blue-500', ring:'ring-blue-500/70' };
+    }
+    if(plannedEnd && today>plannedEnd) return { label:'Delayed', dot:'bg-red-500', ring:'ring-red-500/70' };
+    return { label:'Planned', dot:'bg-blue-500', ring:'ring-blue-500/70' };
+  }
+
+  function pickMilestones(state){
+    const src = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
+    const milestones = src.map(m => ({
+      phase: safeText(m?.phase || m?.Activity || m?.title || m?.name || 'Milestone'),
+      startDate: safeText(m?.startDate || m?.plannedStart || m?.start || m?.['Start Date'] || ''),
+      endDate: safeText(m?.endDate || m?.plannedEnd || m?.end || m?.['End Date'] || ''),
+      actualStartDate: safeText(m?.actualStartDate || m?.actualStart || m?.['Actual Start Date'] || ''),
+      actualEndDate: safeText(m?.actualEndDate || m?.actualEnd || m?.['Actual End Date'] || ''),
+      owner: safeText(m?.owner || m?.Owner || ''),
+      remark: safeText(m?.remark || m?.Remark || '')
+    }));
+    const completed = milestones.filter(x => !!safeText(x.actualEndDate)).length;
+    const progressPct = milestones.length ? Math.round((completed/milestones.length)*100) : 0;
+    return { count: milestones.length, progressPct, milestones };
+  }
+
+  function pickApplication(state){
+    const us = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
+    const bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
+    const usOpen = countOpen(us);
+    const bugsOpen = countOpen(bugs);
+    return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen };
+  }
+
+  function computeAutoSummary(state){
+    const ms = pickMilestones(state);
+    const app = pickApplication(state);
+    const parts=[];
+    if(ms.count) parts.push(`Project execution is at ${ms.progressPct}% completion (${ms.count} milestones).`);
+    if(app.userStories) parts.push(`User Stories: ${app.userStories} (Open ${app.usOpen}).`);
+    if(app.bugs) parts.push(`Bugs: ${app.bugs} (Open ${app.bugsOpen}).`);
+    return parts.join(' ').trim();
+  }
+
+  function milestoneJourneyHtml(ms){
+    const milestones = Array.isArray(ms?.milestones) ? ms.milestones : [];
+    if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
+
+    const pct = Math.max(0, Math.min(100, Number(ms.progressPct)||0));
+
+    const nodes = milestones.map(m => {
+      const phase = esc(m.phase || 'Milestone');
+      const st = milestoneStatusFromDates(m);
+      return `
+        <div class='flex flex-col items-center' style='width:150px'>
+          <div class='w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${st.dot} ring-2 ${st.ring} ring-offset-2 ring-offset-slate-950'>✓</div>
+          <div class='mt-2 text-xs font-semibold text-slate-200 text-center break-words leading-tight'>${phase}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class='bg-white/5 border border-white/10 rounded-2xl p-4'>
+        <div class='relative overflow-x-auto custom-scroll'>
+          <div class='relative' style='min-width:max-content'>
+            <div class='absolute top-5 left-6 right-6 h-1 bg-white/10'></div>
+            <div class='absolute top-5 left-6 h-1 bg-blue-500/80' style='width:${pct}%;'></div>
+            <div class='flex items-start gap-8 px-6 pt-0 pb-2'>${nodes}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function milestoneCardsHtml(ms){
+    const milestones = Array.isArray(ms?.milestones) ? ms.milestones : [];
+    if(!milestones.length) return `<div class='text-sm text-slate-300'>No milestones</div>`;
+
+    return milestones.slice(0, 24).map(m => {
+      const phase = esc(m.phase||'Milestone');
+      const start = esc(m.startDate||'—');
+      const end = esc(m.endDate||'—');
+      const actS = esc(m.actualStartDate||'—');
+      const actE = esc(m.actualEndDate||'—');
+      const owner = esc(m.owner||'—');
+      const remark = esc(m.remark||'');
+      const st = milestoneStatusFromDates(m);
+
+      return `
+        <div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+          <div class='flex items-start justify-between gap-2'>
+            <div class='min-w-0'>
+              <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
+              <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
+              <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
+              <div class='mt-1 text-xs text-slate-400'>Owner: ${owner}</div>
+              ${remark ? `<div class='mt-1 text-xs text-slate-300 line-clamp-4'>${remark}</div>` : ''}
+            </div>
+            <span class='shrink-0 px-2 py-1 rounded-full border border-white/10 text-xs font-semibold text-slate-200 bg-white/5'>${st.label}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderMilestoneSection(item){
+    const ms = item.milestones;
+    const app = item.application;
+
+    return `
+      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
+        <div class='px-4 py-3 border-b border-white/10'>
+          <div class='text-base font-extrabold text-blue-300'>Project Milestones - Application Tracker</div>
+          <div class='mt-1 text-sm text-slate-200'>User Stories: <b>${app.userStories||0}</b> (Open ${app.usOpen||0}) • Bugs: <b>${app.bugs||0}</b> (Open ${app.bugsOpen||0})</div>
+        </div>
+        <div class='p-4'>
+          ${milestoneJourneyHtml(ms)}
+          <div class='mt-4 flex justify-end'>
+            <button type='button' data-inner-toggle='mscards' class='px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>View Details</button>
+          </div>
+          <div data-inner-panel='mscards' class='hidden mt-4'>
+            <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${milestoneCardsHtml(ms)}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function card(d){
+    const dashId = String(d.id || '');
+    const name = esc(d.name || d.id || 'Dashboard');
+    const published = fmt(d.publishedAt || d.updatedAt);
+    const owner = esc(d.ownerId || '');
+    const summary = esc(d.summary || 'No summary');
+    const detailsId = `details-${encodeURIComponent(dashId).replace(/%/g,'_')}`;
+
+    return `
+      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
+        <div class='p-4 flex flex-col gap-3'>
+          <div class='flex items-start justify-between gap-3'>
+            <div class='min-w-0'>
+              <div class='text-base font-bold truncate' title='${name}'>${name}</div>
+              <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
+                <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
+                <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
+              </div>
+              <div class='mt-3 text-sm text-slate-200 leading-relaxed line-clamp-4 whitespace-pre-wrap'>${summary}</div>
+            </div>
+            <div class='flex flex-wrap gap-2 justify-end shrink-0'>
+              <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
+              <button type='button' data-toggle='${detailsId}' data-dash='${encodeURIComponent(dashId)}'
+                class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Details</button>
+            </div>
+          </div>
+        </div>
+        <div id='${detailsId}' class='hidden p-4 space-y-3 border-t border-white/10' data-loaded='0' data-dash='${encodeURIComponent(dashId)}'>
+          <div class='text-sm text-slate-300'>Loading…</div>
+        </div>
+      </div>`;
+  }
+
   function applySearch(){
-    const q = ($('q')?.value||'').trim().toLowerCase();
+    const q = ($('q')?.value || '').trim().toLowerCase();
     document.querySelectorAll('#grid [data-name]').forEach(el=>{
       const n = el.getAttribute('data-name')||'';
       el.style.display = (!q || n.includes(q)) ? '' : 'none';
     });
   }
 
-  // ===== Build globals (required by copied functions) =====
-  let milestones = [];
-  let userStories = [];
-  let bugs = [];
-  let bauData = { totalTickets:0, withinSLA:0, breachedSLA:0, slaPercentage:0 };
-  let showTrackerDetails = false;
+  const itemsById = new Map();
 
-  let taskDisciplines = [
-    { discipline: 'DMT', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-    { discipline: 'Tech', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-    { discipline: 'Content Mgmt.', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-    { discipline: 'QA', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-  ];
-
-  let pendingDisciplineData = [];
-  let profileToDisciplineMap = {};
-  let l2Columns = [{id:'c1',name:'Col 1'}, {id:'c2',name:'Col 2'}, {id:'c3',name:'Col 3'}];
-  let l2Data = { 'DMT': [], 'Tech': [], 'Content Mgmt.': [], 'QA': [] };
-  let expandedDiscipline = null;
-
-  // safeText required by some build rendering paths
-  function safeText(s,fb=''){ return (typeof s==='string' && s.trim())?s.trim():fb; }
-
-  
-// --- Read-only stubs (Executive Board) ---
-function openMilestoneModal(){ alert('Executive Board is read-only. Open the dashboard to edit milestones.'); }
-function handleFileUpload(){ alert('Executive Board is read-only.'); }
-function openAdoModal(){ alert('Executive Board is read-only.'); }
-function handleDisciplineUpload(){ alert('Executive Board is read-only.'); }
-function openDisciplineModal(){ alert('Executive Board is read-only.'); }
-function openL3Modal(){ alert('Executive Board is read-only.'); }
-function handleHeaderClick(fn, controlsId){
-  const el = document.getElementById(controlsId);
-  if(!el) return;
-  el.classList.toggle('hidden');
-}
-
-
-  function calculateStatus(m) {
-            const today = new Date(); today.setHours(0,0,0,0); const toDate = (d) => d ? new Date(d) : null; const planEnd = toDate(m.endDate); const actEnd = toDate(m.actualEndDate); let statusKey = 'pending'; let execLabel = 'YTB'; let execColor = 'text-gray-500 bg-gray-100';
-            if(actEnd) { statusKey = 'completed'; execLabel = 'Completed'; execColor = 'text-green-700 bg-green-100 border-green-200'; } else if(toDate(m.actualStartDate)) { statusKey = 'in-progress'; execLabel = 'In-Progress'; execColor = 'text-blue-700 bg-blue-100 border-blue-200'; }
-            let tracker = 'Pending'; let color = 'bg-gray-300'; 
-            if (statusKey === 'completed') { color = 'bg-green-500'; tracker = (actEnd <= planEnd) ? 'On Track' : 'Delayed'; } 
-            else if (statusKey === 'in-progress') { color = 'bg-blue-500'; tracker = (today > planEnd) ? 'Delayed' : 'On Track'; }
-            return { status: statusKey, tracker, color, execLabel, execColor };
-        }
-
-function toggleTrackerDetails() {
-            showTrackerDetails = !showTrackerDetails;
-            const el = document.getElementById('milestone-details');
-            const icon = document.getElementById('tracker-arrow');
-            if(showTrackerDetails) { el.classList.remove('hidden'); icon.classList.add('rotate-180'); renderMilestoneDetails(); } 
-            else { el.classList.add('hidden'); icon.classList.remove('rotate-180'); }
-        }
-
-function renderMilestones() {
-            const container = document.getElementById('milestone-container');
-            if(milestones.length === 0) {
-                container.innerHTML = `<div onclick="openMilestoneModal()" class="text-center py-10 cursor-pointer"><i data-lucide="plus" class="w-12 h-12 mx-auto text-gray-300"></i><p class="text-gray-500 mt-2">Add Milestone</p></div>`;
-                lucide.createIcons();  return;
-            }
-            const completedCount = milestones.filter(m => calculateStatus(m).status === 'completed').length;
-            const pct = (completedCount / milestones.length) * 100;
-            let html = `<div class="relative min-w-max px-4 pt-8 pb-4"><div class="absolute top-12 left-4 right-4 h-1 bg-gray-300 z-0"></div><div class="absolute top-12 left-4 h-1 bg-blue-500 z-0 transition-all duration-500" style="width: ${pct}%"></div><div class="flex justify-between items-start">`;
-            milestones.forEach((m, i) => {
-                const { color } = calculateStatus(m);
-                html += `<div class="flex flex-col items-center z-10 relative mx-2 group cursor-pointer" onclick="openMilestoneModal(${i})" style="width: 120px"><div class="w-8 h-8 rounded-full flex items-center justify-center mb-2 text-white shadow-sm transition-transform hover:scale-110 ${color}"><i data-lucide="check" class="w-4 h-4"></i></div><p class="text-xs font-bold text-gray-700 text-center leading-tight mb-1 break-words w-full">${m.phase}</p></div>`;
-            });
-            html += `</div></div>`; container.innerHTML = html; lucide.createIcons(); renderMilestoneDetails(); 
-        }
-
-function renderMilestoneDetails() {
-            if(!showTrackerDetails) return;
-            const container = document.getElementById('milestone-cards');
-            container.innerHTML = milestones.map((m, i) => {
-                const { tracker, execLabel, execColor } = calculateStatus(m);
-                let badgeColor = 'bg-gray-100 text-gray-800';
-                if(tracker === 'On Track') badgeColor = 'bg-green-100 text-green-800 border-green-200';
-                if(tracker === 'Delayed') badgeColor = 'bg-red-100 text-red-800 border-red-200';
-                return `<div class="bg-white rounded-lg p-3 border border-gray-200 flex flex-col min-w-[160px] max-w-[180px] shadow-sm hover:border-blue-400 cursor-pointer" onclick="openMilestoneModal(${i})"><p class="text-xs font-bold text-gray-800 mb-2 text-center h-8 flex items-center justify-center break-words">${m.phase}</p><div class="flex-1 space-y-2 mb-2"><div class="bg-blue-50 p-1.5 rounded text-[10px]"><p class="font-bold text-blue-700">Planned</p><p>S: ${m.startDate || '-'}</p><p>E: ${m.endDate || '-'}</p></div><div class="bg-green-50 p-1.5 rounded text-[10px]"><p class="font-bold text-green-700">Actual</p><p>S: ${m.actualStartDate || '-'}</p><p>E: ${m.actualEndDate || '-'}</p></div></div><div class="bg-amber-50 p-1.5 rounded text-[10px]"><p class="font-bold text-amber-700">Owner</p><p>${m.owner || '-'}</p></div><div class="mb-2 px-1 border-t border-gray-50 pt-1">${m.remark ? `<div class="bg-gray-50 p-1 rounded border border-gray-100 mb-1"><p class="text-[10px] text-gray-600 line-clamp-2" title="${m.remark}">R: ${m.remark}</p></div>` : ''}<div class="flex justify-between items-center"><span class="text-[10px] text-gray-500 font-medium">Status:</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${execColor}">${execLabel}</span></div></div><div class="mt-auto pt-2 border-t border-gray-100"><span class="block text-center text-[10px] px-2 py-1 rounded-full font-bold border ${badgeColor}">${tracker}</span></div></div>`;
-            }).join('');
-        }
-
-function renderDisciplineTable() {
-            const tbody = document.getElementById('discipline-tbody');
-            let grand = {t:0,o:0,c:0,h:0,g:0};
-            tbody.innerHTML = taskDisciplines.map(d => {
-                grand.t += +d.totalTasks; grand.o += +d.openTasks; grand.c += +d.closedTasks; grand.h += +d.holdTasks; grand.g += +d.grandTotal;
-                const isExpanded = expandedDiscipline === d.discipline;
-                // Specific L3 Modal triggers on numeric cells
-                return `
-                <tr class="hover:bg-gray-50 text-sm transition-colors ${isExpanded ? 'bg-teal-50 border-l-4 border-teal-500' : ''}">
-                    <td class="px-6 py-4 font-medium flex items-center cursor-pointer" onclick="toggleL2Details('${d.discipline}')">
-                        <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-up'}" class="w-4 h-4 mr-2 text-gray-400"></i>${d.discipline}
-                    </td>
-                    <td class="px-6 py-4 text-center clickable-cell text-blue-600 font-bold" onclick="openL3Modal('${d.discipline}', 'total')">${d.totalTasks}</td>
-                    <td class="px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Open')">${d.openTasks}</td>
-                    <td class="px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Closed')">${d.closedTasks}</td>
-                    <td class="px-6 py-4 text-center clickable-cell text-gray-500" onclick="openL3Modal('${d.discipline}', 'Hold')">${d.holdTasks}</td>
-                    <td class="px-6 py-4 text-center font-bold clickable-cell" onclick="openL3Modal('${d.discipline}', 'grand')">${d.grandTotal}</td>
-                </tr>`;
-            }).join('') + `<tr class="bg-gray-100 font-bold text-sm"><td class="px-6 py-4">Grand Total</td><td class="px-6 py-4 text-center">${grand.t}</td><td class="px-6 py-4 text-center">${grand.o}</td><td class="px-6 py-4 text-center">${grand.c}</td><td class="px-6 py-4 text-center">${grand.h}</td><td class="px-6 py-4 text-center">${grand.g}</td></tr>`;
-            lucide.createIcons();
-        }
-
-function renderL2Details() {
-    // Guard against invalid L2 shapes (prevents intermittent failures)
-    if (!l2Data || typeof l2Data !== 'object' || Array.isArray(l2Data)) {
-        l2Data = { 'DMT': [], 'Tech': [], 'Content Mgmt.': [], 'QA': [] };
-    }
-    if (!Array.isArray(l2Columns) || l2Columns.length === 0) {
-        l2Columns = [ {id:'c1',name:'Col 1'},{id:'c2',name:'Col 2'},{id:'c3',name:'Col 3'} ];
-    }
-    const container = document.getElementById('l2-container');
-            const content = document.getElementById('l2-content');
-            if (!expandedDiscipline) { container.classList.add('hidden'); return; }
-            container.classList.remove('hidden');
-            const btnText = document.getElementById('l2-btn-text');
-            btnText.textContent = expandedDiscipline === 'ALL' ? 'Collapse Details' : 'View All L2 Details';
-            document.getElementById('l2-header-text').textContent = expandedDiscipline === 'ALL' ? 'All Detailed Activities' : `${expandedDiscipline} Activities`;
-            const entries = Object.entries(l2Data);
-            content.innerHTML = entries.map(([disc, rows]) => {
-                if (expandedDiscipline !== 'ALL' && expandedDiscipline !== disc) return '';
-                return `<div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm animate-fade-in"><div class="bg-teal-50 px-4 py-2 border-b border-teal-100 font-medium text-teal-800 text-sm">${disc}</div><div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-100"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 w-1/4">Feature/Scope</th>${l2Columns.map(c => `<th class="px-4 py-2 text-center text-xs font-medium text-gray-500 border-l border-gray-100">${c.name}</th>`).join('')}</tr></thead><tbody class="divide-y divide-gray-100 text-xs">${rows.map(r => `<tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium border-r border-gray-50">${r.feature}</td>${l2Columns.map(c => `<td class="px-4 py-3 text-center border-r border-gray-50">${r[c.id]||''}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
-            }).join('');
-        }
-
-function toggleL2Details(disc) { if (disc === 'ALL') expandedDiscipline = expandedDiscipline === 'ALL' ? null : 'ALL'; else expandedDiscipline = expandedDiscipline === disc ? null : disc; renderDisciplineTable(); renderL2Details(); }
-
-  // Card overall summary uses build styling but read-only
-  function cardHtml(item){
-    const dashId = String(item.id||'');
-    const name = esc(item.name||dashId||'Dashboard');
-    const owner = esc(item.ownerId||'');
-    const published = fmt(item.publishedAt||item.updatedAt);
-    const summary = esc(item.summary||'No summary');
-
-    return `
-      <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col'>
-        <div class='p-4 flex flex-col gap-3'>
-          <div class='flex items-start justify-between gap-3'>
-            <div class='min-w-0 flex-1'>
-              <div class='text-base font-bold truncate' title='${name}'>${name}</div>
-              <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
-                <span class='px-2 py-1 rounded-full border border-indigo-400/30 bg-indigo-400/10'>Published: ${published}</span>
-                <span class='px-2 py-1 rounded-full border border-white/10 bg-white/5'>Owner: ${owner}</span>
-              </div>
-
-              <div class='mt-4 bg-white rounded-xl p-4'>
-                <div class='flex items-center justify-between mb-4'>
-                  <h3 class='text-xl font-semibold text-gray-700 flex items-center'>
-                    <i data-lucide='file-text' class='w-5 h-5 mr-2 text-purple-600'></i>Overall Summary
-                  </h3>
-                </div>
-                <div class='bg-purple-50 p-4 rounded-lg border border-purple-100 text-gray-700 text-sm whitespace-pre-wrap'>${summary}</div>
-              </div>
-            </div>
-
-            <div class='flex flex-wrap gap-2 justify-end shrink-0'>
-              <a href='/index.html?dash=${encodeURIComponent(dashId)}' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm'>Open</a>
-              <button type='button' class='inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm' data-eb-details='${encodeURIComponent(dashId)}'>Details</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function openModalFor(dashId){
-    const item = itemsById.get(dashId);
-    if(!item) return;
-
-    const state = item._state || {};
-
-    // Map dashboard state to build globals
-    milestones = Array.isArray(state?.executive?.milestones) ? state.executive.milestones.map(m=>({
-      phase: safeText(m.phase||m.Activity||m.title||m.name||'Milestone'),
-      startDate: m.startDate||m.plannedStart||m.start||'',
-      endDate: m.endDate||m.plannedEnd||m.end||'',
-      actualStartDate: m.actualStartDate||m.actualStart||'',
-      actualEndDate: m.actualEndDate||m.actualEnd||''
-    })) : [];
-
-    userStories = Array.isArray(state?.executive?.userStories) ? state.executive.userStories : [];
-    bugs = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
-
-    taskDisciplines = Array.isArray(state?.executive?.taskDisciplines) ? state.executive.taskDisciplines : taskDisciplines;
-
-    l2Columns = Array.isArray(state?.executive?.l2Columns) ? state.executive.l2Columns : (Array.isArray(state?.l2Columns) ? state.l2Columns : l2Columns);
-    l2Data = (state?.executive?.l2Data && typeof state.executive.l2Data==='object') ? state.executive.l2Data : ((state?.l2Data && typeof state.l2Data==='object') ? state.l2Data : l2Data);
-
-    expandedDiscipline = null;
-    showTrackerDetails = false;
-
-    // Reset UI states in build sections
-    document.getElementById('milestone-details')?.classList.add('hidden');
-    document.getElementById('tracker-arrow')?.classList.remove('rotate-180');
-    document.getElementById('l2-container')?.classList.add('hidden');
-
-    // set modal title
-    const title = document.getElementById('eb-modal-title');
-    if(title) title.textContent = item.name || dashId;
-
-    // show modal
-    modal.classList.remove('hidden');
-    modal.classList.add('open');
-
-    // Render build sections
-    try{ renderMilestones(); }catch(e){ console.error(e); }
-    try{ renderDisciplineTable(); }catch(e){ console.error(e); }
-    try{ renderL2Details(); }catch(e){ console.error(e); }
-    try{ lucide.createIcons(); }catch(e){}
-  }
-
-  function closeModal(){
-    modal.classList.add('hidden');
-    modal.classList.remove('open');
-  }
-
-  function computeSummaryFromState(state){
-    const saved = state?.executive?.savedSummaryText || state?.executive?.summary || '';
-    if(typeof saved === 'string' && saved.trim()) return saved.trim();
-    // fallback: same logic as build calculateAutoSummary without edit
-    const ms = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
-    const bugsArr = Array.isArray(state?.executive?.bugs) ? state.executive.bugs : [];
-    const parts=[];
-    if(ms.length){
-      const completed = ms.filter(m=>m.actualEndDate||m.actualEnd).length;
-      parts.push(`Project execution is at ${Math.round((completed/ms.length)*100)}% completion.`);
-    }
-    if(bugsArr.length){
-      const nnew = bugsArr.filter(b=>String(b.stage||b.status||'')==='New').length;
-      const nact = bugsArr.filter(b=>String(b.stage||b.status||'')==='Active').length;
-      parts.push(`Currently tracking ${bugsArr.length} total bugs, with ${nnew} new and ${nact} active issues.`);
-    }
-    return parts.length ? parts.join('
-
-') : 'No summary';
-  }
+  async function apiList(){ return jget('/api/state?list=1'); }
+  async function apiGetDash(id){ return jget(`/api/state?dash=${encodeURIComponent(id)}`); }
 
   async function loadBoard(){
     clearErr();
     const status=$('status');
-    if(status) status.textContent='Checking access…';
+    if(status) status.textContent = 'Checking access…';
 
     const me = await jget('/api/auth/me');
-    if(!me.authenticated){ location.href='/login.html?next='+encodeURIComponent('/executive-board.html'); return; }
+    if(!me.authenticated){
+      location.href='/login.html?next='+encodeURIComponent('/executive-board.html');
+      return;
+    }
+
     const perms = me.permissions || {};
-    if(!(me.role==='admin' || perms.executiveBoard)){ showErr('Access denied: Executive Board access required.'); if(status) status.textContent='—'; return; }
+    if(!(me.role==='admin' || perms.executiveBoard)){
+      showErr('Access denied: Executive Board access required.');
+      if(status) status.textContent = '—';
+      return;
+    }
 
-    if(status) status.textContent='Loading dashboards…';
+    if(status) status.textContent = 'Loading dashboards…';
+
     const sortMode = $('sort')?.value || 'newest';
-
-    const listRes = await jget('/api/state?list=1');
+    const listRes = await apiList();
     const dashboards = Array.isArray(listRes.dashboards) ? listRes.dashboards : [];
+
     const publishedFromList = dashboards.filter(d => d && (d.published === true || d.published === 1 || d.published === 'true'));
     const source = publishedFromList.length ? publishedFromList : dashboards;
 
     const pool = 4;
     let idx = 0;
-    const items=[];
+    const items = [];
 
     async function worker(){
       while(idx < source.length){
-        const d = source[idx++];
+        const i = idx++;
+        const d = source[i];
         if(!d || !d.id) continue;
         try{
-          const resp = await jget(`/api/state?dash=${encodeURIComponent(d.id)}`);
+          const resp = await apiGetDash(d.id);
           const meta = resp.meta || {};
           const state = resp.state || {};
           if(publishedFromList.length === 0 && !meta.published) continue;
 
+          const milestones = pickMilestones(state);
+          const application = pickApplication(state);
+          const saved = safeText(state?.executive?.savedSummaryText || '');
+          const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
+
           items.push({
-            id: String(d.id),
+            id: d.id,
             name: resp.name || d.name || d.id,
             ownerId: meta.ownerId || '',
             publishedAt: meta.publishedAt || d.publishedAt || d.updatedAt,
             updatedAt: d.updatedAt,
-            summary: computeSummaryFromState(state),
-            _state: state
+            summary,
+            milestones,
+            application
           });
         }catch(e){}
       }
     }
 
     await Promise.all(Array.from({length: pool}, worker));
-    sortItems(items, sortMode);
 
+    sortItems(items, sortMode);
     itemsById.clear();
-    items.forEach(it => itemsById.set(String(it.id), it));
+    items.forEach(it => { if(it && it.id) itemsById.set(String(it.id), it); });
 
     const grid=$('grid');
     if(grid){
       grid.innerHTML = items.length
-        ? items.map(it => `<div data-name='${esc((it.name||'').toLowerCase())}'>${cardHtml(it)}</div>`).join('')
+        ? items.map(d => `<div data-name='${esc((d.name||'').toLowerCase())}'>${card(d)}</div>`).join('')
         : "<div class='text-slate-400 text-sm'>No published dashboards available.</div>";
     }
 
-    try{ lucide.createIcons(); }catch(e){}
     if(status) status.textContent = `Showing ${items.length} published dashboard(s).`;
     applySearch();
   }
 
-  function wire(){
-    $('sort')?.addEventListener('change', loadBoard);
-    $('q')?.addEventListener('input', applySearch);
+  function wireToggles(){
+    const grid=$('grid');
+    if(!grid || grid.__wired) return;
+    grid.__wired = true;
 
-    $('grid')?.addEventListener('click', (e)=>{
-      const btn = e.target.closest && e.target.closest('[data-eb-details]');
+    grid.addEventListener('click', (e)=>{
+      const innerBtn = e.target.closest && e.target.closest('[data-inner-toggle]');
+      if(innerBtn){
+        const key = innerBtn.getAttribute('data-inner-toggle');
+        const root = innerBtn.closest('[data-loaded]') || innerBtn.closest('div');
+        const panel = root && root.querySelector ? root.querySelector('[data-inner-panel="'+key+'"]') : null;
+        if(panel){ panel.classList.toggle('hidden'); return; }
+      }
+
+      const btn = e.target.closest && e.target.closest('[data-toggle]');
       if(!btn) return;
-      const dash = decodeURIComponent(btn.getAttribute('data-eb-details'));
-      openModalFor(dash);
-    });
 
-    $('eb-modal-close')?.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+      const id = btn.getAttribute('data-toggle');
+      const dashEnc = btn.getAttribute('data-dash');
+      const dashId = dashEnc ? decodeURIComponent(dashEnc) : '';
+      const panel = document.getElementById(id);
+      if(!panel) return;
+
+      const willOpen = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden');
+      btn.textContent = panel.classList.contains('hidden') ? 'Details' : 'Hide';
+
+      if(willOpen && panel.getAttribute('data-loaded') !== '1'){
+        const item = itemsById.get(dashId);
+        panel.innerHTML = item ? renderMilestoneSection(item) : `<div class='text-sm text-slate-300'>No details available.</div>`;
+        panel.setAttribute('data-loaded','1');
+      }
+    });
   }
 
-  window.addEventListener('DOMContentLoaded', ()=>{
-    wire();
-    loadBoard().catch(err=>{ showErr(err.message||String(err)); $('status').textContent='—'; });
-  });
+  function init(){
+    const sortEl = $('sort');
+    if(sortEl) sortEl.addEventListener('change', loadBoard);
+    const qEl = $('q');
+    if(qEl) qEl.addEventListener('input', applySearch);
+    wireToggles();
+
+    loadBoard().catch(e=>{
+      showErr(e && (e.message||e) || String(e));
+      const status=$('status');
+      if(status) status.textContent = '—';
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 
