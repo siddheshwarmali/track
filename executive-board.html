@@ -54,13 +54,13 @@
   const $ = (id)=>document.getElementById(id);
 
   function esc(s){
-  return String(s ?? '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[c]));
+ return String(s ?? '').replace(/[&<>"']/g, c => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+ }[c]));
 }
   function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
   function safeText(s, fb=''){ return (typeof s==='string' && s.trim()) ? s.trim() : fb; }
@@ -143,51 +143,50 @@
     return { userStories: us.length, bugs: bugs.length, usOpen, bugsOpen };
   }
 
-   function pickDiscipline(state){
-  // Tries multiple shapes:
-  // A) precomputed counts: {disciplines: n, pending: n}
-  // B) container with items: {items:[...]}
-  // C) array of discipline/task items
-  const raw = state?.executive?.discipline ?? state?.executive?.taskDiscipline ?? state?.discipline ?? state?.taskDiscipline ?? null;
-  if(!raw) return { disciplines: 0, pending: 0 };
+  function pickDiscipline(state){
+ // Task Discipline status (ported from executive-board.html into FULL_WORKING)
+ // Supports multiple state shapes for backward compatibility.
+ const raw = state?.executive?.discipline ?? state?.executive?.taskDiscipline ?? state?.discipline ?? state?.taskDiscipline ?? null;
+ if(!raw) return { disciplines: 0, pending: 0 };
 
-  const d0 = raw?.disciplines ?? raw?.count ?? raw?.total;
-  const p0 = raw?.pending ?? raw?.open;
-  if(Number.isFinite(Number(d0)) && Number.isFinite(Number(p0))){
-    return { disciplines: Number(d0), pending: Number(p0) };
-  }
-
-  const arr = Array.isArray(raw)
-    ? raw
-    : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.tasks) ? raw.tasks : []));
-
-  const disciplines = new Set();
-  let pending = 0;
-
-  for(const it of arr){
-    const disc = safeText(it?.discipline ?? it?.Discipline ?? it?.area ?? it?.type ?? it?.category ?? '', '');
-    if(disc) disciplines.add(disc);
-    const st = normalizeStage(it?.stage ?? it?.status ?? it?.State ?? it?.Status);
-    // board convention: anything not explicitly 'closed' is pending
-    if(st !== 'closed') pending += 1;
-  }
-
-  const uniqueCount = disciplines.size;
-  const total = arr.length;
-  const outDisc = uniqueCount ? uniqueCount : total;
-  return { disciplines: outDisc, pending };
+ // If counts are already present
+ const d0 = raw?.disciplines ?? raw?.count ?? raw?.total;
+ const p0 = raw?.pending ?? raw?.open;
+ if(Number.isFinite(Number(d0)) && Number.isFinite(Number(p0))){
+  return { disciplines: Number(d0), pending: Number(p0) };
  }
+
+ // Else derive from arrays
+ const arr = Array.isArray(raw)
+  ? raw
+  : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.tasks) ? raw.tasks : []));
+
+ const uniq = new Set();
+ let pending = 0;
+
+ for(const it of arr){
+  const disc = safeText(it?.discipline ?? it?.Discipline ?? it?.area ?? it?.type ?? it?.category ?? '', '');
+  if(disc) uniq.add(disc);
+  const st = normalizeStage(it?.stage ?? it?.status ?? it?.State ?? it?.Status);
+  // convention: anything not explicitly 'closed' is pending
+  if(st !== 'closed') pending += 1;
+ }
+
+ const uniqueCount = uniq.size;
+ const outDisc = uniqueCount ? uniqueCount : arr.length;
+ return { disciplines: outDisc, pending };
+}
 
 function computeAutoSummary(state){
     const ms = pickMilestones(state);
     const app = pickApplication(state);
-  const disc = pickDiscipline(state);
+ const disc = pickDiscipline(state);
     const parts=[];
     if(ms.count) parts.push(`Project execution is at ${ms.progressPct}% completion (${ms.count} milestones).`);
     if(app.userStories) parts.push(`User Stories: ${app.userStories} (Open ${app.usOpen}).`);
     if(app.bugs) parts.push(`Bugs: ${app.bugs} (Open ${app.bugsOpen}).`);
     if(disc.disciplines) parts.push(`Task Disciplines: ${disc.disciplines} (Pending ${disc.pending}).`);
-  return parts.join(' ').trim();
+ return parts.join(' ').trim();
   }
 
   function milestoneJourneyHtml(ms){
@@ -249,9 +248,9 @@ function computeAutoSummary(state){
   }
 
   function renderMilestoneSection(item){
-  const ms = item.milestones;
-  const app = item.application;
-  const disc = item.discipline || {};
+ const ms = item.milestones;
+ const app = item.application;
+ const disc = item.discipline || {};
 
     return `
       <div class='rounded-2xl border border-white/10 bg-white/5 overflow-hidden'>
@@ -365,7 +364,7 @@ function computeAutoSummary(state){
 
           const milestones = pickMilestones(state);
           const application = pickApplication(state);
-          const discipline = pickDiscipline(state);
+ const discipline = pickDiscipline(state);
           const saved = safeText(state?.executive?.savedSummaryText || '');
           const summary = saved || safeText(computeAutoSummary(state),'') || 'No summary';
 
@@ -377,9 +376,9 @@ function computeAutoSummary(state){
             updatedAt: d.updatedAt,
             summary,
             milestones,
-            application,
-            discipline
-          });
+            application
+          discipline
+ } );
         }catch(e){}
       }
     }
