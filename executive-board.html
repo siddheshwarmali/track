@@ -51,15 +51,15 @@
 .atk-section{margin-top:14px;}
 .atk-title{font-weight:800;font-size:14px;letter-spacing:0.3px;color:rgba(226,232,240,0.90);margin:0 0 10px 0;}
 .atk-surface{border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.03);border-radius:14px;padding:12px;}
-.atk-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+.atk-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;scroll-snap-type:x mandatory;}
 .atk-scroll::-webkit-scrollbar{height:8px;}
 .atk-scroll::-webkit-scrollbar-track{background:rgba(148,163,184,0.18);border-radius:999px;}
 .atk-scroll::-webkit-scrollbar-thumb{background:rgba(148,163,184,0.45);border-radius:999px;}
 .atk-scroll::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,0.65);}
 
-.atk-row{display:flex;gap:12px;align-items:stretch;scroll-snap-type:x mandatory;}
-.atk-card{flex:0 0 220px;max-width:220px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 0 rgba(15,23,42,0.06);padding:10px 10px 12px;scroll-snap-align:start;}
-.atk-head{font-weight:800;font-size:12px;color:#0f172a;line-height:1.15;margin-bottom:8px;min-height:30px;}
+.atk-row{display:flex;gap:12px;align-items:stretch;}
+.atk-card{flex:0 0 240px;max-width:240px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 0 rgba(15,23,42,0.06);padding:10px 10px 12px;scroll-snap-align:start;}
+.atk-head{font-weight:800;font-size:12px;color:#0f172a;line-height:1.2;margin-bottom:8px;min-height:32px;}
 .atk-box{border-radius:8px;padding:8px;margin-bottom:8px;border:1px solid rgba(15,23,42,0.06);}
 .atk-box .k{font-size:10px;font-weight:800;letter-spacing:0.25px;text-transform:uppercase;margin-bottom:4px;}
 .atk-box .v{font-size:11px;color:#334155;line-height:1.25;}
@@ -85,9 +85,6 @@
   .atk-surface{padding:10px;}
   .atk-card{flex-basis:86vw;max-width:86vw;}
   .atk-head{font-size:13px;min-height:auto;}
-}
-@media (min-width: 1024px){
-  .atk-card{flex-basis:240px;max-width:240px;}
 }
 </style>
 
@@ -174,15 +171,8 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){
-  return String(s||'').replace(/[&<>"']/g, c => ({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
-  }[c]));
-}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function card(d){
   const dashId = String(d.id || '');
   const name = esc(d.name || d.id || 'Dashboard');
@@ -318,6 +308,7 @@ function buildAppTrackerStatusCards(milestones){
   if(!list.length){
     return "<div class='text-sm text-slate-300'>No milestones</div>";
   }
+
   const toDate = (v)=>{ try{ return v ? new Date(v) : null; }catch(e){ return null; } };
   const fmtD = (v)=>{
     if(!v) return '-';
@@ -325,20 +316,39 @@ function buildAppTrackerStatusCards(milestones){
     if(d && !isNaN(+d)) return d.toISOString().slice(0,10);
     return String(v);
   };
+
+  function prettifyLabel(x){
+    let s = String(x||'').trim();
+    s = s.split('_').join(' ');
+    s = s.split('-').join(' ');
+    let out = '';
+    for(let i=0;i<s.length;i++){
+      const ch = s[i];
+      const prev = i>0 ? s[i-1] : '';
+      const isUpper = ch >= 'A' && ch <= 'Z';
+      const wasLower = prev >= 'a' && prev <= 'z';
+      if(i>0 && isUpper && wasLower) out += ' ';
+      out += ch;
+    }
+    s = out;
+    while(s.indexOf('  ') !== -1) s = s.split('  ').join(' ');
+    return s.trim();
+  }
+
   function labelOf(m,i){
     const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
-    let s = String(raw||'').trim();
-    s = s.replace(/[_-]+/g,' ').replace(/\s{2,}/g,' ');
-    s = s.replace(/([a-z])([A-Z])/g,'$1 $2');
-    return s;
+    return prettifyLabel(raw);
   }
+
   const isCompleted = (m)=> !!toDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-  const isOngoing = (m)=> !isCompleted(m) && !!toDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+  const isOngoing  = (m)=> !isCompleted(m) && !!toDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+
   function statusOf(m){
     if(isCompleted(m)) return {key:'completed', label:'Completed'};
-    if(isOngoing(m)) return {key:'ongoing', label:'In-Progress'};
+    if(isOngoing(m))  return {key:'ongoing',   label:'In-Progress'};
     return {key:'pending', label:'Planned'};
   }
+
   function trackOf(m){
     const pEnd = toDate(m.endDate || m.plannedEnd || m.end);
     const aEnd = toDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
@@ -365,7 +375,7 @@ function buildAppTrackerStatusCards(milestones){
         ? "<span class='pill ongoing'>In-Progress</span>"
         : "<span class='pill pending'>Planned</span>";
 
-    const noteHtml = note ? ("<div style='margin-top:6px;color:#6b7280;font-size:10.5px;line-height:1.25;">" + note + "</div>") : '';
+    const noteHtml = note ? ("<div style='margin-top:6px;color:#6b7280;font-size:10.5px;line-height:1.25;'>" + note + "</div>") : '';
 
     return "<div class='atk-card'>"
       + "<div class='atk-head'>" + name + "</div>"
@@ -394,7 +404,7 @@ function renderDetailsFromState(state){
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
   let trackerHtml = '';
-  try{ trackerHtml = buildAppTrackerStatusCards(milestones); }catch(e){ trackerHtml=''; }
+  try{ trackerHtml = buildAppTrackerStatusCards(milestones); }catch(e){ trackerHtml = '<div class="text-sm text-red-200">Tracker render error</div>'; }
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
