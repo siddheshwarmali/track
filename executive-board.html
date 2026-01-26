@@ -396,38 +396,6 @@ function buildMilestoneTrackerCombined(milestones){
       + "<div class='trk-label'>" + esc(labelOf(m,i)) + "</div>"
       + "</div>";
   }).join('');
-
-  const cards = list.map((m,i)=>{
-    const name = esc(labelOf(m,i));
-    const pS = _trkFmtDate(m.startDate || m.plannedStart || m.start);
-    const pE = _trkFmtDate(m.endDate || m.plannedEnd || m.end);
-    const aS = _trkFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-    const aE = _trkFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-    const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
-    const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
-    const st = statusOf(m);
-    const tr = trackOf(m);
-
-    const statusPill = (st.key==='completed')
-      ? "<span class='trk-pill completed'>Completed</span>"
-      : (st.key==='ongoing')
-        ? "<span class='trk-pill ongoing'>In-Progress</span>"
-        : "<span class='trk-pill pending'>Planned</span>";
-
-    const noteHtml = note ? ("<div style='margin-top:6px;color:#6b7280;font-size:10.5px;line-height:1.25;'>" + note + "</div>") : '';
-
-    return "<div class='card'>"
-      + "<div class='head'>" + name + "</div>"
-      + "<div class='box planned'><div class='k'>Planned</div><div class='v'>S: " + esc(pS) + "<br/>E: " + esc(pE) + "</div></div>"
-      + "<div class='box actual'><div class='k'>Actual</div><div class='v'>S: " + esc(aS) + "<br/>E: " + esc(aE) + "</div></div>"
-      + "<div class='box owner'><div class='k'>Owner</div><div class='v'>" + owner + noteHtml + "</div></div>"
-      + "<div class='footer'>"
-      +   "<div class='line'><span>Status:</span>" + statusPill + "</div>"
-      +   "<div class='trk-trackpill " + tr.key + "'>" + tr.label + "</div>"
-      + "</div>"
-      + "</div>";
-  }).join('');
-
   return "<div class='trk-card'>"
     + "<div class='trk-title'>Project Milestones - Application Tracker</div>"
     + "<div class='trk-scroll'>"
@@ -437,10 +405,7 @@ function buildMilestoneTrackerCombined(milestones){
     +     "<div class='trk-items'>" + timelineItems + "</div>"
     +   "</div>"
     + "</div>"
-    + "<div class='trk-cards'>"
-    +   "<div class='trk-scroll'><div class='row'>" + cards + "</div></div>"
-    + "</div>"
-    + "</div>";
++ "</div>";
 }
 
 function renderDetailsFromState(state){
@@ -472,29 +437,6 @@ function renderDetailsFromState(state){
     if(actualStart) return { label:'In Progress', cls:'bg-amber-400/10 border-amber-400/30 text-amber-200' };
     return { label:'Planned', cls:'bg-slate-400/10 border-white/10 text-slate-200' };
   }
-
-  const msStats = { total: milestones.length, completed:0, delayed:0, inprogress:0, planned:0 };
-  const msCards = milestones.length
-    ? milestones.slice(0, 12).map(m => {
-        const phase = esc(m.phase || m.Activity || m.name || 'Milestone');
-        const start = esc(m.startDate || m.plannedStart || m.start || '—');
-        const end = esc(m.endDate || m.plannedEnd || m.end || '—');
-        const actS = esc(m.actualStartDate || m.actualStart || '—');
-        const actE = esc(m.actualEndDate || m.actualEnd || '—');
-        const st = milestoneStatus(m);
-        if(st.label==='Completed') msStats.completed++; else if(st.label==='Delayed') msStats.delayed++; else if(st.label==='In Progress') msStats.inprogress++; else msStats.planned++;
-        return `<div class='rounded-xl border border-white/10 bg-white/5 p-3'>
-          <div class='flex items-start justify-between gap-2'>
-            <div class='min-w-0'>
-              <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
-              <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
-              <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
-            </div>
-            <span class='shrink-0 px-2 py-1 rounded-full border text-xs font-semibold ${st.cls}'>${st.label}</span>
-          </div>
-        </div>`;
-      }).join('')
-    : `<div class='text-sm text-slate-300'>No milestones</div>`;
 
   // Task Discipline (L1 visible, L2 collapsed)
   const taskDisciplines = Array.isArray(exec.taskDisciplines) ? exec.taskDisciplines : (exec.taskDisciplines && Array.isArray(exec.taskDisciplines.items) ? exec.taskDisciplines.items : []);
@@ -561,8 +503,6 @@ function renderDetailsFromState(state){
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
   ${trackerHtml}
-
-        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
 
