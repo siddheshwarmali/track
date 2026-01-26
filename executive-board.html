@@ -153,7 +153,7 @@
     <div class='max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between'>
       <div>
         <div class='text-lg font-extrabold'>Executive Board</div>
-        <div class='text-xs text-slate-400'>All published dashboards you can access — card view</div>
+        <div class='text-xs text-slate-400'>All published dashboards you can access — card view • Build 2026-01-26 13:03 IST</div>
       </div>
       <div class='flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center w-full sm:w-auto'>
         <div class='flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto'>
@@ -354,7 +354,7 @@ function buildMilestoneTrackerCombined(milestones){
   const isStarted = (m)=> !isDone(m) && !!_trkToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
   const stateOf = (m)=> isDone(m) ? 'completed' : (isStarted(m) ? 'ongoing' : 'pending');
 
-  // Fill bar up to last completed (matches screenshot)
+  // Fill bar up to last completed
   let lastCompleted = -1;
   for(let i=0;i<list.length;i++){ if(stateOf(list[i])==='completed') lastCompleted=i; }
   const denom = Math.max(1, (list.length-1));
@@ -365,12 +365,10 @@ function buildMilestoneTrackerCombined(milestones){
     return _trkPrettify(raw);
   }
 
-  // Status + track calculations (embedded)
-  const isCompleted = isDone;
-  const isOngoing  = isStarted;
+  // Status + track calculations
   function statusOf(m){
-    if(isCompleted(m)) return {key:'completed', label:'Completed'};
-    if(isOngoing(m))  return {key:'ongoing', label:'In-Progress'};
+    if(isDone(m)) return {key:'completed', label:'Completed'};
+    if(isStarted(m)) return {key:'ongoing', label:'In-Progress'};
     return {key:'pending', label:'Planned'};
   }
   function trackOf(m){
