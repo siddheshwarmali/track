@@ -1,3 +1,4 @@
+
 <!DOCTYPE html><html lang='en'>
 <head>
     
@@ -188,10 +189,7 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-[c])); }
-
-function card(d){
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }function card(d){
   const dashId = String(d.id || '');
   const name = esc(d.name || d.id || 'Dashboard');
   const published = fmt(d.publishedAt || d.updatedAt);
@@ -370,13 +368,11 @@ function buildMilestoneTrackerCombined(milestones){
     const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
     return _trkPrettify(raw);
   }
-
   function statusOf(m){
     if(isDone(m)) return {key:'completed', label:'Completed'};
     if(isStarted(m)) return {key:'ongoing', label:'In-Progress'};
     return {key:'pending', label:'Planned'};
   }
-
   function trackOf(m){
     const pEnd = _trkToDate(m.endDate || m.plannedEnd || m.end);
     const aEnd = _trkToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
@@ -386,18 +382,18 @@ function buildMilestoneTrackerCombined(milestones){
     return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
   }
 
-  // Timeline row (top)
+  // Timeline
   const timeline = list.map((m,i)=>{
     const st = stateOf(m);
     const dotCls = (st==='completed') ? 'bg-emerald-500' : (st==='ongoing' ? 'bg-blue-600' : 'bg-slate-300');
     const icon = (st==='completed' || st==='ongoing') ? checkSvg : "";
     return "<div class='flex-1 min-w-[90px] text-center'>"+
-      "<div class='mx-auto w-7 h-7 rounded-full text-white flex items-center justify-center shadow "+dotCls+"'>"+icon+"</div>"+
+      "<div class='mx-auto w-7 h-7 rounded-full text-white flex items-center justify-center shadow-sm "+dotCls+"'>"+icon+"</div>"+
       "<div class='mt-2 text-[10px] leading-tight font-semibold text-slate-700'>"+esc(labelOf(m,i))+"</div>"+
-      "</div>";
+    "</div>";
   }).join('');
 
-  // Cards row (bottom)
+  // Cards
   const cards = list.map((m,i)=>{
     const name = esc(labelOf(m,i));
     const pS = esc(_trkFmtDate(m.startDate || m.plannedStart || m.start));
@@ -443,13 +439,12 @@ function buildMilestoneTrackerCombined(milestones){
     "</div>";
   }).join('');
 
-  // Wrap (light UI inside the dark executive board page)
   return "<div class='rounded-2xl border border-blue-200 bg-white text-slate-900 p-4'>"+
     "<div class='text-sm sm:text-base font-extrabold text-slate-800'>Project Milestones - Application Tracker</div>"+
     "<div class='mt-3 rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-white p-4 sm:p-6 overflow-x-auto'>"+
-      "<div class='relative min-w-[720px]'>"+
+      "<div class='relative min-w-[720px] px-6'>"+
         "<div class='absolute left-6 right-6 top-3 h-1 bg-slate-200 rounded-full'></div>"+
-        "<div class='absolute left-6 top-3 h-1 bg-blue-500 rounded-full' style='width:calc("+fillPct+"% - " + (fillPct*0.12) + "px)'></div>"+
+        "<div class='absolute left-6 top-3 h-1 bg-blue-500 rounded-full' style='width:"+fillPct+"%'></div>"+
         "<div class='relative flex justify-between gap-4'>"+timeline+"</div>"+
       "</div>"+
     "</div>"+
