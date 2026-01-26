@@ -473,29 +473,6 @@ function renderDetailsFromState(state){
     return { label:'Planned', cls:'bg-slate-400/10 border-white/10 text-slate-200' };
   }
 
-  const msStats = { total: milestones.length, completed:0, delayed:0, inprogress:0, planned:0 };
-  const msCards = milestones.length
-    ? milestones.slice(0, 12).map(m => {
-        const phase = esc(m.phase || m.Activity || m.name || 'Milestone');
-        const start = esc(m.startDate || m.plannedStart || m.start || '—');
-        const end = esc(m.endDate || m.plannedEnd || m.end || '—');
-        const actS = esc(m.actualStartDate || m.actualStart || '—');
-        const actE = esc(m.actualEndDate || m.actualEnd || '—');
-        const st = milestoneStatus(m);
-        if(st.label==='Completed') msStats.completed++; else if(st.label==='Delayed') msStats.delayed++; else if(st.label==='In Progress') msStats.inprogress++; else msStats.planned++;
-        return `<div class='rounded-xl border border-white/10 bg-white/5 p-3'>
-          <div class='flex items-start justify-between gap-2'>
-            <div class='min-w-0'>
-              <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
-              <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
-              <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
-            </div>
-            <span class='shrink-0 px-2 py-1 rounded-full border text-xs font-semibold ${st.cls}'>${st.label}</span>
-          </div>
-        </div>`;
-      }).join('')
-    : `<div class='text-sm text-slate-300'>No milestones</div>`;
-
   // Task Discipline (L1 visible, L2 collapsed)
   const taskDisciplines = Array.isArray(exec.taskDisciplines) ? exec.taskDisciplines : (exec.taskDisciplines && Array.isArray(exec.taskDisciplines.items) ? exec.taskDisciplines.items : []);
   const l2Columns = Array.isArray(exec.l2Columns) ? exec.l2Columns : (exec.l2Columns && Array.isArray(exec.l2Columns.items) ? exec.l2Columns.items : []);
@@ -562,7 +539,7 @@ function renderDetailsFromState(state){
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
   ${trackerHtml}
 
-        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
+        
       </div>
     </div>
 
