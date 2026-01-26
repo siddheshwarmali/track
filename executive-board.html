@@ -1,4 +1,3 @@
-
 <!DOCTYPE html><html lang='en'>
 <head>
     
@@ -189,7 +188,8 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+[c])); }
 
 function card(d){
   const dashId = String(d.id || '');
@@ -354,23 +354,29 @@ function buildMilestoneTrackerCombined(milestones){
   const isStarted = (m)=> !isDone(m) && !!_trkToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
   const stateOf = (m)=> isDone(m) ? 'completed' : (isStarted(m) ? 'ongoing' : 'pending');
 
-  // Fill bar up to last completed
-  let lastCompleted = -1;
-  for(let i=0;i<list.length;i++){ if(stateOf(list[i])==='completed') lastCompleted=i; }
+  // Progress fill: last completed; if none, first ongoing
+  let progressIndex = -1;
+  for(let i=0;i<list.length;i++) if(stateOf(list[i])==='completed') progressIndex=i;
+  if(progressIndex < 0){
+    for(let i=0;i<list.length;i++) if(stateOf(list[i])==='ongoing'){ progressIndex=i; break; }
+  }
   const denom = Math.max(1, (list.length-1));
-  const fillPct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
+  const fillPct = progressIndex < 0 ? 0 : Math.max(0, Math.min(100, (progressIndex/denom)*100));
+
+  const checkSvg = "<svg viewBox='0 0 24 24' fill='none' aria-hidden='true' class='w-4 h-4'>"+
+    "<path d='M20 6L9 17l-5-5' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>";
 
   function labelOf(m,i){
     const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
     return _trkPrettify(raw);
   }
 
-  // Status + track calculations
   function statusOf(m){
     if(isDone(m)) return {key:'completed', label:'Completed'};
     if(isStarted(m)) return {key:'ongoing', label:'In-Progress'};
     return {key:'pending', label:'Planned'};
   }
+
   function trackOf(m){
     const pEnd = _trkToDate(m.endDate || m.plannedEnd || m.end);
     const aEnd = _trkToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
@@ -380,34 +386,83 @@ function buildMilestoneTrackerCombined(milestones){
     return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
   }
 
-  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-    + '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
-    + '</svg>';
-
-  const scrolling = list.length > 7;
-  const itemCls = scrolling ? 'trk-item fixed' : 'trk-item';
-  const trackStyle = 'style="--n:' + list.length + ';"';
-
-  const timelineItems = list.map((m,i)=>{
+  // Timeline row (top)
+  const timeline = list.map((m,i)=>{
     const st = stateOf(m);
-    const icon = (st==='completed' || st==='ongoing') ? checkSvg : '';
-    return "<div class='" + itemCls + "'>"
-      + "<div class='trk-dot " + st + "'>" + icon + "</div>"
-      + "<div class='trk-label'>" + esc(labelOf(m,i)) + "</div>"
-      + "</div>";
+    const dotCls = (st==='completed') ? 'bg-emerald-500' : (st==='ongoing' ? 'bg-blue-600' : 'bg-slate-300');
+    const icon = (st==='completed' || st==='ongoing') ? checkSvg : "";
+    return "<div class='flex-1 min-w-[90px] text-center'>"+
+      "<div class='mx-auto w-7 h-7 rounded-full text-white flex items-center justify-center shadow "+dotCls+"'>"+icon+"</div>"+
+      "<div class='mt-2 text-[10px] leading-tight font-semibold text-slate-700'>"+esc(labelOf(m,i))+"</div>"+
+      "</div>";
   }).join('');
-  return "<div class='trk-card'>"
-    + "<div class='trk-title'>Project Milestones - Application Tracker</div>"
-    + "<div class='trk-scroll'>"
-    +   "<div class='trk-track' " + trackStyle + ">"
-    +     "<div class='trk-line'></div>"
-    +     "<div class='trk-linefill' style='width:" + fillPct + "%'></div>"
-    +     "<div class='trk-items'>" + timelineItems + "</div>"
-    +   "</div>"
-    + "</div>"
-+ "</div>";
-}
 
+  // Cards row (bottom)
+  const cards = list.map((m,i)=>{
+    const name = esc(labelOf(m,i));
+    const pS = esc(_trkFmtDate(m.startDate || m.plannedStart || m.start));
+    const pE = esc(_trkFmtDate(m.endDate || m.plannedEnd || m.end));
+    const aS = esc(_trkFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual));
+    const aE = esc(_trkFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate));
+    const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
+    const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
+
+    const st = statusOf(m);
+    const tr = trackOf(m);
+
+    const statusPill = (st.key==='completed')
+      ? "<span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200'>Completed</span>"
+      : (st.key==='ongoing')
+        ? "<span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700 border border-blue-200'>In-Progress</span>"
+        : "<span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200'>Planned</span>";
+
+    const trackPill = (tr.key==='delayed')
+      ? "<div class='w-full text-center px-2 py-1 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200'>Delayed</div>"
+      : "<div class='w-full text-center px-2 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200'>On Track</div>";
+
+    const noteHtml = note ? ("<div class='mt-1 text-[10px] text-slate-500'>"+note+"</div>") : '';
+
+    return "<div class='w-56 shrink-0 rounded-xl border border-slate-200 bg-white shadow-sm p-3'>"+
+      "<div class='text-[11px] font-extrabold text-slate-800 mb-2'>"+name+"</div>"+
+      "<div class='rounded-md bg-blue-50 border border-blue-100 p-2 mb-2'>"+
+        "<div class='text-[9px] font-extrabold text-blue-700 uppercase'>Planned</div>"+
+        "<div class='mt-1 text-[10px] text-slate-700'>S: "+pS+"<br/>E: "+pE+"</div>"+
+      "</div>"+
+      "<div class='rounded-md bg-emerald-50 border border-emerald-100 p-2 mb-2'>"+
+        "<div class='text-[9px] font-extrabold text-emerald-700 uppercase'>Actual</div>"+
+        "<div class='mt-1 text-[10px] text-slate-700'>S: "+aS+"<br/>E: "+aE+"</div>"+
+      "</div>"+
+      "<div class='rounded-md bg-amber-50 border border-amber-100 p-2 mb-2'>"+
+        "<div class='text-[9px] font-extrabold text-amber-700 uppercase'>Owner</div>"+
+        "<div class='mt-1 text-[10px] text-slate-700'>"+owner+noteHtml+"</div>"+
+      "</div>"+
+      "<div class='flex items-center justify-between gap-2 mt-1'>"+
+        "<div class='text-[10px] text-slate-600'>Status:</div>"+statusPill+
+      "</div>"+
+      "<div class='mt-2'>"+trackPill+"</div>"+
+    "</div>";
+  }).join('');
+
+  // Wrap (light UI inside the dark executive board page)
+  return "<div class='rounded-2xl border border-blue-200 bg-white text-slate-900 p-4'>"+
+    "<div class='text-sm sm:text-base font-extrabold text-slate-800'>Project Milestones - Application Tracker</div>"+
+    "<div class='mt-3 rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-white p-4 sm:p-6 overflow-x-auto'>"+
+      "<div class='relative min-w-[720px]'>"+
+        "<div class='absolute left-6 right-6 top-3 h-1 bg-slate-200 rounded-full'></div>"+
+        "<div class='absolute left-6 top-3 h-1 bg-blue-500 rounded-full' style='width:calc("+fillPct+"% - " + (fillPct*0.12) + "px)'></div>"+
+        "<div class='relative flex justify-between gap-4'>"+timeline+"</div>"+
+      "</div>"+
+    "</div>"+
+    "<div class='my-4 relative'>"+
+      "<div class='border-t border-slate-200'></div>"+
+      "<div class='absolute left-1/2 -top-3 -translate-x-1/2 w-7 h-7 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 text-xs'>⌃</div>"+
+    "</div>"+
+    "<div class='text-[11px] font-bold text-slate-700 mb-2'>Application Tracker Status (Auto-calculated):</div>"+
+    "<div class='overflow-x-auto pb-2'>"+
+      "<div class='flex gap-3 min-w-max'>"+cards+"</div>"+
+    "</div>"+
+  "</div>";
+}
 function renderDetailsFromState(state){
   // Normalize state shape across versions
   const root = (state && (state.state || state.data || state)) || state || {};
