@@ -47,29 +47,37 @@
         .delete-btn { opacity: 0; transition: opacity 0.2s; }
     
 
-/* === Milestone Tracker UI (responsive, screenshot style) === */
+/* === Milestone Tracker UI (web responsive, screenshot style) === */
 .ms-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:16px;color:#0f172a;}
 .ms-title{font-weight:800;font-size:18px;margin:0 0 12px 0;color:#0f172a;}
-.ms-track-wrap{--dot:36px;--count:7;position:relative;padding:18px 0 8px 0;}
+.ms-track-wrap{--dot:36px;--count:7;position:relative;}
+.ms-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
+.ms-track-inner{position:relative;min-width:calc(var(--count) * 140px);max-width:1100px;margin:0 auto;padding:18px 0 10px 0;}
 .ms-track-bg{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:36px;height:6px;background:#d1d5db;border-radius:999px;}
 .ms-track-fg{position:absolute;left:calc(var(--dot)/2);top:36px;height:6px;background:#3b82f6;border-radius:999px;}
-.ms-items{display:grid;grid-template-columns:repeat(var(--count), minmax(110px, 1fr));gap:14px;align-items:start;}
+.ms-items{display:grid;grid-template-columns:repeat(var(--count), 1fr);align-items:start;}
 .ms-item{min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;}
 .ms-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 2px 0 rgba(15,23,42,0.08);}
 .ms-dot.completed{background:#22c55e;}
 .ms-dot.pending{background:#3b82f6;}
 .ms-dot svg{width:18px;height:18px;}
-.ms-label{margin-top:10px;font-size:13px;font-weight:700;color:#0f172a;line-height:1.2;max-width:140px;white-space:normal;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.ms-label{margin-top:10px;font-size:13px;font-weight:700;color:#0f172a;line-height:1.2;max-width:150px;white-space:normal;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .ms-card .ms-legend{margin-top:12px;font-size:12px;color:#334155;line-height:1.35;}
+.ms-scroll::-webkit-scrollbar{height:8px;}
+.ms-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
+.ms-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
+.ms-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
+
+@media (max-width: 1024px){
+  .ms-track-inner{max-width:none;min-width:calc(var(--count) * 140px);}
+}
 @media (max-width: 640px){
   .ms-card{padding:12px;}
   .ms-title{font-size:16px;}
-  .ms-track-wrap{--dot:32px;padding:14px 0 6px 0;}
+  .ms-track-wrap{--dot:32px;}
+  .ms-track-inner{min-width:calc(var(--count) * 125px);padding:14px 0 8px 0;}
   .ms-track-bg,.ms-track-fg{top:32px;height:5px;}
-  .ms-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
-  .ms-items{grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:minmax(110px,1fr);gap:12px;}
-  .ms-item{scroll-snap-align:center;}
-  .ms-label{max-width:120px;font-size:12px;}
+  .ms-label{max-width:130px;font-size:12px;}
 }
 </style>
 
@@ -156,7 +164,7 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
 function card(d){
   const dashId = String(d.id || '');
@@ -304,20 +312,42 @@ function buildMilestoneTrackerUI(milestones){
   const denom = Math.max(1, (list.length-1));
   const pct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
 
-  const checkSvg = '<svg viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\">'    + '<path d=\"M20 6L9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>'    + '</svg>';
+  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '</svg>';
 
   const items = list.map((m,i)=>{
     const rawLabel = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
-    const label = esc(prettyLabel(rawLabel));
+    const pretty = prettyLabel(rawLabel);
+    const label = esc(pretty);
     const cls = isCompleted(m) ? 'completed' : 'pending';
     const start = m.startDate || m.plannedStart || m.start || '';
     const end = m.endDate || m.plannedEnd || m.end || '';
-    const tipText = prettyLabel(rawLabel) + (start||end ? (' • Planned: ' + (start||'—') + ' → ' + (end||'—')) : '');
+    const tipText = pretty + (start||end ? (' • Planned: ' + (start||'—') + ' → ' + (end||'—')) : '');
     const tip = tipText.replace(/\s+/g,' ').trim();
-    return "<div class='ms-item' title='" + esc(tip) + "'>" +      "<div class='ms-dot " + cls + "'>" + (cls==='completed' ? checkSvg : '') + "</div>" +      "<div class='ms-label'>" + label + "</div>" +    "</div>";
+    return "<div class='ms-item' title='" + esc(tip) + "'>" +
+      "<div class='ms-dot " + cls + "'>" + (cls==='completed' ? checkSvg : '') + "</div>" +
+      "<div class='ms-label'>" + label + "</div>" +
+    "</div>";
   }).join('');
 
-  return "<div class='ms-card'>" +    "<div class='ms-title'>Project Milestones - Application Tracker</div>" +    "<div class='ms-track-wrap ms-scroll' style='--count:" + list.length + "'>" +      "<div class='ms-track-bg'></div>" +      "<div class='ms-track-fg' style='width:" + pct + "%'></div>" +      "<div class='ms-items'>" + items + "</div>" +    "</div>" +    "<div class='ms-legend'>" +      "<div>The horizontal bar is the project timeline, moving from left to right.</div>" +      "<div>Each circular icon is a milestone in the lifecycle of the application.</div>" +      "<div>Green circles with check marks are completed milestones; blue circles are pending or upcoming.</div>" +    "</div>" +  "</div>";
+  return "<div class='ms-card'>" +
+    "<div class='ms-title'>Project Milestones - Application Tracker</div>" +
+    "<div class='ms-track-wrap' style='--count:" + list.length + "'>" +
+      "<div class='ms-scroll'>" +
+        "<div class='ms-track-inner'>" +
+          "<div class='ms-track-bg'></div>" +
+          "<div class='ms-track-fg' style='width:" + pct + "%'></div>" +
+          "<div class='ms-items'>" + items + "</div>" +
+        "</div>" +
+      "</div>" +
+    "</div>" +
+    "<div class='ms-legend'>" +
+      "<div>The horizontal bar is the project timeline, moving from left to right.</div>" +
+      "<div>Each circular icon is a milestone in the lifecycle of the application.</div>" +
+      "<div>Green circles with check marks are completed milestones; blue circles are pending or upcoming.</div>" +
+    "</div>" +
+  "</div>";
 }
 
 function renderDetailsFromState(state){
