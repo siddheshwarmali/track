@@ -396,38 +396,6 @@ function buildMilestoneTrackerCombined(milestones){
       + "<div class='trk-label'>" + esc(labelOf(m,i)) + "</div>"
       + "</div>";
   }).join('');
-
-  const cards = list.map((m,i)=>{
-    const name = esc(labelOf(m,i));
-    const pS = _trkFmtDate(m.startDate || m.plannedStart || m.start);
-    const pE = _trkFmtDate(m.endDate || m.plannedEnd || m.end);
-    const aS = _trkFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-    const aE = _trkFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-    const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
-    const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
-    const st = statusOf(m);
-    const tr = trackOf(m);
-
-    const statusPill = (st.key==='completed')
-      ? "<span class='trk-pill completed'>Completed</span>"
-      : (st.key==='ongoing')
-        ? "<span class='trk-pill ongoing'>In-Progress</span>"
-        : "<span class='trk-pill pending'>Planned</span>";
-
-    const noteHtml = note ? ("<div style='margin-top:6px;color:#6b7280;font-size:10.5px;line-height:1.25;'>" + note + "</div>") : '';
-
-    return "<div class='card'>"
-      + "<div class='head'>" + name + "</div>"
-      + "<div class='box planned'><div class='k'>Planned</div><div class='v'>S: " + esc(pS) + "<br/>E: " + esc(pE) + "</div></div>"
-      + "<div class='box actual'><div class='k'>Actual</div><div class='v'>S: " + esc(aS) + "<br/>E: " + esc(aE) + "</div></div>"
-      + "<div class='box owner'><div class='k'>Owner</div><div class='v'>" + owner + noteHtml + "</div></div>"
-      + "<div class='footer'>"
-      +   "<div class='line'><span>Status:</span>" + statusPill + "</div>"
-      +   "<div class='trk-trackpill " + tr.key + "'>" + tr.label + "</div>"
-      + "</div>"
-      + "</div>";
-  }).join('');
-
   return "<div class='trk-card'>"
     + "<div class='trk-title'>Project Milestones - Application Tracker</div>"
     + "<div class='trk-scroll'>"
@@ -437,10 +405,7 @@ function buildMilestoneTrackerCombined(milestones){
     +     "<div class='trk-items'>" + timelineItems + "</div>"
     +   "</div>"
     + "</div>"
-    + "<div class='trk-cards'>"
-    +   "<div class='trk-scroll'><div class='row'>" + cards + "</div></div>"
-    + "</div>"
-    + "</div>";
++ "</div>";
 }
 
 function renderDetailsFromState(state){
@@ -538,8 +503,6 @@ function renderDetailsFromState(state){
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
   ${trackerHtml}
-
-        
       </div>
     </div>
 
