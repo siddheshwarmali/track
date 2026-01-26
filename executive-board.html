@@ -83,7 +83,7 @@
 
 @media (max-width: 640px){
   .atk-surface{padding:10px;}
-  .atk-card{flex-basis:82vw;max-width:82vw;}
+  .atk-card{flex-basis:86vw;max-width:86vw;}
   .atk-head{font-size:13px;min-height:auto;}
 }
 @media (min-width: 1024px){
@@ -174,8 +174,15 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;' }[c])); }
-
+function esc(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[c]));
+}
 function card(d){
   const dashId = String(d.id || '');
   const name = esc(d.name || d.id || 'Dashboard');
@@ -312,7 +319,7 @@ function buildAppTrackerStatusCards(milestones){
     return "<div class='text-sm text-slate-300'>No milestones</div>";
   }
   const toDate = (v)=>{ try{ return v ? new Date(v) : null; }catch(e){ return null; } };
-  const fmt = (v)=>{
+  const fmtD = (v)=>{
     if(!v) return '-';
     const d = toDate(v);
     if(d && !isNaN(+d)) return d.toISOString().slice(0,10);
@@ -343,10 +350,10 @@ function buildAppTrackerStatusCards(milestones){
 
   const cards = list.map((m,i)=>{
     const name = esc(labelOf(m,i));
-    const pS = fmt(m.startDate || m.plannedStart || m.start);
-    const pE = fmt(m.endDate || m.plannedEnd || m.end);
-    const aS = fmt(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-    const aE = fmt(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+    const pS = fmtD(m.startDate || m.plannedStart || m.start);
+    const pE = fmtD(m.endDate || m.plannedEnd || m.end);
+    const aS = fmtD(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+    const aE = fmtD(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
     const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
     const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
     const st = statusOf(m);
