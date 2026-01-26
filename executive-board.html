@@ -47,6 +47,36 @@
         .delete-btn { opacity: 0; transition: opacity 0.2s; }
     
 
+/* === Timeline Tracker (screenshot style) === */
+.tl-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;color:#0f172a;}
+.tl-title{font-weight:800;font-size:16px;margin:0 0 10px 0;color:#0f172a;}
+.tl-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+.tl-scroll::-webkit-scrollbar{height:8px;}
+.tl-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
+.tl-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
+.tl-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
+
+.tl-track{--dot:28px;--n:7;position:relative;min-width:max(100%, calc(var(--n) * 140px));padding:18px 6px 10px 6px;border-radius:12px;border:1px solid rgba(29,78,216,0.20);background:rgba(219,234,254,0.35);}
+.tl-line{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:34px;height:6px;background:#d1d5db;border-radius:999px;}
+.tl-linefill{position:absolute;left:calc(var(--dot)/2);top:34px;height:6px;background:#3b82f6;border-radius:999px;}
+.tl-items{display:flex;justify-content:space-between;gap:16px;position:relative;}
+.tl-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.tl-item.fixed{flex:0 0 140px;}
+.tl-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:grid;place-items:center;color:white;box-shadow:0 4px 10px rgba(15,23,42,0.18);}
+.tl-dot.completed{background:#22c55e;}
+.tl-dot.ongoing{background:#3b82f6;}
+.tl-dot.pending{background:#9ca3af;}
+.tl-dot svg{width:14px;height:14px;}
+.tl-label{margin-top:8px;font-size:12px;font-weight:700;color:#0f172a;line-height:1.15;max-width:140px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+@media (max-width: 640px){
+  .tl-card{padding:12px;}
+  .tl-title{font-size:15px;}
+  .tl-track{--dot:28px;min-width:calc(var(--n) * 128px);}
+  .tl-item.fixed{flex-basis:128px;}
+  .tl-label{max-width:128px;font-size:12px;}
+}
+
 /* === Application Tracker Status (cards UI, responsive) === */
 .atk-section{margin-top:14px;}
 .atk-title{font-weight:800;font-size:14px;letter-spacing:0.3px;color:rgba(226,232,240,0.90);margin:0 0 10px 0;}
@@ -303,67 +333,106 @@ function countOpen(items){
 
 
 
+function _twToDate(v){ try{ return v? new Date(v): null; }catch(e){ return null; } }
+function _twFmtDate(v){
+  if(!v) return '-';
+  const d = _twToDate(v);
+  if(d && !isNaN(+d)) return d.toISOString().slice(0,10);
+  return String(v);
+}
+function _twPrettifyLabel(x){
+  let s = String(x||'').trim();
+  s = s.split('_').join(' ');
+  s = s.split('-').join(' ');
+  let out='';
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    const prev=i>0?s[i-1]:'';
+    const isUpper = ch>='A' && ch<='Z';
+    const wasLower = prev>='a' && prev<='z';
+    if(i>0 && isUpper && wasLower) out += ' ';
+    out += ch;
+  }
+  s=out;
+  while(s.indexOf('  ')!==-1) s = s.split('  ').join(' ');
+  return s.trim();
+}
+
+function buildMilestoneTimelineBar(milestones){
+  const list = Array.isArray(milestones) ? milestones : [];
+  if(!list.length) return "<div class='text-sm text-slate-300'>No milestones</div>";
+  const isDone = (m)=> !!_twToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+  const isStarted = (m)=> !isDone(m) && !!_twToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+  const stateOf = (m)=> isDone(m) ? 'completed' : (isStarted(m) ? 'ongoing' : 'pending');
+
+  let lastCompleted = -1;
+  for(let i=0;i<list.length;i++){ if(stateOf(list[i])==='completed') lastCompleted=i; }
+  const denom = Math.max(1, (list.length-1));
+  const fillPct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
+
+  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '</svg>';
+
+  const scrolling = list.length > 7;
+  const itemCls = scrolling ? 'tl-item fixed' : 'tl-item';
+  const trackStyle = 'style="--n:' + list.length + ';"';
+
+  const items = list.map((m,i)=>{
+    const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
+    const label = esc(_twPrettifyLabel(raw));
+    const st = stateOf(m);
+    const icon = (st==='completed' || st==='ongoing') ? checkSvg : '';
+    return "<div class='" + itemCls + "'>"
+      + "<div class='tl-dot " + st + "'>" + icon + "</div>"
+      + "<div class='tl-label'>" + label + "</div>"
+      + "</div>";
+  }).join('');
+
+  return "<div class='tl-card'>"
+    + "<div class='tl-title'>Project Milestones - Application Tracker</div>"
+    + "<div class='tl-scroll'>"
+    +   "<div class='tl-track' " + trackStyle + ">"
+    +     "<div class='tl-line'></div>"
+    +     "<div class='tl-linefill' style='width:" + fillPct + "%'></div>"
+    +     "<div class='tl-items'>" + items + "</div>"
+    +   "</div>"
+    + "</div>"
+    + "</div>";
+}
+
 function buildAppTrackerStatusCards(milestones){
   const list = Array.isArray(milestones) ? milestones : [];
   if(!list.length){
     return "<div class='text-sm text-slate-300'>No milestones</div>";
   }
 
-  const toDate = (v)=>{ try{ return v ? new Date(v) : null; }catch(e){ return null; } };
-  const fmtD = (v)=>{
-    if(!v) return '-';
-    const d = toDate(v);
-    if(d && !isNaN(+d)) return d.toISOString().slice(0,10);
-    return String(v);
-  };
-
-  function prettifyLabel(x){
-    let s = String(x||'').trim();
-    s = s.split('_').join(' ');
-    s = s.split('-').join(' ');
-    let out = '';
-    for(let i=0;i<s.length;i++){
-      const ch = s[i];
-      const prev = i>0 ? s[i-1] : '';
-      const isUpper = ch >= 'A' && ch <= 'Z';
-      const wasLower = prev >= 'a' && prev <= 'z';
-      if(i>0 && isUpper && wasLower) out += ' ';
-      out += ch;
-    }
-    s = out;
-    while(s.indexOf('  ') !== -1) s = s.split('  ').join(' ');
-    return s.trim();
-  }
-
-  function labelOf(m,i){
-    const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
-    return prettifyLabel(raw);
-  }
-
-  const isCompleted = (m)=> !!toDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-  const isOngoing  = (m)=> !isCompleted(m) && !!toDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-
+  const isCompleted = (m)=> !!_twToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+  const isOngoing  = (m)=> !isCompleted(m) && !!_twToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
   function statusOf(m){
     if(isCompleted(m)) return {key:'completed', label:'Completed'};
     if(isOngoing(m))  return {key:'ongoing',   label:'In-Progress'};
     return {key:'pending', label:'Planned'};
   }
-
   function trackOf(m){
-    const pEnd = toDate(m.endDate || m.plannedEnd || m.end);
-    const aEnd = toDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+    const pEnd = _twToDate(m.endDate || m.plannedEnd || m.end);
+    const aEnd = _twToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
     const today = new Date();
     if(!pEnd || isNaN(+pEnd)) return {key:'unknown', label:'On Track'};
     if(aEnd && !isNaN(+aEnd)) return (aEnd <= pEnd) ? {key:'ontrack', label:'On Track'} : {key:'delayed', label:'Delayed'};
     return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
   }
+  function labelOf(m,i){
+    const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
+    return _twPrettifyLabel(raw);
+  }
 
   const cards = list.map((m,i)=>{
     const name = esc(labelOf(m,i));
-    const pS = fmtD(m.startDate || m.plannedStart || m.start);
-    const pE = fmtD(m.endDate || m.plannedEnd || m.end);
-    const aS = fmtD(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-    const aE = fmtD(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+    const pS = _twFmtDate(m.startDate || m.plannedStart || m.start);
+    const pE = _twFmtDate(m.endDate || m.plannedEnd || m.end);
+    const aS = _twFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+    const aE = _twFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
     const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
     const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
     const st = statusOf(m);
@@ -403,8 +472,10 @@ function renderDetailsFromState(state){
 
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
+  let timelineHtml = '';
   let trackerHtml = '';
-  try{ trackerHtml = buildAppTrackerStatusCards(milestones); }catch(e){ trackerHtml = '<div class="text-sm text-red-200">Tracker render error</div>'; }
+  try{ timelineHtml = buildMilestoneTimelineBar(milestones); }catch(e){ timelineHtml=''; }
+  try{ trackerHtml = buildAppTrackerStatusCards(milestones); }catch(e){ trackerHtml=''; }
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
@@ -512,6 +583,7 @@ function renderDetailsFromState(state){
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
+  ${timelineHtml}
   ${trackerHtml}
 
         <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
