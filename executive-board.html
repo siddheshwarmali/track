@@ -47,74 +47,62 @@
         .delete-btn { opacity: 0; transition: opacity 0.2s; }
     
 
-/* === Timeline Tracker (screenshot style) === */
-.tl-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;color:#0f172a;}
-.tl-title{font-weight:800;font-size:16px;margin:0 0 10px 0;color:#0f172a;}
-.tl-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
-.tl-scroll::-webkit-scrollbar{height:8px;}
-.tl-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
-.tl-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
-.tl-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
+/* === Project Milestones - Application Tracker (combined, responsive) === */
+.trk-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;color:#0f172a;}
+.trk-title{font-weight:800;font-size:16px;margin:0 0 10px 0;color:#0f172a;}
+.trk-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+.trk-scroll::-webkit-scrollbar{height:8px;}
+.trk-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
+.trk-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
+.trk-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
 
-.tl-track{--dot:28px;--n:7;position:relative;min-width:max(100%, calc(var(--n) * 140px));padding:18px 6px 10px 6px;border-radius:12px;border:1px solid rgba(29,78,216,0.20);background:rgba(219,234,254,0.35);}
-.tl-line{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:34px;height:6px;background:#d1d5db;border-radius:999px;}
-.tl-linefill{position:absolute;left:calc(var(--dot)/2);top:34px;height:6px;background:#3b82f6;border-radius:999px;}
-.tl-items{display:flex;justify-content:space-between;gap:16px;position:relative;}
-.tl-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;}
-.tl-item.fixed{flex:0 0 140px;}
-.tl-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:grid;place-items:center;color:white;box-shadow:0 4px 10px rgba(15,23,42,0.18);}
-.tl-dot.completed{background:#22c55e;}
-.tl-dot.ongoing{background:#3b82f6;}
-.tl-dot.pending{background:#9ca3af;}
-.tl-dot svg{width:14px;height:14px;}
-.tl-label{margin-top:8px;font-size:12px;font-weight:700;color:#0f172a;line-height:1.15;max-width:140px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* Timeline */
+.trk-track{--dot:28px;--n:7;position:relative;min-width:max(100%, calc(var(--n) * 140px));padding:18px 6px 10px 6px;border-radius:12px;border:1px solid rgba(29,78,216,0.20);background:rgba(219,234,254,0.35);}
+.trk-line{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:34px;height:6px;background:#d1d5db;border-radius:999px;}
+.trk-linefill{position:absolute;left:calc(var(--dot)/2);top:34px;height:6px;background:#3b82f6;border-radius:999px;}
+.trk-items{display:flex;justify-content:space-between;gap:16px;position:relative;}
+.trk-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.trk-item.fixed{flex:0 0 140px;}
+.trk-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:grid;place-items:center;color:white;box-shadow:0 4px 10px rgba(15,23,42,0.18);}
+.trk-dot.completed{background:#22c55e;}
+.trk-dot.ongoing{background:#3b82f6;}
+.trk-dot.pending{background:#9ca3af;}
+.trk-dot svg{width:14px;height:14px;}
+.trk-label{margin-top:8px;font-size:12px;font-weight:700;color:#0f172a;line-height:1.15;max-width:140px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 
-@media (max-width: 640px){
-  .tl-card{padding:12px;}
-  .tl-title{font-size:15px;}
-  .tl-track{--dot:28px;min-width:calc(var(--n) * 128px);}
-  .tl-item.fixed{flex-basis:128px;}
-  .tl-label{max-width:128px;font-size:12px;}
-}
-
-/* === Application Tracker Status (cards UI, responsive) === */
-.atk-section{margin-top:14px;}
-.atk-title{font-weight:800;font-size:14px;letter-spacing:0.3px;color:rgba(226,232,240,0.90);margin:0 0 10px 0;}
-.atk-surface{border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.03);border-radius:14px;padding:12px;}
-.atk-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;scroll-snap-type:x mandatory;}
-.atk-scroll::-webkit-scrollbar{height:8px;}
-.atk-scroll::-webkit-scrollbar-track{background:rgba(148,163,184,0.18);border-radius:999px;}
-.atk-scroll::-webkit-scrollbar-thumb{background:rgba(148,163,184,0.45);border-radius:999px;}
-.atk-scroll::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,0.65);}
-
-.atk-row{display:flex;gap:12px;align-items:stretch;}
-.atk-card{flex:0 0 240px;max-width:240px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 0 rgba(15,23,42,0.06);padding:10px 10px 12px;scroll-snap-align:start;}
-.atk-head{font-weight:800;font-size:12px;color:#0f172a;line-height:1.2;margin-bottom:8px;min-height:32px;}
-.atk-box{border-radius:8px;padding:8px;margin-bottom:8px;border:1px solid rgba(15,23,42,0.06);}
-.atk-box .k{font-size:10px;font-weight:800;letter-spacing:0.25px;text-transform:uppercase;margin-bottom:4px;}
-.atk-box .v{font-size:11px;color:#334155;line-height:1.25;}
-.atk-planned{background:#eff6ff;}
-.atk-planned .k{color:#1d4ed8;}
-.atk-actual{background:#ecfdf5;}
-.atk-actual .k{color:#047857;}
-.atk-owner{background:#fffbeb;}
-.atk-owner .k{color:#b45309;}
-
-.atk-footer{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
-.atk-line{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#334155;}
-.pill{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;line-height:18px;white-space:nowrap;border:1px solid transparent;}
-.pill.completed{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
-.pill.ongoing{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
-.pill.pending{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
-.track{width:100%;display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid transparent;}
-.track.ontrack{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
-.track.delayed{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
-.track.unknown{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+/* Embedded status cards row (no separate title) */
+.trk-cards{margin-top:12px;}
+.trk-cards .row{display:flex;gap:12px;align-items:stretch;}
+.trk-cards .card{flex:0 0 240px;max-width:240px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 0 rgba(15,23,42,0.06);padding:10px 10px 12px;}
+.trk-cards .head{font-weight:800;font-size:12px;color:#0f172a;line-height:1.2;margin-bottom:8px;min-height:32px;}
+.trk-cards .box{border-radius:8px;padding:8px;margin-bottom:8px;border:1px solid rgba(15,23,42,0.06);}
+.trk-cards .box .k{font-size:10px;font-weight:800;letter-spacing:0.25px;text-transform:uppercase;margin-bottom:4px;}
+.trk-cards .box .v{font-size:11px;color:#334155;line-height:1.25;}
+.trk-cards .planned{background:#eff6ff;}
+.trk-cards .planned .k{color:#1d4ed8;}
+.trk-cards .actual{background:#ecfdf5;}
+.trk-cards .actual .k{color:#047857;}
+.trk-cards .owner{background:#fffbeb;}
+.trk-cards .owner .k{color:#b45309;}
+.trk-cards .footer{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
+.trk-cards .line{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#334155;}
+.trk-pill{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;line-height:18px;white-space:nowrap;border:1px solid transparent;}
+.trk-pill.completed{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.trk-pill.ongoing{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+.trk-pill.pending{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+.trk-trackpill{width:100%;display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid transparent;}
+.trk-trackpill.ontrack{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.trk-trackpill.delayed{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
+.trk-trackpill.unknown{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
 
 @media (max-width: 640px){
-  .atk-surface{padding:10px;}
-  .atk-card{flex-basis:86vw;max-width:86vw;}
-  .atk-head{font-size:13px;min-height:auto;}
+  .trk-card{padding:12px;}
+  .trk-title{font-size:15px;}
+  .trk-track{min-width:calc(var(--n) * 128px);} 
+  .trk-item.fixed{flex-basis:128px;}
+  .trk-label{max-width:128px;font-size:12px;}
+  .trk-cards .card{flex-basis:86vw;max-width:86vw;}
+  .trk-cards .head{font-size:13px;min-height:auto;}
 }
 </style>
 
@@ -333,14 +321,14 @@ function countOpen(items){
 
 
 
-function _twToDate(v){ try{ return v? new Date(v): null; }catch(e){ return null; } }
-function _twFmtDate(v){
+function _trkToDate(v){ try{ return v? new Date(v): null; }catch(e){ return null; } }
+function _trkFmtDate(v){
   if(!v) return '-';
-  const d = _twToDate(v);
+  const d = _trkToDate(v);
   if(d && !isNaN(+d)) return d.toISOString().slice(0,10);
   return String(v);
 }
-function _twPrettifyLabel(x){
+function _trkPrettify(x){
   let s = String(x||'').trim();
   s = s.split('_').join(' ');
   s = s.split('-').join(' ');
@@ -358,109 +346,102 @@ function _twPrettifyLabel(x){
   return s.trim();
 }
 
-function buildMilestoneTimelineBar(milestones){
+function buildMilestoneTrackerCombined(milestones){
   const list = Array.isArray(milestones) ? milestones : [];
   if(!list.length) return "<div class='text-sm text-slate-300'>No milestones</div>";
-  const isDone = (m)=> !!_twToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-  const isStarted = (m)=> !isDone(m) && !!_twToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+
+  const isDone = (m)=> !!_trkToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+  const isStarted = (m)=> !isDone(m) && !!_trkToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
   const stateOf = (m)=> isDone(m) ? 'completed' : (isStarted(m) ? 'ongoing' : 'pending');
 
+  // Fill bar up to last completed (matches screenshot)
   let lastCompleted = -1;
   for(let i=0;i<list.length;i++){ if(stateOf(list[i])==='completed') lastCompleted=i; }
   const denom = Math.max(1, (list.length-1));
   const fillPct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
+
+  function labelOf(m,i){
+    const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
+    return _trkPrettify(raw);
+  }
+
+  // Status + track calculations (embedded)
+  const isCompleted = isDone;
+  const isOngoing  = isStarted;
+  function statusOf(m){
+    if(isCompleted(m)) return {key:'completed', label:'Completed'};
+    if(isOngoing(m))  return {key:'ongoing', label:'In-Progress'};
+    return {key:'pending', label:'Planned'};
+  }
+  function trackOf(m){
+    const pEnd = _trkToDate(m.endDate || m.plannedEnd || m.end);
+    const aEnd = _trkToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+    const today = new Date();
+    if(!pEnd || isNaN(+pEnd)) return {key:'unknown', label:'On Track'};
+    if(aEnd && !isNaN(+aEnd)) return (aEnd <= pEnd) ? {key:'ontrack', label:'On Track'} : {key:'delayed', label:'Delayed'};
+    return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
+  }
 
   const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
     + '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
     + '</svg>';
 
   const scrolling = list.length > 7;
-  const itemCls = scrolling ? 'tl-item fixed' : 'tl-item';
+  const itemCls = scrolling ? 'trk-item fixed' : 'trk-item';
   const trackStyle = 'style="--n:' + list.length + ';"';
 
-  const items = list.map((m,i)=>{
-    const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
-    const label = esc(_twPrettifyLabel(raw));
+  const timelineItems = list.map((m,i)=>{
     const st = stateOf(m);
     const icon = (st==='completed' || st==='ongoing') ? checkSvg : '';
     return "<div class='" + itemCls + "'>"
-      + "<div class='tl-dot " + st + "'>" + icon + "</div>"
-      + "<div class='tl-label'>" + label + "</div>"
+      + "<div class='trk-dot " + st + "'>" + icon + "</div>"
+      + "<div class='trk-label'>" + esc(labelOf(m,i)) + "</div>"
       + "</div>";
   }).join('');
 
-  return "<div class='tl-card'>"
-    + "<div class='tl-title'>Project Milestones - Application Tracker</div>"
-    + "<div class='tl-scroll'>"
-    +   "<div class='tl-track' " + trackStyle + ">"
-    +     "<div class='tl-line'></div>"
-    +     "<div class='tl-linefill' style='width:" + fillPct + "%'></div>"
-    +     "<div class='tl-items'>" + items + "</div>"
-    +   "</div>"
-    + "</div>"
-    + "</div>";
-}
-
-function buildAppTrackerStatusCards(milestones){
-  const list = Array.isArray(milestones) ? milestones : [];
-  if(!list.length){
-    return "<div class='text-sm text-slate-300'>No milestones</div>";
-  }
-
-  const isCompleted = (m)=> !!_twToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-  const isOngoing  = (m)=> !isCompleted(m) && !!_twToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-  function statusOf(m){
-    if(isCompleted(m)) return {key:'completed', label:'Completed'};
-    if(isOngoing(m))  return {key:'ongoing',   label:'In-Progress'};
-    return {key:'pending', label:'Planned'};
-  }
-  function trackOf(m){
-    const pEnd = _twToDate(m.endDate || m.plannedEnd || m.end);
-    const aEnd = _twToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-    const today = new Date();
-    if(!pEnd || isNaN(+pEnd)) return {key:'unknown', label:'On Track'};
-    if(aEnd && !isNaN(+aEnd)) return (aEnd <= pEnd) ? {key:'ontrack', label:'On Track'} : {key:'delayed', label:'Delayed'};
-    return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
-  }
-  function labelOf(m,i){
-    const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
-    return _twPrettifyLabel(raw);
-  }
-
   const cards = list.map((m,i)=>{
     const name = esc(labelOf(m,i));
-    const pS = _twFmtDate(m.startDate || m.plannedStart || m.start);
-    const pE = _twFmtDate(m.endDate || m.plannedEnd || m.end);
-    const aS = _twFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-    const aE = _twFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+    const pS = _trkFmtDate(m.startDate || m.plannedStart || m.start);
+    const pE = _trkFmtDate(m.endDate || m.plannedEnd || m.end);
+    const aS = _trkFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+    const aE = _trkFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
     const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
     const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
     const st = statusOf(m);
     const tr = trackOf(m);
 
     const statusPill = (st.key==='completed')
-      ? "<span class='pill completed'>Completed</span>"
+      ? "<span class='trk-pill completed'>Completed</span>"
       : (st.key==='ongoing')
-        ? "<span class='pill ongoing'>In-Progress</span>"
-        : "<span class='pill pending'>Planned</span>";
+        ? "<span class='trk-pill ongoing'>In-Progress</span>"
+        : "<span class='trk-pill pending'>Planned</span>";
 
     const noteHtml = note ? ("<div style='margin-top:6px;color:#6b7280;font-size:10.5px;line-height:1.25;'>" + note + "</div>") : '';
 
-    return "<div class='atk-card'>"
-      + "<div class='atk-head'>" + name + "</div>"
-      + "<div class='atk-box atk-planned'><div class='k'>Planned</div><div class='v'>S: " + esc(pS) + "<br/>E: " + esc(pE) + "</div></div>"
-      + "<div class='atk-box atk-actual'><div class='k'>Actual</div><div class='v'>S: " + esc(aS) + "<br/>E: " + esc(aE) + "</div></div>"
-      + "<div class='atk-box atk-owner'><div class='k'>Owner</div><div class='v'>" + owner + noteHtml + "</div></div>"
-      + "<div class='atk-footer'>"
-      +   "<div class='atk-line'><span>Status:</span>" + statusPill + "</div>"
-      +   "<div class='track " + tr.key + "'>" + tr.label + "</div>"
+    return "<div class='card'>"
+      + "<div class='head'>" + name + "</div>"
+      + "<div class='box planned'><div class='k'>Planned</div><div class='v'>S: " + esc(pS) + "<br/>E: " + esc(pE) + "</div></div>"
+      + "<div class='box actual'><div class='k'>Actual</div><div class='v'>S: " + esc(aS) + "<br/>E: " + esc(aE) + "</div></div>"
+      + "<div class='box owner'><div class='k'>Owner</div><div class='v'>" + owner + noteHtml + "</div></div>"
+      + "<div class='footer'>"
+      +   "<div class='line'><span>Status:</span>" + statusPill + "</div>"
+      +   "<div class='trk-trackpill " + tr.key + "'>" + tr.label + "</div>"
       + "</div>"
       + "</div>";
   }).join('');
 
-  return "<div class='atk-section'>"
-    + "<div class='atk-title'>Application Tracker Status (Auto-calculated):</div>"
-    + "<div class='atk-surface'><div class='atk-scroll'><div class='atk-row'>" + cards + "</div></div></div>"
+  return "<div class='trk-card'>"
+    + "<div class='trk-title'>Project Milestones - Application Tracker</div>"
+    + "<div class='trk-scroll'>"
+    +   "<div class='trk-track' " + trackStyle + ">"
+    +     "<div class='trk-line'></div>"
+    +     "<div class='trk-linefill' style='width:" + fillPct + "%'></div>"
+    +     "<div class='trk-items'>" + timelineItems + "</div>"
+    +   "</div>"
+    + "</div>"
+    + "<div class='trk-cards'>"
+    +   "<div class='trk-scroll'><div class='row'>" + cards + "</div></div>"
+    + "</div>"
     + "</div>";
 }
 
@@ -472,10 +453,8 @@ function renderDetailsFromState(state){
 
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
-  let timelineHtml = '';
   let trackerHtml = '';
-  try{ timelineHtml = buildMilestoneTimelineBar(milestones); }catch(e){ timelineHtml=''; }
-  try{ trackerHtml = buildAppTrackerStatusCards(milestones); }catch(e){ trackerHtml=''; }
+  try{ trackerHtml = buildMilestoneTrackerCombined(milestones); }catch(e){ trackerHtml=''; }
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
@@ -583,7 +562,6 @@ function renderDetailsFromState(state){
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
-  ${timelineHtml}
   ${trackerHtml}
 
         <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
