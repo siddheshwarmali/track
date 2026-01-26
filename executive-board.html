@@ -47,67 +47,88 @@
         .delete-btn { opacity: 0; transition: opacity 0.2s; }
     
 
-/* === Project Milestones - Application Tracker (Clean Mobile UX) === */
-.mx-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;color:#0f172a;}
-.mx-title{font-weight:800;font-size:16px;margin:0 0 10px 0;color:#0f172a;}
-.mx-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:-2px 0 10px 0;}
-.mx-kpis{display:flex;gap:8px;flex-wrap:wrap;}
-.mx-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid rgba(15,23,42,0.08);background:rgba(255,255,255,0.7);}
-.mx-chip.good{background:#dcfce7;border-color:#bbf7d0;color:#166534;}
-.mx-chip.bad{background:#fee2e2;border-color:#fecaca;color:#991b1b;}
-.mx-chip.neu{background:#e0f2fe;border-color:#bae6fd;color:#075985;}
+/* === Advanced Mobile Tracker UX (progressive disclosure + bottom sheet) === */
+.ax-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:14px;color:#0f172a;}
+.ax-head{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+.ax-title{font-weight:900;font-size:16px;line-height:1.2;color:#0f172a;}
+.ax-kpis{display:flex;flex-wrap:wrap;gap:8px;}
+.ax-kpi{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid rgba(15,23,42,0.10);background:rgba(255,255,255,0.75);}
+.ax-kpi.good{background:#dcfce7;border-color:#bbf7d0;color:#166534;}
+.ax-kpi.bad{background:#fee2e2;border-color:#fecaca;color:#991b1b;}
+.ax-kpi.neu{background:#dbeafe;border-color:#bfdbfe;color:#1d4ed8;}
+.ax-kpi.gray{background:#f1f5f9;border-color:#e2e8f0;color:#475569;}
 
-.mx-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px 0;}
-.mx-tab{flex:1;min-width:90px;display:flex;align-items:center;justify-content:center;padding:8px 10px;border-radius:12px;font-size:12px;font-weight:900;border:1px solid rgba(15,23,42,0.10);background:rgba(255,255,255,0.75);color:#0f172a;}
-.mx-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:white;}
+.ax-tabs{display:flex;gap:8px;}
+.ax-tab{flex:1;display:flex;align-items:center;justify-content:center;padding:10px 10px;border-radius:14px;font-size:12px;font-weight:900;border:1px solid rgba(15,23,42,0.10);background:rgba(255,255,255,0.8);color:#0f172a;}
+.ax-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff;}
 
-/* Timeline (top) */
-.mx-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
-.mx-scroll::-webkit-scrollbar{height:8px;}
-.mx-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
-.mx-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
-.mx-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
+.ax-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+.ax-scroll::-webkit-scrollbar{height:8px;}
+.ax-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
+.ax-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
+.ax-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
 
-.mx-track{--dot:28px;--n:7;position:relative;min-width:max(100%, calc(var(--n) * 132px));padding:16px 6px 10px 6px;border-radius:12px;border:1px solid rgba(29,78,216,0.20);background:rgba(219,234,254,0.35);} 
-.mx-line{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:32px;height:6px;background:#d1d5db;border-radius:999px;}
-.mx-linefill{position:absolute;left:calc(var(--dot)/2);top:32px;height:6px;background:#3b82f6;border-radius:999px;}
-.mx-items{display:flex;justify-content:space-between;gap:14px;position:relative;}
-.mx-item{flex:0 0 132px;display:flex;flex-direction:column;align-items:center;text-align:center;}
-.mx-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:grid;place-items:center;color:white;box-shadow:0 4px 10px rgba(15,23,42,0.18);} 
-.mx-dot.completed{background:#22c55e;} .mx-dot.ongoing{background:#3b82f6;} .mx-dot.pending{background:#9ca3af;}
-.mx-dot svg{width:14px;height:14px;}
-.mx-label{margin-top:8px;font-size:12px;font-weight:800;color:#0f172a;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* Timeline */
+.ax-track{--dot:28px;--n:7;position:relative;min-width:max(100%, calc(var(--n) * 132px));padding:16px 6px 10px 6px;border-radius:14px;border:1px solid rgba(29,78,216,0.18);background:rgba(219,234,254,0.38);} 
+.ax-line{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:32px;height:6px;background:#d1d5db;border-radius:999px;}
+.ax-linefill{position:absolute;left:calc(var(--dot)/2);top:32px;height:6px;background:#3b82f6;border-radius:999px;}
+.ax-items{display:flex;justify-content:space-between;gap:14px;position:relative;}
+.ax-item{flex:0 0 132px;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.ax-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:grid;place-items:center;color:#fff;box-shadow:0 4px 10px rgba(15,23,42,0.18);} 
+.ax-dot.completed{background:#22c55e;}
+.ax-dot.ongoing{background:#3b82f6;}
+.ax-dot.pending{background:#9ca3af;}
+.ax-dot svg{width:14px;height:14px;}
+.ax-label{margin-top:8px;font-size:12px;font-weight:900;color:#0f172a;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 
-/* Milestone list (accordion) */
-.mx-list{display:flex;flex-direction:column;gap:10px;}
-.mx-row{background:rgba(255,255,255,0.88);border:1px solid rgba(15,23,42,0.10);border-radius:14px;overflow:hidden;}
-.mx-rowhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 12px;cursor:pointer;}
-.mx-rowname{font-size:13px;font-weight:900;color:#0f172a;line-height:1.1;}
-.mx-rowmeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
-.mx-pill{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:900;border:1px solid transparent;}
-.mx-pill.completed{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
-.mx-pill.ongoing{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
-.mx-pill.pending{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
-.mx-pill.ontrack{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
-.mx-pill.delayed{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
-.mx-pill.unknown{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+/* List */
+.ax-controls{display:flex;gap:10px;align-items:center;margin:10px 0 10px 0;flex-wrap:wrap;}
+.ax-search{flex:1;min-width:160px;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;border:1px solid rgba(15,23,42,0.12);background:rgba(255,255,255,0.85);} 
+.ax-search input{border:none;outline:none;background:transparent;width:100%;font-size:12px;font-weight:700;color:#0f172a;}
+.ax-filters{display:flex;gap:6px;flex-wrap:wrap;}
+.ax-filter{padding:8px 10px;border-radius:999px;border:1px solid rgba(15,23,42,0.10);background:rgba(255,255,255,0.8);font-size:11px;font-weight:900;color:#0f172a;}
+.ax-filter.active{background:#0f172a;color:#fff;border-color:#0f172a;}
 
-.mx-panel{display:none;padding:0 12px 12px 12px;}
-.mx-panel.open{display:block;}
-.mx-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
-.mx-box{border-radius:12px;padding:10px;border:1px solid rgba(15,23,42,0.08);}
-.mx-box h6{font-size:10px;font-weight:900;letter-spacing:0.25px;text-transform:uppercase;margin:0 0 6px 0;}
-.mx-box p{margin:0;font-size:11px;line-height:1.35;color:#334155;}
-.mx-box.planned{background:#eff6ff;} .mx-box.planned h6{color:#1d4ed8;}
-.mx-box.actual{background:#ecfdf5;} .mx-box.actual h6{color:#047857;}
-.mx-box.owner{background:#fffbeb;} .mx-box.owner h6{color:#b45309;}
-.mx-note{margin-top:10px;font-size:11px;color:#475569;line-height:1.35;}
+.ax-list{display:flex;flex-direction:column;gap:10px;}
+.ax-row{background:rgba(255,255,255,0.92);border:1px solid rgba(15,23,42,0.10);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px;}
+.ax-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.ax-name{font-size:13px;font-weight:900;line-height:1.15;color:#0f172a;}
+.ax-sub{font-size:11px;color:#475569;font-weight:700;margin-top:4px;}
+.ax-pills{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.ax-pill{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:900;border:1px solid transparent;white-space:nowrap;}
+.ax-pill.completed{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.ax-pill.ongoing{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+.ax-pill.pending{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+.ax-pill.ontrack{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.ax-pill.delayed{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
+.ax-pill.unknown{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
 
-/* Mobile: single column detail blocks */
+.ax-actions{display:flex;gap:10px;}
+.ax-btn{flex:1;display:flex;align-items:center;justify-content:center;padding:10px 10px;border-radius:14px;border:1px solid rgba(15,23,42,0.10);background:#ffffff;font-size:12px;font-weight:900;color:#0f172a;}
+.ax-btn.primary{background:#1d4ed8;color:#fff;border-color:#1d4ed8;}
+
+/* Bottom sheet */
+.ax-overlay{position:fixed;inset:0;background:rgba(2,6,23,0.55);display:none;z-index:60;}
+.ax-overlay.open{display:block;}
+.ax-sheet{position:fixed;left:0;right:0;bottom:0;background:#ffffff;border-radius:18px 18px 0 0;transform:translateY(110%);transition:transform 220ms ease;z-index:61;max-height:86vh;overflow:auto;}
+.ax-sheet.open{transform:translateY(0);}
+.ax-sheethead{padding:12px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.ax-sheettitle{font-size:14px;font-weight:900;color:#0f172a;line-height:1.2;}
+.ax-close{border:none;background:#f1f5f9;color:#0f172a;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:900;}
+.ax-sheetbody{padding:14px;}
+.ax-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ax-box{border-radius:14px;padding:12px;border:1px solid rgba(15,23,42,0.08);}
+.ax-box h6{font-size:10px;font-weight:900;letter-spacing:0.25px;text-transform:uppercase;margin:0 0 6px 0;}
+.ax-box p{margin:0;font-size:12px;line-height:1.35;color:#334155;font-weight:700;}
+.ax-box.planned{background:#eff6ff;} .ax-box.planned h6{color:#1d4ed8;}
+.ax-box.actual{background:#ecfdf5;} .ax-box.actual h6{color:#047857;}
+.ax-box.owner{background:#fffbeb;} .ax-box.owner h6{color:#b45309;}
+.ax-note{margin-top:12px;color:#475569;font-size:12px;line-height:1.4;font-weight:700;}
+
 @media (max-width: 480px){
-  .mx-grid{grid-template-columns:1fr;}
-  .mx-item{flex-basis:120px;}
-  .mx-track{min-width:max(100%, calc(var(--n) * 120px));}
+  .ax-grid{grid-template-columns:1fr;}
+  .ax-item{flex-basis:120px;}
+  .ax-track{min-width:max(100%, calc(var(--n) * 120px));}
 }
 </style>
 
@@ -158,7 +179,7 @@
     <div class='max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between'>
       <div>
         <div class='text-lg font-extrabold'>Executive Board</div>
-        <div class='text-xs text-slate-400'>All published dashboards you can access — card view • Mobile UX v1 • Build 2026-01-26 17:01 IST</div>
+        <div class='text-xs text-slate-400'>All published dashboards you can access — card view • Advanced Mobile UX • Build 2026-01-26 17:08 IST</div>
       </div>
       <div class='flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center w-full sm:w-auto'>
         <div class='flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto'>
@@ -326,18 +347,17 @@ function countOpen(items){
 
 
 
-function mxToDate(v){ try{ return v? new Date(v): null; }catch(e){ return null; } }
-function mxFmtDate(v){
+function axToDate(v){ try{ return v? new Date(v): null; }catch(e){ return null; } }
+function axFmt(v){
   if(!v) return '-';
-  const d = mxToDate(v);
+  const d = axToDate(v);
   if(d && !isNaN(+d)) return d.toISOString().slice(0,10);
   return String(v);
 }
-function mxLabel(x){
+function axLabel(x){
   let s = String(x||'').trim();
   s = s.split('_').join(' ');
   s = s.split('-').join(' ');
-  // camelCase split without regex
   let out='';
   for(let i=0;i<s.length;i++){
     const ch=s[i];
@@ -351,152 +371,244 @@ function mxLabel(x){
   while(s.indexOf('  ')!==-1) s = s.split('  ').join(' ');
   return s.trim();
 }
-
-function mxState(m){
-  const done = !!mxToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+function axState(m){
+  const done = !!axToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
   if(done) return 'completed';
-  const started = !!mxToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+  const started = !!axToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
   return started ? 'ongoing' : 'pending';
 }
-
-function mxTrack(m){
-  const pEnd = mxToDate(m.endDate || m.plannedEnd || m.end);
-  const aEnd = mxToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+function axTrack(m){
+  const pEnd = axToDate(m.endDate || m.plannedEnd || m.end);
+  const aEnd = axToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
   const today = new Date();
   if(!pEnd || isNaN(+pEnd)) return {key:'unknown', label:'On Track'};
   if(aEnd && !isNaN(+aEnd)) return (aEnd <= pEnd) ? {key:'ontrack', label:'On Track'} : {key:'delayed', label:'Delayed'};
   return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
 }
 
-function buildMobileMilestoneUX(milestones){
+function buildAdvancedMilestoneUX(milestones){
   const list = Array.isArray(milestones) ? milestones : [];
   if(!list.length) return "<div class='text-sm text-slate-300'>No milestones</div>";
 
-  // progress fill to last completed
-  let lastCompleted = -1;
-  for(let i=0;i<list.length;i++){ if(mxState(list[i])==='completed') lastCompleted=i; }
-  const denom = Math.max(1, (list.length-1));
-  const fillPct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
-
-  // meta
-  const doneCount = lastCompleted < 0 ? 0 : (lastCompleted+1);
-  let current = '';
+  let lastCompleted=-1;
+  let counts={completed:0,ongoing:0,pending:0,delayed:0};
   for(let i=0;i<list.length;i++){
-    if(mxState(list[i])!=='completed'){
+    const st=axState(list[i]);
+    counts[st] = (counts[st]||0)+1;
+    if(st==='completed') lastCompleted=i;
+    const tr=axTrack(list[i]);
+    if(tr.key==='delayed') counts.delayed++;
+  }
+  const denom = Math.max(1,(list.length-1));
+  const fillPct = lastCompleted<0?0:Math.max(0,Math.min(100,(lastCompleted/denom)*100));
+  const doneCount = lastCompleted<0?0:(lastCompleted+1);
+
+  let current='';
+  for(let i=0;i<list.length;i++){
+    if(axState(list[i])!=='completed'){
       const raw = list[i].phase || list[i].Activity || list[i].name || ('Milestone ' + (i+1));
-      current = mxLabel(raw);
+      current = axLabel(raw);
       break;
     }
   }
-  const overallTrack = (function(){
-    // If any milestone delayed, show delayed, else on track
-    let delayed = false;
-    for(let i=0;i<list.length;i++){
-      const tr = mxTrack(list[i]);
-      if(tr.key==='delayed'){ delayed = true; break; }
-    }
-    return delayed ? {key:'bad', label:'Delayed'} : {key:'good', label:'On Track'};
-  })();
+  const overall = counts.delayed>0 ? {cls:'bad', label:'Delayed'} : {cls:'good', label:'On Track'};
 
   const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
     + '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
     + '</svg>';
 
   const trackStyle = "style=\"--n:" + list.length + ";\"";
-
-  const timelineItems = list.map((m,i)=>{
-    const st = mxState(m);
-    const raw = m.phase || m.Activity || m.name || ('Milestone ' + (i+1));
-    const label = esc(mxLabel(raw));
-    const icon = (st==='completed' || st==='ongoing') ? checkSvg : '';
-    return "<div class='mx-item'>"
-      + "<div class='mx-dot " + st + "'>" + icon + "</div>"
-      + "<div class='mx-label'>" + label + "</div>"
+  const timeline = list.map((m,i)=>{
+    const st=axState(m);
+    const raw=m.phase||m.Activity||m.name||('Milestone '+(i+1));
+    const label=esc(axLabel(raw));
+    const icon = (st==='completed') ? checkSvg : (st==='ongoing' ? checkSvg : '');
+    return "<div class='ax-item'>"
+      + "<div class='ax-dot " + st + "'>" + icon + "</div>"
+      + "<div class='ax-label'>" + label + "</div>"
       + "</div>";
   }).join('');
 
-  const listItems = list.map((m,i)=>{
-    const raw = m.phase || m.Activity || m.name || ('Milestone ' + (i+1));
-    const name = esc(mxLabel(raw));
-    const st = mxState(m);
-    const tr = mxTrack(m);
-    const pS = mxFmtDate(m.startDate || m.plannedStart || m.start);
-    const pE = mxFmtDate(m.endDate || m.plannedEnd || m.end);
-    const aS = mxFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-    const aE = mxFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-    const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
-    const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || '');
+  const rows = list.map((m,i)=>{
+    const raw=m.phase||m.Activity||m.name||('Milestone '+(i+1));
+    const name=esc(axLabel(raw));
+    const st=axState(m);
+    const tr=axTrack(m);
+    const pS=axFmt(m.startDate||m.plannedStart||m.start);
+    const pE=axFmt(m.endDate||m.plannedEnd||m.end);
+    const aS=axFmt(m.actualStartDate||m.actualStart||m.startedAt||m.startActual);
+    const aE=axFmt(m.actualEndDate||m.actualEnd||m.completedAt||m.doneDate);
+    const owner=esc(m.owner||m.Owner||m.ownerName||m.ownerId||'-');
+    const note=esc(m.note||m.notes||m.remark||m.remarks||m.risk||'');
 
-    return "<div class='mx-row' data-mx-row='1'>"
-      + "<div class='mx-rowhead' data-mx-toggle='1'>"
-      +   "<div class='mx-rowname'>" + name + "</div>"
-      +   "<div class='mx-rowmeta'>"
-      +     "<span class='mx-pill " + st + "'>" + (st==='completed'?'Completed':(st==='ongoing'?'In-Progress':'Planned')) + "</span>"
-      +     "<span class='mx-pill " + tr.key + "'>" + tr.label + "</span>"
+    const stLabel = (st==='completed')?'Completed':(st==='ongoing'?'In-Progress':'Planned');
+
+    return "<div class='ax-row' data-ax='row' data-name='"+name.toLowerCase()+"' data-status='"+st+"' data-track='"+tr.key+"' "
+      + "data-ps='"+esc(pS)+"' data-pe='"+esc(pE)+"' data-as='"+esc(aS)+"' data-ae='"+esc(aE)+"' data-owner='"+owner+"' data-note='"+note+"' data-title='"+name+"'>"
+      + "<div class='ax-top'>"
+      +   "<div>"
+      +     "<div class='ax-name'>" + name + "</div>"
+      +     "<div class='ax-sub'>Planned: " + esc(pS) + " → " + esc(pE) + "</div>"
+      +   "</div>"
+      +   "<div class='ax-pills'>"
+      +     "<span class='ax-pill " + st + "'>" + stLabel + "</span>"
+      +     "<span class='ax-pill " + tr.key + "'>" + tr.label + "</span>"
       +   "</div>"
       + "</div>"
-      + "<div class='mx-panel'>"
-      +   "<div class='mx-grid'>"
-      +     "<div class='mx-box planned'><h6>Planned</h6><p>S: " + esc(pS) + "<br/>E: " + esc(pE) + "</p></div>"
-      +     "<div class='mx-box actual'><h6>Actual</h6><p>S: " + esc(aS) + "<br/>E: " + esc(aE) + "</p></div>"
-      +     "<div class='mx-box owner' style='grid-column: 1 / -1;'><h6>Owner</h6><p>" + owner + "</p></div>"
-      +   "</div>"
-      +   (note ? ("<div class='mx-note'><b>Note:</b> " + note + "</div>") : "")
+      + "<div class='ax-actions'>"
+      +   "<button type='button' class='ax-btn' data-ax-open='1'>View details</button>"
+      +   "<button type='button' class='ax-btn primary' data-ax-open='1'>Open</button>"
       + "</div>"
       + "</div>";
   }).join('');
 
-  // Tabs: Overview (timeline), Milestones (accordion)
-  return "<div class='mx-card' data-mx-root='1'>"
-    + "<div class='mx-title'>Project Milestones - Application Tracker</div>"
-    + "<div class='mx-meta'>"
-    +   "<div class='mx-kpis'>"
-    +     "<span class='mx-chip neu'>Completed " + doneCount + "/" + list.length + "</span>"
-    +     (current ? ("<span class='mx-chip neu'>Current: " + esc(current) + "</span>") : "")
-    +     "<span class='mx-chip " + (overallTrack.key==='good'?'good':'bad') + "'>" + overallTrack.label + "</span>"
+  return "<div class='ax-card' data-ax-root='1'>"
+    + "<div class='ax-head'>"
+    +   "<div class='ax-title'>Project Milestones - Application Tracker</div>"
+    +   "<div class='ax-kpis'>"
+    +     "<span class='ax-kpi neu'>Completed " + doneCount + "/" + list.length + "</span>"
+    +     (current ? ("<span class='ax-kpi gray'>Current: " + esc(current) + "</span>") : "")
+    +     "<span class='ax-kpi " + overall.cls + "'>" + overall.label + "</span>"
+    +   "</div>"
+    +   "<div class='ax-tabs'>"
+    +     "<button type='button' class='ax-tab active' data-ax-tab='overview'>Overview</button>"
+    +     "<button type='button' class='ax-tab' data-ax-tab='milestones'>Milestones</button>"
     +   "</div>"
     + "</div>"
-    + "<div class='mx-tabs'>"
-    +   "<button type='button' class='mx-tab active' data-mx-tab='overview'>Overview</button>"
-    +   "<button type='button' class='mx-tab' data-mx-tab='milestones'>Milestones</button>"
-    + "</div>"
 
-    + "<div data-mx-panel='overview'>"
-    +   "<div class='mx-scroll'>"
-    +     "<div class='mx-track' " + trackStyle + ">"
-    +       "<div class='mx-line'></div>"
-    +       "<div class='mx-linefill' style='width:" + fillPct + "%'></div>"
-    +       "<div class='mx-items'>" + timelineItems + "</div>"
+    + "<div data-ax-panel='overview'>"
+    +   "<div class='ax-scroll'>"
+    +     "<div class='ax-track' " + trackStyle + ">"
+    +       "<div class='ax-line'></div>"
+    +       "<div class='ax-linefill' style='width:" + fillPct + "%'></div>"
+    +       "<div class='ax-items'>" + timeline + "</div>"
     +     "</div>"
     +   "</div>"
     + "</div>"
 
-    + "<div data-mx-panel='milestones' style='display:none'>"
-    +   "<div class='mx-list'>" + listItems + "</div>"
+    + "<div data-ax-panel='milestones' style='display:none'>"
+    +   "<div class='ax-controls'>"
+    +     "<div class='ax-search'><span style='font-weight:900;color:#64748b;'>Search</span><input placeholder='Milestone…' data-ax-search='1'/></div>"
+    +     "<div class='ax-filters'>"
+    +       "<button type='button' class='ax-filter active' data-ax-filter='all'>All</button>"
+    +       "<button type='button' class='ax-filter' data-ax-filter='delayed'>Delayed</button>"
+    +       "<button type='button' class='ax-filter' data-ax-filter='ongoing'>In-Progress</button>"
+    +       "<button type='button' class='ax-filter' data-ax-filter='completed'>Completed</button>"
+    +     "</div>"
+    +   "</div>"
+    +   "<div class='ax-list'>" + rows + "</div>"
+    + "</div>"
+
+    + "<div class='ax-overlay' data-ax-overlay='1'></div>"
+    + "<div class='ax-sheet' data-ax-sheet='1'>"
+    +   "<div class='ax-sheethead'>"
+    +     "<div class='ax-sheettitle' data-ax-sheettitle='1'>Details</div>"
+    +     "<button type='button' class='ax-close' data-ax-close='1'>Close</button>"
+    +   "</div>"
+    +   "<div class='ax-sheetbody'>"
+    +     "<div class='ax-grid'>"
+    +       "<div class='ax-box planned'><h6>Planned</h6><p data-ax-planned='1'>-</p></div>"
+    +       "<div class='ax-box actual'><h6>Actual</h6><p data-ax-actual='1'>-</p></div>"
+    +       "<div class='ax-box owner' style='grid-column:1/-1;'><h6>Owner</h6><p data-ax-owner='1'>-</p></div>"
+    +     "</div>"
+    +     "<div class='ax-note' data-ax-note='1' style='display:none'></div>"
+    +   "</div>"
     + "</div>"
     + "</div>";
 }
 
-function wireMobileMilestoneUX(root){
-  if(!root || root.__mxWired) return;
-  root.__mxWired = true;
+function wireAdvancedMilestoneUX(root){
+  if(!root || root.__axWired) return;
+  root.__axWired = true;
+
+  const overlay = root.querySelector('[data-ax-overlay="1"]');
+  const sheet = root.querySelector('[data-ax-sheet="1"]');
+  const closeBtn = root.querySelector('[data-ax-close="1"]');
+
+  function openSheet(row){
+    if(!row) return;
+    const title = row.getAttribute('data-title') || 'Details';
+    const ps = row.getAttribute('data-ps') || '-';
+    const pe = row.getAttribute('data-pe') || '-';
+    const asd = row.getAttribute('data-as') || '-';
+    const ae = row.getAttribute('data-ae') || '-';
+    const owner = row.getAttribute('data-owner') || '-';
+    const note = row.getAttribute('data-note') || '';
+
+    root.querySelector('[data-ax-sheettitle="1"]').textContent = title;
+    root.querySelector('[data-ax-planned="1"]').innerHTML = 'S: ' + esc(ps) + '<br/>E: ' + esc(pe);
+    root.querySelector('[data-ax-actual="1"]').innerHTML = 'S: ' + esc(asd) + '<br/>E: ' + esc(ae);
+    root.querySelector('[data-ax-owner="1"]').textContent = owner;
+
+    const noteEl = root.querySelector('[data-ax-note="1"]');
+    if(note && note.trim()){
+      noteEl.style.display = '';
+      noteEl.textContent = 'Note: ' + note;
+    }else{
+      noteEl.style.display = 'none';
+      noteEl.textContent = '';
+    }
+
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSheet(){
+    overlay.classList.remove('open');
+    sheet.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  overlay && overlay.addEventListener('click', closeSheet);
+  closeBtn && closeBtn.addEventListener('click', closeSheet);
+
   root.addEventListener('click', (e)=>{
-    const tabBtn = e.target.closest && e.target.closest('[data-mx-tab]');
-    if(tabBtn){
-      const key = tabBtn.getAttribute('data-mx-tab');
-      root.querySelectorAll('.mx-tab').forEach(b=>b.classList.toggle('active', b===tabBtn));
-      root.querySelectorAll('[data-mx-panel]').forEach(p=>{
-        p.style.display = (p.getAttribute('data-mx-panel')===key) ? '' : 'none';
+    const tab = e.target.closest && e.target.closest('[data-ax-tab]');
+    if(tab){
+      const key = tab.getAttribute('data-ax-tab');
+      root.querySelectorAll('.ax-tab').forEach(b=>b.classList.toggle('active', b===tab));
+      root.querySelectorAll('[data-ax-panel]').forEach(p=>{
+        p.style.display = (p.getAttribute('data-ax-panel')===key) ? '' : 'none';
       });
       return;
     }
-    const tog = e.target.closest && e.target.closest('[data-mx-toggle]');
-    if(tog){
-      const row = tog.closest('.mx-row');
-      const panel = row && row.querySelector('.mx-panel');
-      if(panel){ panel.classList.toggle('open'); }
+
+    const openBtn = e.target.closest && e.target.closest('[data-ax-open]');
+    if(openBtn){
+      const row = e.target.closest('[data-ax="row"]');
+      openSheet(row);
+      return;
+    }
+
+    const fbtn = e.target.closest && e.target.closest('[data-ax-filter]');
+    if(fbtn){
+      const key = fbtn.getAttribute('data-ax-filter');
+      root.querySelectorAll('.ax-filter').forEach(b=>b.classList.toggle('active', b===fbtn));
+      root.setAttribute('data-ax-filter-active', key);
+      applyFilter(root);
     }
   });
+
+  const search = root.querySelector('[data-ax-search="1"]');
+  if(search){
+    search.addEventListener('input', ()=>applyFilter(root));
+  }
+
+  function applyFilter(rootEl){
+    const q = (rootEl.querySelector('[data-ax-search="1"]').value||'').trim().toLowerCase();
+    const flt = rootEl.getAttribute('data-ax-filter-active') || 'all';
+    rootEl.querySelectorAll('[data-ax="row"]').forEach(row=>{
+      const name = (row.getAttribute('data-name')||'');
+      const st = row.getAttribute('data-status')||'';
+      const tr = row.getAttribute('data-track')||'';
+      let ok = (!q || name.indexOf(q) !== -1);
+      if(flt==='delayed') ok = ok && (tr==='delayed');
+      else if(flt==='ongoing') ok = ok && (st==='ongoing');
+      else if(flt==='completed') ok = ok && (st==='completed');
+      row.style.display = ok ? '' : 'none';
+    });
+  }
 }
 
 function renderDetailsFromState(state){
@@ -507,8 +619,8 @@ function renderDetailsFromState(state){
 
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
-  let mxHtml = '';
-  try{ mxHtml = buildMobileMilestoneUX(milestones); }catch(e){ mxHtml=''; }
+  let axHtml = '';
+  try{ axHtml = buildAdvancedMilestoneUX(milestones); }catch(e){ axHtml=''; }
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
@@ -616,6 +728,8 @@ function renderDetailsFromState(state){
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
+  ${axHtml}
+
         <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
@@ -681,7 +795,7 @@ function wireExecBoardToggles(){
       try{
         const st = await fetchDashState(dash);
         panel.innerHTML = renderDetailsFromState(st);
-      try{ const r = panel.querySelector('[data-mx-root="1"]'); if(r) wireMobileMilestoneUX(r); }catch(e){}
+      try{ const r = panel.querySelector('[data-ax-root="1"]'); if(r) wireAdvancedMilestoneUX(r); }catch(e){}
       }catch(err){
         panel.innerHTML = `<div class='text-sm text-red-200 bg-red-400/10 border border-red-400/30 rounded-xl p-3'>Preview failed: ${esc(err.message || String(err))}</div>`;
       }
