@@ -47,62 +47,67 @@
         .delete-btn { opacity: 0; transition: opacity 0.2s; }
     
 
-/* === Project Milestones - Application Tracker (combined, responsive) === */
-.trk-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;color:#0f172a;}
-.trk-title{font-weight:800;font-size:16px;margin:0 0 10px 0;color:#0f172a;}
-.trk-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
-.trk-scroll::-webkit-scrollbar{height:8px;}
-.trk-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
-.trk-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
-.trk-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
+/* === Project Milestones - Application Tracker (Clean Mobile UX) === */
+.mx-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;color:#0f172a;}
+.mx-title{font-weight:800;font-size:16px;margin:0 0 10px 0;color:#0f172a;}
+.mx-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:-2px 0 10px 0;}
+.mx-kpis{display:flex;gap:8px;flex-wrap:wrap;}
+.mx-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid rgba(15,23,42,0.08);background:rgba(255,255,255,0.7);}
+.mx-chip.good{background:#dcfce7;border-color:#bbf7d0;color:#166534;}
+.mx-chip.bad{background:#fee2e2;border-color:#fecaca;color:#991b1b;}
+.mx-chip.neu{background:#e0f2fe;border-color:#bae6fd;color:#075985;}
 
-/* Timeline */
-.trk-track{--dot:28px;--n:7;position:relative;min-width:max(100%, calc(var(--n) * 140px));padding:18px 6px 10px 6px;border-radius:12px;border:1px solid rgba(29,78,216,0.20);background:rgba(219,234,254,0.35);}
-.trk-line{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:34px;height:6px;background:#d1d5db;border-radius:999px;}
-.trk-linefill{position:absolute;left:calc(var(--dot)/2);top:34px;height:6px;background:#3b82f6;border-radius:999px;}
-.trk-items{display:flex;justify-content:space-between;gap:16px;position:relative;}
-.trk-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;}
-.trk-item.fixed{flex:0 0 140px;}
-.trk-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:grid;place-items:center;color:white;box-shadow:0 4px 10px rgba(15,23,42,0.18);}
-.trk-dot.completed{background:#22c55e;}
-.trk-dot.ongoing{background:#3b82f6;}
-.trk-dot.pending{background:#9ca3af;}
-.trk-dot svg{width:14px;height:14px;}
-.trk-label{margin-top:8px;font-size:12px;font-weight:700;color:#0f172a;line-height:1.15;max-width:140px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.mx-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px 0;}
+.mx-tab{flex:1;min-width:90px;display:flex;align-items:center;justify-content:center;padding:8px 10px;border-radius:12px;font-size:12px;font-weight:900;border:1px solid rgba(15,23,42,0.10);background:rgba(255,255,255,0.75);color:#0f172a;}
+.mx-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:white;}
 
-/* Embedded status cards row (no separate title) */
-.trk-cards{margin-top:12px;}
-.trk-cards .row{display:flex;gap:12px;align-items:stretch;}
-.trk-cards .card{flex:0 0 240px;max-width:240px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 0 rgba(15,23,42,0.06);padding:10px 10px 12px;}
-.trk-cards .head{font-weight:800;font-size:12px;color:#0f172a;line-height:1.2;margin-bottom:8px;min-height:32px;}
-.trk-cards .box{border-radius:8px;padding:8px;margin-bottom:8px;border:1px solid rgba(15,23,42,0.06);}
-.trk-cards .box .k{font-size:10px;font-weight:800;letter-spacing:0.25px;text-transform:uppercase;margin-bottom:4px;}
-.trk-cards .box .v{font-size:11px;color:#334155;line-height:1.25;}
-.trk-cards .planned{background:#eff6ff;}
-.trk-cards .planned .k{color:#1d4ed8;}
-.trk-cards .actual{background:#ecfdf5;}
-.trk-cards .actual .k{color:#047857;}
-.trk-cards .owner{background:#fffbeb;}
-.trk-cards .owner .k{color:#b45309;}
-.trk-cards .footer{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
-.trk-cards .line{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#334155;}
-.trk-pill{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;line-height:18px;white-space:nowrap;border:1px solid transparent;}
-.trk-pill.completed{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
-.trk-pill.ongoing{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
-.trk-pill.pending{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
-.trk-trackpill{width:100%;display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid transparent;}
-.trk-trackpill.ontrack{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
-.trk-trackpill.delayed{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
-.trk-trackpill.unknown{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+/* Timeline (top) */
+.mx-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+.mx-scroll::-webkit-scrollbar{height:8px;}
+.mx-scroll::-webkit-scrollbar-track{background:rgba(15,23,42,0.08);border-radius:999px;}
+.mx-scroll::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.45);border-radius:999px;}
+.mx-scroll::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,0.65);}
 
-@media (max-width: 640px){
-  .trk-card{padding:12px;}
-  .trk-title{font-size:15px;}
-  .trk-track{min-width:calc(var(--n) * 128px);} 
-  .trk-item.fixed{flex-basis:128px;}
-  .trk-label{max-width:128px;font-size:12px;}
-  .trk-cards .card{flex-basis:86vw;max-width:86vw;}
-  .trk-cards .head{font-size:13px;min-height:auto;}
+.mx-track{--dot:28px;--n:7;position:relative;min-width:max(100%, calc(var(--n) * 132px));padding:16px 6px 10px 6px;border-radius:12px;border:1px solid rgba(29,78,216,0.20);background:rgba(219,234,254,0.35);} 
+.mx-line{position:absolute;left:calc(var(--dot)/2);right:calc(var(--dot)/2);top:32px;height:6px;background:#d1d5db;border-radius:999px;}
+.mx-linefill{position:absolute;left:calc(var(--dot)/2);top:32px;height:6px;background:#3b82f6;border-radius:999px;}
+.mx-items{display:flex;justify-content:space-between;gap:14px;position:relative;}
+.mx-item{flex:0 0 132px;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.mx-dot{width:var(--dot);height:var(--dot);border-radius:999px;display:grid;place-items:center;color:white;box-shadow:0 4px 10px rgba(15,23,42,0.18);} 
+.mx-dot.completed{background:#22c55e;} .mx-dot.ongoing{background:#3b82f6;} .mx-dot.pending{background:#9ca3af;}
+.mx-dot svg{width:14px;height:14px;}
+.mx-label{margin-top:8px;font-size:12px;font-weight:800;color:#0f172a;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+/* Milestone list (accordion) */
+.mx-list{display:flex;flex-direction:column;gap:10px;}
+.mx-row{background:rgba(255,255,255,0.88);border:1px solid rgba(15,23,42,0.10);border-radius:14px;overflow:hidden;}
+.mx-rowhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 12px;cursor:pointer;}
+.mx-rowname{font-size:13px;font-weight:900;color:#0f172a;line-height:1.1;}
+.mx-rowmeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.mx-pill{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:900;border:1px solid transparent;}
+.mx-pill.completed{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.mx-pill.ongoing{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+.mx-pill.pending{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+.mx-pill.ontrack{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.mx-pill.delayed{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
+.mx-pill.unknown{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+
+.mx-panel{display:none;padding:0 12px 12px 12px;}
+.mx-panel.open{display:block;}
+.mx-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.mx-box{border-radius:12px;padding:10px;border:1px solid rgba(15,23,42,0.08);}
+.mx-box h6{font-size:10px;font-weight:900;letter-spacing:0.25px;text-transform:uppercase;margin:0 0 6px 0;}
+.mx-box p{margin:0;font-size:11px;line-height:1.35;color:#334155;}
+.mx-box.planned{background:#eff6ff;} .mx-box.planned h6{color:#1d4ed8;}
+.mx-box.actual{background:#ecfdf5;} .mx-box.actual h6{color:#047857;}
+.mx-box.owner{background:#fffbeb;} .mx-box.owner h6{color:#b45309;}
+.mx-note{margin-top:10px;font-size:11px;color:#475569;line-height:1.35;}
+
+/* Mobile: single column detail blocks */
+@media (max-width: 480px){
+  .mx-grid{grid-template-columns:1fr;}
+  .mx-item{flex-basis:120px;}
+  .mx-track{min-width:max(100%, calc(var(--n) * 120px));}
 }
 </style>
 
@@ -153,7 +158,7 @@
     <div class='max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between'>
       <div>
         <div class='text-lg font-extrabold'>Executive Board</div>
-        <div class='text-xs text-slate-400'>All published dashboards you can access — card view • Build 2026-01-26 13:03 IST</div>
+        <div class='text-xs text-slate-400'>All published dashboards you can access — card view • Mobile UX v1 • Build 2026-01-26 17:01 IST</div>
       </div>
       <div class='flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center w-full sm:w-auto'>
         <div class='flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto'>
@@ -189,7 +194,8 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function card(d){
   const dashId = String(d.id || '');
   const name = esc(d.name || d.id || 'Dashboard');
@@ -320,17 +326,18 @@ function countOpen(items){
 
 
 
-function _trkToDate(v){ try{ return v? new Date(v): null; }catch(e){ return null; } }
-function _trkFmtDate(v){
+function mxToDate(v){ try{ return v? new Date(v): null; }catch(e){ return null; } }
+function mxFmtDate(v){
   if(!v) return '-';
-  const d = _trkToDate(v);
+  const d = mxToDate(v);
   if(d && !isNaN(+d)) return d.toISOString().slice(0,10);
   return String(v);
 }
-function _trkPrettify(x){
+function mxLabel(x){
   let s = String(x||'').trim();
   s = s.split('_').join(' ');
   s = s.split('-').join(' ');
+  // camelCase split without regex
   let out='';
   for(let i=0;i<s.length;i++){
     const ch=s[i];
@@ -345,126 +352,153 @@ function _trkPrettify(x){
   return s.trim();
 }
 
-function buildMilestoneTrackerCombined(milestones){
+function mxState(m){
+  const done = !!mxToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+  if(done) return 'completed';
+  const started = !!mxToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+  return started ? 'ongoing' : 'pending';
+}
+
+function mxTrack(m){
+  const pEnd = mxToDate(m.endDate || m.plannedEnd || m.end);
+  const aEnd = mxToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
+  const today = new Date();
+  if(!pEnd || isNaN(+pEnd)) return {key:'unknown', label:'On Track'};
+  if(aEnd && !isNaN(+aEnd)) return (aEnd <= pEnd) ? {key:'ontrack', label:'On Track'} : {key:'delayed', label:'Delayed'};
+  return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
+}
+
+function buildMobileMilestoneUX(milestones){
   const list = Array.isArray(milestones) ? milestones : [];
   if(!list.length) return "<div class='text-sm text-slate-300'>No milestones</div>";
 
-  const isDone = (m)=> !!_trkToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-  const isStarted = (m)=> !isDone(m) && !!_trkToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
-  const stateOf = (m)=> isDone(m) ? 'completed' : (isStarted(m) ? 'ongoing' : 'pending');
-
-  // Progress fill: last completed; if none, first ongoing
-  let progressIndex = -1;
-  for(let i=0;i<list.length;i++) if(stateOf(list[i])==='completed') progressIndex=i;
-  if(progressIndex < 0){
-    for(let i=0;i<list.length;i++) if(stateOf(list[i])==='ongoing'){ progressIndex=i; break; }
-  }
+  // progress fill to last completed
+  let lastCompleted = -1;
+  for(let i=0;i<list.length;i++){ if(mxState(list[i])==='completed') lastCompleted=i; }
   const denom = Math.max(1, (list.length-1));
-  const fillPct = progressIndex < 0 ? 0 : Math.max(0, Math.min(100, (progressIndex/denom)*100));
+  const fillPct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
 
-  const checkSvg = "<svg viewBox='0 0 24 24' fill='none' aria-hidden='true' class='w-4 h-4'>"+
-    "<path d='M20 6L9 17l-5-5' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+  // meta
+  const doneCount = lastCompleted < 0 ? 0 : (lastCompleted+1);
+  let current = '';
+  for(let i=0;i<list.length;i++){
+    if(mxState(list[i])!=='completed'){
+      const raw = list[i].phase || list[i].Activity || list[i].name || ('Milestone ' + (i+1));
+      current = mxLabel(raw);
+      break;
+    }
+  }
+  const overallTrack = (function(){
+    // If any milestone delayed, show delayed, else on track
+    let delayed = false;
+    for(let i=0;i<list.length;i++){
+      const tr = mxTrack(list[i]);
+      if(tr.key==='delayed'){ delayed = true; break; }
+    }
+    return delayed ? {key:'bad', label:'Delayed'} : {key:'good', label:'On Track'};
+  })();
 
-  function labelOf(m,i){
-    const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
-    return _trkPrettify(raw);
-  }
-  function statusOf(m){
-    if(isDone(m)) return {key:'completed', label:'Completed'};
-    if(isStarted(m)) return {key:'ongoing', label:'In-Progress'};
-    return {key:'pending', label:'Planned'};
-  }
-  function trackOf(m){
-    const pEnd = _trkToDate(m.endDate || m.plannedEnd || m.end);
-    const aEnd = _trkToDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
-    const today = new Date();
-    if(!pEnd || isNaN(+pEnd)) return {key:'unknown', label:'On Track'};
-    if(aEnd && !isNaN(+aEnd)) return (aEnd <= pEnd) ? {key:'ontrack', label:'On Track'} : {key:'delayed', label:'Delayed'};
-    return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
-  }
+  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '</svg>';
 
-  // Timeline
-  const timeline = list.map((m,i)=>{
-    const st = stateOf(m);
-    const dotCls = (st==='completed') ? 'bg-emerald-500' : (st==='ongoing' ? 'bg-blue-600' : 'bg-slate-300');
-    const icon = (st==='completed' || st==='ongoing') ? checkSvg : "";
-    return "<div class='flex-1 min-w-[90px] text-center'>"+
-      "<div class='mx-auto w-7 h-7 rounded-full text-white flex items-center justify-center shadow-sm "+dotCls+"'>"+icon+"</div>"+
-      "<div class='mt-2 text-[10px] leading-tight font-semibold text-slate-700'>"+esc(labelOf(m,i))+"</div>"+
-    "</div>";
+  const trackStyle = "style=\"--n:" + list.length + ";\"";
+
+  const timelineItems = list.map((m,i)=>{
+    const st = mxState(m);
+    const raw = m.phase || m.Activity || m.name || ('Milestone ' + (i+1));
+    const label = esc(mxLabel(raw));
+    const icon = (st==='completed' || st==='ongoing') ? checkSvg : '';
+    return "<div class='mx-item'>"
+      + "<div class='mx-dot " + st + "'>" + icon + "</div>"
+      + "<div class='mx-label'>" + label + "</div>"
+      + "</div>";
   }).join('');
 
-  // Small tile cards (for vertical scroll). Note: return a *tile* without fixed width.
-  const cards = list.map((m,i)=>{
-    const name = esc(labelOf(m,i));
-    const pS = esc(_trkFmtDate(m.startDate || m.plannedStart || m.start));
-    const pE = esc(_trkFmtDate(m.endDate || m.plannedEnd || m.end));
-    const aS = esc(_trkFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual));
-    const aE = esc(_trkFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate));
+  const listItems = list.map((m,i)=>{
+    const raw = m.phase || m.Activity || m.name || ('Milestone ' + (i+1));
+    const name = esc(mxLabel(raw));
+    const st = mxState(m);
+    const tr = mxTrack(m);
+    const pS = mxFmtDate(m.startDate || m.plannedStart || m.start);
+    const pE = mxFmtDate(m.endDate || m.plannedEnd || m.end);
+    const aS = mxFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+    const aE = mxFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
     const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
-    const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
+    const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || '');
 
-    const st = statusOf(m);
-    const tr = trackOf(m);
-
-    const statusPill = (st.key==='completed')
-      ? "<span class='px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200'>Completed</span>"
-      : (st.key==='ongoing')
-        ? "<span class='px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-blue-100 text-blue-700 border border-blue-200'>In-Progress</span>"
-        : "<span class='px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200'>Planned</span>";
-
-    const trackPill = (tr.key==='delayed')
-      ? "<div class='w-full text-center px-2 py-1 rounded-full text-[9px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200'>Delayed</div>"
-      : "<div class='w-full text-center px-2 py-1 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200'>On Track</div>";
-
-    const noteHtml = note ? ("<div class='mt-1 text-[9px] text-slate-500 line-clamp-2'>"+note+"</div>") : '';
-
-    return "<div class='rounded-lg border border-slate-200 bg-white shadow-sm p-2'>"+
-      "<div class='text-[10px] font-extrabold text-slate-800 mb-1 line-clamp-2'>"+name+"</div>"+
-      "<div class='rounded-md bg-blue-50 border border-blue-100 p-1.5 mb-1.5'>"+
-        "<div class='text-[8px] font-extrabold text-blue-700 uppercase'>Planned</div>"+
-        "<div class='mt-0.5 text-[9px] text-slate-700'>S: "+pS+"<br/>E: "+pE+"</div>"+
-      "</div>"+
-      "<div class='rounded-md bg-emerald-50 border border-emerald-100 p-1.5 mb-1.5'>"+
-        "<div class='text-[8px] font-extrabold text-emerald-700 uppercase'>Actual</div>"+
-        "<div class='mt-0.5 text-[9px] text-slate-700'>S: "+aS+"<br/>E: "+aE+"</div>"+
-      "</div>"+
-      "<div class='rounded-md bg-amber-50 border border-amber-100 p-1.5 mb-1.5'>"+
-        "<div class='text-[8px] font-extrabold text-amber-700 uppercase'>Owner</div>"+
-        "<div class='mt-0.5 text-[9px] text-slate-700'>"+owner+noteHtml+"</div>"+
-      "</div>"+
-      "<div class='flex items-center justify-between gap-2'>"+
-        "<div class='text-[9px] text-slate-600'>Status</div>"+statusPill+
-      "</div>"+
-      "<div class='mt-1.5'>"+trackPill+"</div>"+
-    "</div>";
+    return "<div class='mx-row' data-mx-row='1'>"
+      + "<div class='mx-rowhead' data-mx-toggle='1'>"
+      +   "<div class='mx-rowname'>" + name + "</div>"
+      +   "<div class='mx-rowmeta'>"
+      +     "<span class='mx-pill " + st + "'>" + (st==='completed'?'Completed':(st==='ongoing'?'In-Progress':'Planned')) + "</span>"
+      +     "<span class='mx-pill " + tr.key + "'>" + tr.label + "</span>"
+      +   "</div>"
+      + "</div>"
+      + "<div class='mx-panel'>"
+      +   "<div class='mx-grid'>"
+      +     "<div class='mx-box planned'><h6>Planned</h6><p>S: " + esc(pS) + "<br/>E: " + esc(pE) + "</p></div>"
+      +     "<div class='mx-box actual'><h6>Actual</h6><p>S: " + esc(aS) + "<br/>E: " + esc(aE) + "</p></div>"
+      +     "<div class='mx-box owner' style='grid-column: 1 / -1;'><h6>Owner</h6><p>" + owner + "</p></div>"
+      +   "</div>"
+      +   (note ? ("<div class='mx-note'><b>Note:</b> " + note + "</div>") : "")
+      + "</div>"
+      + "</div>";
   }).join('');
 
-  // Return UI
-  return "<div class='rounded-2xl border border-blue-200 bg-white text-slate-900 p-4'>"+
-    "<div class='text-sm sm:text-base font-extrabold text-slate-800'>Project Milestones - Application Tracker</div>"+
-    "<div class='mt-3 rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-white p-4 sm:p-6 overflow-x-auto'>"+
-      "<div class='relative min-w-[720px] px-6'>"+
-        "<div class='absolute left-6 right-6 top-3 h-1 bg-slate-200 rounded-full'></div>"+
-        "<div class='absolute left-6 top-3 h-1 bg-blue-500 rounded-full' style='width:"+fillPct+"%'></div>"+
-        "<div class='relative flex justify-between gap-4'>"+timeline+"</div>"+
-      "</div>"+
-    "</div>"+
+  // Tabs: Overview (timeline), Milestones (accordion)
+  return "<div class='mx-card' data-mx-root='1'>"
+    + "<div class='mx-title'>Project Milestones - Application Tracker</div>"
+    + "<div class='mx-meta'>"
+    +   "<div class='mx-kpis'>"
+    +     "<span class='mx-chip neu'>Completed " + doneCount + "/" + list.length + "</span>"
+    +     (current ? ("<span class='mx-chip neu'>Current: " + esc(current) + "</span>") : "")
+    +     "<span class='mx-chip " + (overallTrack.key==='good'?'good':'bad') + "'>" + overallTrack.label + "</span>"
+    +   "</div>"
+    + "</div>"
+    + "<div class='mx-tabs'>"
+    +   "<button type='button' class='mx-tab active' data-mx-tab='overview'>Overview</button>"
+    +   "<button type='button' class='mx-tab' data-mx-tab='milestones'>Milestones</button>"
+    + "</div>"
 
-    // Application Tracker Status toggle (default hidden)
-    "<div class='mt-4'>"+
-      "<button type='button' data-inner-toggle='apptrk' class='w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50'>"+
-        "<span class='text-[11px] font-bold text-slate-700'>Application Tracker Status (Auto-calculated)</span>"+
-        "<span class='text-slate-500 text-xs'>Show/Hide</span>"+
-      "</button>"+
-      "<div data-inner-panel='apptrk' class='hidden mt-3'>"+
-        "<div class='max-h-80 overflow-y-auto pr-1'>"+
-          "<div class='grid grid-cols-1 sm:grid-cols-2 gap-2'>"+cards+"</div>"+
-        "</div>"+
-      "</div>"+
-    "</div>"+
-  "</div>";
+    + "<div data-mx-panel='overview'>"
+    +   "<div class='mx-scroll'>"
+    +     "<div class='mx-track' " + trackStyle + ">"
+    +       "<div class='mx-line'></div>"
+    +       "<div class='mx-linefill' style='width:" + fillPct + "%'></div>"
+    +       "<div class='mx-items'>" + timelineItems + "</div>"
+    +     "</div>"
+    +   "</div>"
+    + "</div>"
+
+    + "<div data-mx-panel='milestones' style='display:none'>"
+    +   "<div class='mx-list'>" + listItems + "</div>"
+    + "</div>"
+    + "</div>";
 }
+
+function wireMobileMilestoneUX(root){
+  if(!root || root.__mxWired) return;
+  root.__mxWired = true;
+  root.addEventListener('click', (e)=>{
+    const tabBtn = e.target.closest && e.target.closest('[data-mx-tab]');
+    if(tabBtn){
+      const key = tabBtn.getAttribute('data-mx-tab');
+      root.querySelectorAll('.mx-tab').forEach(b=>b.classList.toggle('active', b===tabBtn));
+      root.querySelectorAll('[data-mx-panel]').forEach(p=>{
+        p.style.display = (p.getAttribute('data-mx-panel')===key) ? '' : 'none';
+      });
+      return;
+    }
+    const tog = e.target.closest && e.target.closest('[data-mx-toggle]');
+    if(tog){
+      const row = tog.closest('.mx-row');
+      const panel = row && row.querySelector('.mx-panel');
+      if(panel){ panel.classList.toggle('open'); }
+    }
+  });
+}
+
 function renderDetailsFromState(state){
   // Normalize state shape across versions
   const root = (state && (state.state || state.data || state)) || state || {};
@@ -473,8 +507,8 @@ function renderDetailsFromState(state){
 
   // Milestones + Application Tracker (collapsed)
   const milestones = Array.isArray(exec.milestones) ? exec.milestones : (exec.milestones && Array.isArray(exec.milestones.items) ? exec.milestones.items : []);
-  let trackerHtml = '';
-  try{ trackerHtml = buildMilestoneTrackerCombined(milestones); }catch(e){ trackerHtml=''; }
+  let mxHtml = '';
+  try{ mxHtml = buildMobileMilestoneUX(milestones); }catch(e){ mxHtml=''; }
   const userStories = Array.isArray(exec.userStories) ? exec.userStories : (exec.userStories && Array.isArray(exec.userStories.items) ? exec.userStories.items : []);
   const bugs = Array.isArray(exec.bugs) ? exec.bugs : (exec.bugs && Array.isArray(exec.bugs.items) ? exec.bugs.items : []);
 
@@ -494,6 +528,29 @@ function renderDetailsFromState(state){
     if(actualStart) return { label:'In Progress', cls:'bg-amber-400/10 border-amber-400/30 text-amber-200' };
     return { label:'Planned', cls:'bg-slate-400/10 border-white/10 text-slate-200' };
   }
+
+  const msStats = { total: milestones.length, completed:0, delayed:0, inprogress:0, planned:0 };
+  const msCards = milestones.length
+    ? milestones.slice(0, 12).map(m => {
+        const phase = esc(m.phase || m.Activity || m.name || 'Milestone');
+        const start = esc(m.startDate || m.plannedStart || m.start || '—');
+        const end = esc(m.endDate || m.plannedEnd || m.end || '—');
+        const actS = esc(m.actualStartDate || m.actualStart || '—');
+        const actE = esc(m.actualEndDate || m.actualEnd || '—');
+        const st = milestoneStatus(m);
+        if(st.label==='Completed') msStats.completed++; else if(st.label==='Delayed') msStats.delayed++; else if(st.label==='In Progress') msStats.inprogress++; else msStats.planned++;
+        return `<div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+          <div class='flex items-start justify-between gap-2'>
+            <div class='min-w-0'>
+              <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
+              <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
+              <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
+            </div>
+            <span class='shrink-0 px-2 py-1 rounded-full border text-xs font-semibold ${st.cls}'>${st.label}</span>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div class='text-sm text-slate-300'>No milestones</div>`;
 
   // Task Discipline (L1 visible, L2 collapsed)
   const taskDisciplines = Array.isArray(exec.taskDisciplines) ? exec.taskDisciplines : (exec.taskDisciplines && Array.isArray(exec.taskDisciplines.items) ? exec.taskDisciplines.items : []);
@@ -559,7 +616,7 @@ function renderDetailsFromState(state){
         <span class='text-slate-400 text-sm'>▼</span>
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
-  ${trackerHtml}
+        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
 
@@ -624,6 +681,7 @@ function wireExecBoardToggles(){
       try{
         const st = await fetchDashState(dash);
         panel.innerHTML = renderDetailsFromState(st);
+      try{ const r = panel.querySelector('[data-mx-root="1"]'); if(r) wireMobileMilestoneUX(r); }catch(e){}
       }catch(err){
         panel.innerHTML = `<div class='text-sm text-red-200 bg-red-400/10 border border-red-400/30 rounded-xl p-3'>Preview failed: ${esc(err.message || String(err))}</div>`;
       }
