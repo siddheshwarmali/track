@@ -153,7 +153,7 @@
     <div class='max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between'>
       <div>
         <div class='text-lg font-extrabold'>Executive Board</div>
-        <div class='text-xs text-slate-400'>All published dashboards you can access — card view • Build 2026-01-26 13:03 IST</div>
+        <div class='text-xs text-slate-400'>All published dashboards you can access — card view</div>
       </div>
       <div class='flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center w-full sm:w-auto'>
         <div class='flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm w-full sm:w-auto'>
@@ -189,7 +189,8 @@ async function jget(url){
   return j;
 }
 function fmt(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function card(d){
   const dashId = String(d.id || '');
   const name = esc(d.name || d.id || 'Dashboard');
@@ -353,25 +354,23 @@ function buildMilestoneTrackerCombined(milestones){
   const isStarted = (m)=> !isDone(m) && !!_trkToDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
   const stateOf = (m)=> isDone(m) ? 'completed' : (isStarted(m) ? 'ongoing' : 'pending');
 
-  // Progress fill: last completed; if none, first ongoing
-  let progressIndex = -1;
-  for(let i=0;i<list.length;i++) if(stateOf(list[i])==='completed') progressIndex=i;
-  if(progressIndex < 0){
-    for(let i=0;i<list.length;i++) if(stateOf(list[i])==='ongoing'){ progressIndex=i; break; }
-  }
+  // Fill bar up to last completed (matches screenshot)
+  let lastCompleted = -1;
+  for(let i=0;i<list.length;i++){ if(stateOf(list[i])==='completed') lastCompleted=i; }
   const denom = Math.max(1, (list.length-1));
-  const fillPct = progressIndex < 0 ? 0 : Math.max(0, Math.min(100, (progressIndex/denom)*100));
-
-  const checkSvg = "<svg viewBox='0 0 24 24' fill='none' aria-hidden='true' class='w-4 h-4'>"+
-    "<path d='M20 6L9 17l-5-5' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+  const fillPct = lastCompleted < 0 ? 0 : Math.max(0, Math.min(100, (lastCompleted/denom)*100));
 
   function labelOf(m,i){
     const raw = (m.phase || m.Activity || m.name || ('Milestone ' + (i+1)));
     return _trkPrettify(raw);
   }
+
+  // Status + track calculations (embedded)
+  const isCompleted = isDone;
+  const isOngoing  = isStarted;
   function statusOf(m){
-    if(isDone(m)) return {key:'completed', label:'Completed'};
-    if(isStarted(m)) return {key:'ongoing', label:'In-Progress'};
+    if(isCompleted(m)) return {key:'completed', label:'Completed'};
+    if(isOngoing(m))  return {key:'ongoing', label:'In-Progress'};
     return {key:'pending', label:'Planned'};
   }
   function trackOf(m){
@@ -383,88 +382,69 @@ function buildMilestoneTrackerCombined(milestones){
     return (today > pEnd) ? {key:'delayed', label:'Delayed'} : {key:'ontrack', label:'On Track'};
   }
 
-  // Timeline
-  const timeline = list.map((m,i)=>{
+  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '</svg>';
+
+  const scrolling = list.length > 7;
+  const itemCls = scrolling ? 'trk-item fixed' : 'trk-item';
+  const trackStyle = 'style="--n:' + list.length + ';"';
+
+  const timelineItems = list.map((m,i)=>{
     const st = stateOf(m);
-    const dotCls = (st==='completed') ? 'bg-emerald-500' : (st==='ongoing' ? 'bg-blue-600' : 'bg-slate-300');
-    const icon = (st==='completed' || st==='ongoing') ? checkSvg : "";
-    return "<div class='flex-1 min-w-[90px] text-center'>"+
-      "<div class='mx-auto w-7 h-7 rounded-full text-white flex items-center justify-center shadow-sm "+dotCls+"'>"+icon+"</div>"+
-      "<div class='mt-2 text-[10px] leading-tight font-semibold text-slate-700'>"+esc(labelOf(m,i))+"</div>"+
-    "</div>";
+    const icon = (st==='completed' || st==='ongoing') ? checkSvg : '';
+    return "<div class='" + itemCls + "'>"
+      + "<div class='trk-dot " + st + "'>" + icon + "</div>"
+      + "<div class='trk-label'>" + esc(labelOf(m,i)) + "</div>"
+      + "</div>";
   }).join('');
 
-  // Small tile cards (for vertical scroll). Note: return a *tile* without fixed width.
   const cards = list.map((m,i)=>{
     const name = esc(labelOf(m,i));
-    const pS = esc(_trkFmtDate(m.startDate || m.plannedStart || m.start));
-    const pE = esc(_trkFmtDate(m.endDate || m.plannedEnd || m.end));
-    const aS = esc(_trkFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual));
-    const aE = esc(_trkFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate));
+    const pS = _trkFmtDate(m.startDate || m.plannedStart || m.start);
+    const pE = _trkFmtDate(m.endDate || m.plannedEnd || m.end);
+    const aS = _trkFmtDate(m.actualStartDate || m.actualStart || m.startedAt || m.startActual);
+    const aE = _trkFmtDate(m.actualEndDate || m.actualEnd || m.completedAt || m.doneDate);
     const owner = esc(m.owner || m.Owner || m.ownerName || m.ownerId || '-');
     const note = esc(m.note || m.notes || m.remark || m.remarks || m.risk || m.R || '');
-
     const st = statusOf(m);
     const tr = trackOf(m);
 
     const statusPill = (st.key==='completed')
-      ? "<span class='px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200'>Completed</span>"
+      ? "<span class='trk-pill completed'>Completed</span>"
       : (st.key==='ongoing')
-        ? "<span class='px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-blue-100 text-blue-700 border border-blue-200'>In-Progress</span>"
-        : "<span class='px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200'>Planned</span>";
+        ? "<span class='trk-pill ongoing'>In-Progress</span>"
+        : "<span class='trk-pill pending'>Planned</span>";
 
-    const trackPill = (tr.key==='delayed')
-      ? "<div class='w-full text-center px-2 py-1 rounded-full text-[9px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200'>Delayed</div>"
-      : "<div class='w-full text-center px-2 py-1 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200'>On Track</div>";
+    const noteHtml = note ? ("<div style='margin-top:6px;color:#6b7280;font-size:10.5px;line-height:1.25;'>" + note + "</div>") : '';
 
-    const noteHtml = note ? ("<div class='mt-1 text-[9px] text-slate-500 line-clamp-2'>"+note+"</div>") : '';
-
-    return "<div class='rounded-lg border border-slate-200 bg-white shadow-sm p-2'>"+
-      "<div class='text-[10px] font-extrabold text-slate-800 mb-1 line-clamp-2'>"+name+"</div>"+
-      "<div class='rounded-md bg-blue-50 border border-blue-100 p-1.5 mb-1.5'>"+
-        "<div class='text-[8px] font-extrabold text-blue-700 uppercase'>Planned</div>"+
-        "<div class='mt-0.5 text-[9px] text-slate-700'>S: "+pS+"<br/>E: "+pE+"</div>"+
-      "</div>"+
-      "<div class='rounded-md bg-emerald-50 border border-emerald-100 p-1.5 mb-1.5'>"+
-        "<div class='text-[8px] font-extrabold text-emerald-700 uppercase'>Actual</div>"+
-        "<div class='mt-0.5 text-[9px] text-slate-700'>S: "+aS+"<br/>E: "+aE+"</div>"+
-      "</div>"+
-      "<div class='rounded-md bg-amber-50 border border-amber-100 p-1.5 mb-1.5'>"+
-        "<div class='text-[8px] font-extrabold text-amber-700 uppercase'>Owner</div>"+
-        "<div class='mt-0.5 text-[9px] text-slate-700'>"+owner+noteHtml+"</div>"+
-      "</div>"+
-      "<div class='flex items-center justify-between gap-2'>"+
-        "<div class='text-[9px] text-slate-600'>Status</div>"+statusPill+
-      "</div>"+
-      "<div class='mt-1.5'>"+trackPill+"</div>"+
-    "</div>";
+    return "<div class='card'>"
+      + "<div class='head'>" + name + "</div>"
+      + "<div class='box planned'><div class='k'>Planned</div><div class='v'>S: " + esc(pS) + "<br/>E: " + esc(pE) + "</div></div>"
+      + "<div class='box actual'><div class='k'>Actual</div><div class='v'>S: " + esc(aS) + "<br/>E: " + esc(aE) + "</div></div>"
+      + "<div class='box owner'><div class='k'>Owner</div><div class='v'>" + owner + noteHtml + "</div></div>"
+      + "<div class='footer'>"
+      +   "<div class='line'><span>Status:</span>" + statusPill + "</div>"
+      +   "<div class='trk-trackpill " + tr.key + "'>" + tr.label + "</div>"
+      + "</div>"
+      + "</div>";
   }).join('');
 
-  // Return UI
-  return "<div class='rounded-2xl border border-blue-200 bg-white text-slate-900 p-4'>"+
-    "<div class='text-sm sm:text-base font-extrabold text-slate-800'>Project Milestones - Application Tracker</div>"+
-    "<div class='mt-3 rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-white p-4 sm:p-6 overflow-x-auto'>"+
-      "<div class='relative min-w-[720px] px-6'>"+
-        "<div class='absolute left-6 right-6 top-3 h-1 bg-slate-200 rounded-full'></div>"+
-        "<div class='absolute left-6 top-3 h-1 bg-blue-500 rounded-full' style='width:"+fillPct+"%'></div>"+
-        "<div class='relative flex justify-between gap-4'>"+timeline+"</div>"+
-      "</div>"+
-    "</div>"+
-
-    // Application Tracker Status toggle (default hidden)
-    "<div class='mt-4'>"+
-      "<button type='button' data-inner-toggle='apptrk' class='w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50'>"+
-        "<span class='text-[11px] font-bold text-slate-700'>Application Tracker Status (Auto-calculated)</span>"+
-        "<span class='text-slate-500 text-xs'>Show/Hide</span>"+
-      "</button>"+
-      "<div data-inner-panel='apptrk' class='hidden mt-3'>"+
-        "<div class='max-h-80 overflow-y-auto pr-1'>"+
-          "<div class='grid grid-cols-1 sm:grid-cols-2 gap-2'>"+cards+"</div>"+
-        "</div>"+
-      "</div>"+
-    "</div>"+
-  "</div>";
+  return "<div class='trk-card'>"
+    + "<div class='trk-title'>Project Milestones - Application Tracker</div>"
+    + "<div class='trk-scroll'>"
+    +   "<div class='trk-track' " + trackStyle + ">"
+    +     "<div class='trk-line'></div>"
+    +     "<div class='trk-linefill' style='width:" + fillPct + "%'></div>"
+    +     "<div class='trk-items'>" + timelineItems + "</div>"
+    +   "</div>"
+    + "</div>"
+    + "<div class='trk-cards'>"
+    +   "<div class='trk-scroll'><div class='row'>" + cards + "</div></div>"
+    + "</div>"
+    + "</div>";
 }
+
 function renderDetailsFromState(state){
   // Normalize state shape across versions
   const root = (state && (state.state || state.data || state)) || state || {};
@@ -494,6 +474,29 @@ function renderDetailsFromState(state){
     if(actualStart) return { label:'In Progress', cls:'bg-amber-400/10 border-amber-400/30 text-amber-200' };
     return { label:'Planned', cls:'bg-slate-400/10 border-white/10 text-slate-200' };
   }
+
+  const msStats = { total: milestones.length, completed:0, delayed:0, inprogress:0, planned:0 };
+  const msCards = milestones.length
+    ? milestones.slice(0, 12).map(m => {
+        const phase = esc(m.phase || m.Activity || m.name || 'Milestone');
+        const start = esc(m.startDate || m.plannedStart || m.start || '—');
+        const end = esc(m.endDate || m.plannedEnd || m.end || '—');
+        const actS = esc(m.actualStartDate || m.actualStart || '—');
+        const actE = esc(m.actualEndDate || m.actualEnd || '—');
+        const st = milestoneStatus(m);
+        if(st.label==='Completed') msStats.completed++; else if(st.label==='Delayed') msStats.delayed++; else if(st.label==='In Progress') msStats.inprogress++; else msStats.planned++;
+        return `<div class='rounded-xl border border-white/10 bg-white/5 p-3'>
+          <div class='flex items-start justify-between gap-2'>
+            <div class='min-w-0'>
+              <div class='text-sm font-semibold text-slate-100 break-words'>${phase}</div>
+              <div class='mt-1 text-xs text-slate-400'>Planned: ${start} → ${end}</div>
+              <div class='mt-0.5 text-xs text-slate-400'>Actual: ${actS} → ${actE}</div>
+            </div>
+            <span class='shrink-0 px-2 py-1 rounded-full border text-xs font-semibold ${st.cls}'>${st.label}</span>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div class='text-sm text-slate-300'>No milestones</div>`;
 
   // Task Discipline (L1 visible, L2 collapsed)
   const taskDisciplines = Array.isArray(exec.taskDisciplines) ? exec.taskDisciplines : (exec.taskDisciplines && Array.isArray(exec.taskDisciplines.items) ? exec.taskDisciplines.items : []);
@@ -560,6 +563,8 @@ function renderDetailsFromState(state){
       </button>
       <div data-inner-panel='msapp' class='hidden px-3 pb-3'>
   ${trackerHtml}
+
+        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3'>${msCards}</div>
       </div>
     </div>
 
