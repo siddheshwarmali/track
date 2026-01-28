@@ -68,7 +68,7 @@
     const mgr=document.getElementById('tw-usermgr');
     const lo=document.getElementById('tw-logout');
     try{
-      const me = await Promise.resolve({});
+      const me = await twJson('/api/auth/me');
       if(!me || !me.authenticated){
         const next=encodeURIComponent(location.pathname+location.search+location.hash);
         location.replace('/login.html?next='+next);
@@ -91,8 +91,8 @@
   window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
 </script>
 
-  
-  
+  <script src="/assets/js/state-client.js" defer></script>
+  <script src="/assets/js/build-extras.js" defer></script>
 
 <style id="tw-responsive-overrides">
   /* Copilot bugfix overrides */
@@ -185,11 +185,11 @@
               <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
               <a id="nav-build" href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
               <a id="nav-run" href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
-              <a id="tw-execboard" href="/executive-board.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
+              <a id="tw-execboard" href="/executive-board.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
             </div>
             <div class="p-2 border-t">
               <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
-              <a id="tw-usermgr" href="/user-manager.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">👥 User Manager</a>
+              <a id="tw-usermgr" href="/user-manager.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">👥 User Manager</a>
               <button id="tw-logout" class="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-700">⎋ Logout</button>
             </div>
           </div>
@@ -3329,7 +3329,7 @@ async function wsModalPrimary() {
     }
 
     try{
-      const data = await Promise.resolve(, { method:'GET' });
+      const data = await apiJson('/api/users/list', { method:'GET' });
       const users = (data.users||[]).filter(u=>u && u.userId);
       const me = window.twMe || {};
       const box = qs('publish-users');
