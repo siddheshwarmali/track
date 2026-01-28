@@ -3457,5 +3457,49 @@ async function wsModalPrimary() {
   });
 </script>
 
+
+<script id="tw-menu-fix">
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Hamburger menu
+  const hamBtn = document.getElementById('tw-menu-btn');
+  const hamMenu = document.getElementById('tw-menu');
+
+  if (hamBtn && hamMenu) {
+    hamBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hamMenu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', () => hamMenu.classList.add('hidden'));
+    hamMenu.addEventListener('click', e => e.stopPropagation());
+  }
+
+  // Workspace Actions menu
+  const actBtn = document.getElementById('ws-actions-btn');
+  const actMenu = document.getElementById('ws-actions-menu');
+  const actBackdrop = document.getElementById('ws-actions-backdrop');
+
+  if (actBtn && actMenu) {
+    actBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      actMenu.classList.toggle('hidden');
+      actBackdrop && actBackdrop.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+      actMenu.classList.add('hidden');
+      actBackdrop && actBackdrop.classList.add('hidden');
+    });
+
+    actMenu.addEventListener('click', e => e.stopPropagation());
+    actBackdrop && actBackdrop.addEventListener('click', () => {
+      actMenu.classList.add('hidden');
+      actBackdrop.classList.add('hidden');
+    });
+  }
+
+});
+</script>
+
 </body>
 </html>
