@@ -3464,5 +3464,53 @@ async function wsModalPrimary() {
   });
 </script>
 
+
+<script>
+/* === INLINE HEADER MENU LOGIC (MERGED, NO EXTERNAL FILES) === */
+document.addEventListener('DOMContentLoaded', () => {
+
+  const actionBtn = document.getElementById('ws-actions-btn');
+  const actionMenu = document.getElementById('ws-actions-menu');
+  const userBtn = document.getElementById('tw-menu-btn');
+  const userMenu = document.getElementById('tw-menu');
+
+  function hideAll() {
+    actionMenu?.classList.add('hidden');
+    userMenu?.classList.add('hidden');
+  }
+
+  actionBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userMenu?.classList.add('hidden');
+
+    actionMenu.classList.toggle('hidden');
+
+    // force dropdown direction
+    actionMenu.style.position = 'absolute';
+    actionMenu.style.top = '100%';
+    actionMenu.style.bottom = 'auto';
+    actionMenu.style.right = '0';
+    actionMenu.style.left = 'auto';
+    actionMenu.style.marginTop = '8px';
+  });
+
+  userBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    actionMenu?.classList.add('hidden');
+
+    userMenu.classList.toggle('hidden');
+
+    // hamburger menu from top
+    userMenu.style.position = 'absolute';
+    userMenu.style.top = '48px';
+    userMenu.style.right = '0';
+    userMenu.style.left = 'auto';
+    userMenu.style.bottom = 'auto';
+  });
+
+  document.addEventListener('click', hideAll);
+});
+</script>
+
 </body>
 </html>
