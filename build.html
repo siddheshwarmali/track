@@ -91,8 +91,8 @@
   window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
 </script>
 
-  <script src="/assets/js/state-client.js" defer></script>
-  <script src="/assets/js/build-extras.js" defer></script>
+  
+  
 
 <style id="tw-responsive-overrides">
   /* Copilot bugfix overrides */
@@ -3771,6 +3771,51 @@ async function wsModalPrimary() {
 
   backdrop?.addEventListener('click', closeAll);
   document.addEventListener('click', () => isMobile() && closeAll());
+})();
+</script>
+
+
+<script>
+/* === WORKING HEADER MENU LOGIC (INLINE) === */
+(function () {
+  const qs = id => document.getElementById(id);
+
+  const actionsBtn = qs('ws-actions-btn');
+  const actionsMenu = qs('ws-actions-menu');
+  const backdrop = qs('ws-actions-backdrop');
+  const userBtn = qs('tw-menu-btn');
+  const userMenu = qs('tw-menu');
+
+  function closeAll() {
+    actionsMenu?.classList.add('hidden');
+    userMenu?.classList.add('hidden');
+    backdrop?.classList.add('hidden');
+  }
+
+  function toggle(menu, showBackdrop=false) {
+    const isOpen = !menu.classList.contains('hidden');
+    closeAll();
+    if (!isOpen) {
+      menu.classList.remove('hidden');
+      if (showBackdrop) backdrop?.classList.remove('hidden');
+    }
+  }
+
+  actionsBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle(actionsMenu, true);
+  });
+
+  userBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle(userMenu, false);
+  });
+
+  backdrop?.addEventListener('click', closeAll);
+  document.addEventListener('click', closeAll);
+
 })();
 </script>
 
