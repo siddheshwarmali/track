@@ -160,6 +160,50 @@ body { display: flex; flex-direction: column; }
   .shadow-md { box-shadow: none; }
 }
 </style>
+<style>
+/* === MOBILE HEADER COMPACT MODE === */
+@media (max-width: 640px) {
+  .tw-sticky-header-fix {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .tw-sticky-header-fix .text-lg {
+    font-size: 0.95rem !important;
+    line-height: 1.2;
+  }
+
+  .tw-sticky-header-fix .text-xs {
+    font-size: 0.65rem !important;
+  }
+
+  .tw-sticky-header-fix button,
+  .tw-sticky-header-fix select {
+    padding: 6px 8px !important;
+    height: 32px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .tw-sticky-header-fix .gap-3,
+  .tw-sticky-header-fix .gap-2 {
+    gap: 0.25rem !important;
+  }
+
+  .tw-sticky-header-fix .py-3,
+  .tw-sticky-header-fix .py-4 {
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+  }
+
+  .tw-sticky-header-fix .grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .tw-sticky-header-fix > div {
+    min-height: 52px;
+  }
+}
+</style>
 </head>
 <body class="text-gray-800">
 
