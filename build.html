@@ -54,852 +54,7 @@
     </style>
 
 <script>
-  async function twJson(url, opt){
-    const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
-    const t = await r.text();
-    let j={};
-    try{ j=JSON.parse(t||'{}'); }catch(e){ j={error:t}; }
-    if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
-    return j;
-  }
-
-  async function twInit(){
-    const pill=document.getElementById('tw-userpill');
-    const mgr=document.getElementById('tw-usermgr');
-    const lo=document.getElementById('tw-logout');
-    try{
-      const me = await twJson('/api/auth/me');
-      if(!me || !me.authenticated){
-        const next=encodeURIComponent(location.pathname+location.search+location.hash);
-        location.replace('/login.html?next='+next);
-        return;
-      }
-      const role = me.role || 'viewer';
-      document.body.classList.remove('role-admin','role-creator','role-viewer');
-      document.body.classList.add('role-'+role);
-      window.twMe = me;
-      if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
-      if(mgr) mgr.classList.toggle('hidden', role!=='admin');
- const eb=document.getElementById('tw-execboard');
- if(eb){ const perms = me.permissions || {}; eb.classList.toggle('hidden', !(role==='admin' || perms.executiveBoard)); }
-      if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
-    }catch(e){
-      const next=encodeURIComponent(location.pathname+location.search+location.hash);
-      location.replace('/login.html?next='+next);
-    }
-  }
-  window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
-</script>
-
-  <script src="/assets/js/state-client.js" defer></script>
-  <script src="/assets/js/build-extras.js" defer></script>
-
-<style id="tw-responsive-overrides">
-  /* Copilot bugfix overrides */
-  @media (max-width: 640px){
-    .tw-sticky-header-fix{ position: sticky; top: 0; }
-    .tw-sticky-header-fix *{ max-width: 100%; }
-
-    /* Actions bottom-sheet should not overflow */
-    #ws-actions-menu{ max-height: 85vh; }
-
-    /* Fullscreen heavy modals */
-    #modal-l3 > div,
-    #modal-us-details > div,
-    #modal-discipline > div,
-    #modal-mapping > div{
-      width: 100vw !important;
-      max-width: none !important;
-      height: 100dvh !important;
-      max-height: 100dvh !important;
-      border-radius: 0 !important;
-      margin: 0 !important;
-    }
-
-    /* Stack report controls */
-    .no-print.mobile-stack-actions{ flex-direction: column !important; align-items: stretch !important; }
-    .no-print.mobile-stack-actions > button{ width: 100% !important; justify-content: center !important; }
-  }
-</style>
-
-</head>
-<body class="text-gray-800">
-
-<!-- Toast (Run-style) -->
-<div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
-
-<!-- ===== Header (Run-style layout + Build workspace actions) ===== -->
-<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 tw-sticky-header-fix">
-  <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-    <div class="min-w-0">
-      <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
-      <div class="text-xs text-slate-500 truncate">
-        Workspace: <span id="dashPill" class="font-mono">—</span>
-      </div>
-    </div>
-
-    <div class="w-full sm:w-auto grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:justify-end">
-      <select id="ws-select" class="ml-0 sm:ml-1 col-span-2 sm:col-auto w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Loading…</option>
-                    </select>
-                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-2">Not saved</span>
-
-      <!-- Publish/Private pill (optional, reused from Run ids) -->
-      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
-
-      <div class="relative">
-  <button id="ws-actions-btn" type="button"
-    class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 active:scale-[0.99] transition"
-    aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">
-    <span class="text-base">⚙️</span><span>Actions</span>
-    <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
-  </button>
-  <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-40" aria-hidden="true"></div>
-  <div id="ws-actions-menu" class="hidden z-50 fixed pb-[env(safe-area-inset-bottom)] inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-none" role="menu" aria-label="Workspace actions">
-    <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
-    <div class="p-2 overflow-y-auto flex-1 custom-scroll">
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="new" role="menuitem">New workspace</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="rename" role="menuitem">Rename</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="save" role="menuitem">Save</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-red-50 active:bg-red-100 text-red-700" data-ws-action="delete" role="menuitem">Delete</button>
-      <div class="my-2 h-px bg-slate-100"></div>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportReport" role="menuitem">Export Report (JPG)</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem" id="ws-action-publish">Publish</button>
-      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem" id="ws-action-unpublish">Unpublish</button>
-    </div>
-    <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
-  </div>
-</div>
-
-      <div class="relative">
-          <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
-          <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
-            <div class="px-4 py-3 border-b bg-slate-50">
-              <div class="text-xs text-slate-500">Signed in as</div>
-              <div id="tw-userpill" class="mt-1 text-sm font-semibold">Checking…</div>
-            </div>
-            <div class="p-2">
-              <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
-              <a id="nav-build" href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
-              <a id="nav-run" href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
-              <a id="tw-execboard" href="/executive-board.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
-            </div>
-            <div class="p-2 border-t">
-              <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
-              <a id="tw-usermgr" href="/user-manager.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">👥 User Manager</a>
-              <button id="tw-logout" class="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-700">⎋ Logout</button>
-            </div>
-          </div>
-        </div>
-
-      <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
-    </div>
-  </div>
-</div>
-<!-- ===== /Header ===== -->
-
-<style>
-  /* Tighten content gap under header */
-  body > div.sticky + .max-w-7xl { padding-top: 0 !important; }
-</style>
-
-
-<!-- App Loader Overlay -->
-<div id="tw-app-loader" class="fixed inset-0 z-[99999] bg-slate-950/50 backdrop-blur-sm hidden">
-  <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(520px,92vw)] bg-white rounded-2xl shadow-2xl border border-slate-200 p-5">
-    <div class="flex items-center gap-3">
-      <div class="w-6 h-6 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div>
-      <div>
-        <div class="text-sm font-semibold text-slate-900" id="tw-loader-title">Loading dashboard…</div>
-        <div class="text-xs text-slate-500 mt-0.5" id="tw-loader-sub">Preparing workspace</div>
-      </div>
-    </div>
-    <div class="mt-4">
-      <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-        <div id="tw-loader-bar" class="h-2 bg-blue-600 w-[15%] transition-all duration-300"></div>
-      </div>
-      <div class="mt-2 text-[11px] text-slate-500" id="tw-loader-hint">Tip: Use menu → Workspace → Save to persist to GitHub.</div>
-    </div>
-  </div>
-</div>
-
-
-    <div class="max-w-7xl mx-auto px-6 pb-6 pt-3 min-h-screen">
-        <!-- Header -->
-
-
-<!-- Main Card -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <!-- Toolbar -->
-            <div class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
-                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                    <i data-lucide="activity" class="w-6 h-6 mr-2 text-blue-600"></i>
-                    Executive View
-                </h2>
-
-            </div>
-
-            <!-- BUILD TAB CONTENT -->
-            <div id="content-build" class="animate-fade-in">
-                
-                <!-- Report Controls -->
-                <div class="flex flex-col sm:flex-row sm:justify-end gap-3 mb-4 no-print mobile-stack-actions">
-                    <button onclick="openReportModal()" class="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm text-sm font-medium">
-                        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i><span>Customize View</span>
-                    </button>
-</div>
-
-                <!-- 0. Overall Summary Section -->
-                <div id="summary-section" class="mb-8 border-b pb-8 border-gray-200 hidden">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 flex items-center">
-                            <i data-lucide="file-text" class="w-5 h-5 mr-2 text-purple-600"></i>Overall Summary
-                        </h3>
-                        <div class="flex space-x-2 no-print">
-                             <button onclick="regenerateSummary()" class="flex items-center space-x-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition text-xs font-medium" title="Regenerate based on current data">
-                                <i data-lucide="wand-2" class="w-3 h-3"></i><span>Auto-Gen</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="summary-display" 
-                         ondblclick="toggleSummaryEdit()"
-                         title="Double-click to edit summary"
-                         class="bg-purple-50 p-4 rounded-lg border border-purple-100 text-gray-700 text-sm leading-relaxed whitespace-pre-wrap cursor-pointer hover:bg-purple-100 transition-colors"></div>
-                    
-                    <div id="summary-edit" class="hidden">
-                        <textarea id="summary-input" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm h-32" placeholder="Enter executive summary..."></textarea>
-                        <div class="flex justify-between mt-2">
-                            <button onclick="deleteSummaryText()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200">Delete</button>
-                            <div class="space-x-2">
-                                <button onclick="cancelSummaryEdit()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button>
-                                <button onclick="saveSummary()" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Save</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 1. Milestones Section -->
-                <div id="section-milestones" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 cursor-pointer hover:text-blue-600 select-none transition-colors"
-                            onclick="handleHeaderClick(openMilestoneModal, 'milestone-upload-controls')"
-                            title="Click to Add Milestone | Double click to Toggle Upload">
-                            Project Milestones - Application Tracker
-                        </h3>
-                        <div id="milestone-upload-controls" class="hidden flex items-center space-x-2 no-print">
-                            <label class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition animate-fade-in">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span class="text-sm font-medium">Upload Excel</span>
-                                <input type="file" accept=".xlsx,.xls" onchange="handleFileUpload(this, 'milestones')" class="hidden" />
-                            </label>
-                        </div>
-                    </div>
-                    <div id="milestone-container" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 overflow-x-auto min-h-[150px] custom-scroll"></div>
-                    <div class="flex justify-center mt-4 pt-2 border-t border-blue-100 no-print">
-                        <button onclick="toggleTrackerDetails()" class="flex items-center justify-center p-2 rounded-full bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 shadow-sm border border-gray-200 transition-all hover:shadow-md">
-                            <i id="tracker-arrow" data-lucide="chevron-down" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                    <div id="milestone-details" class="mt-4 pt-4 border-t-2 border-blue-200 animate-fade-in hidden">
-                         <p class="text-sm font-semibold text-gray-700 mb-4">Application Tracker Status (Auto-calculated):</p>
-                         <div class="overflow-x-auto custom-scroll">
-                             <div id="milestone-cards" class="flex gap-3 pb-2" style="min-width: max-content"></div>
-                         </div>
-                    </div>
-                </div>
-
-                <!-- 2. Task Discipline Section -->
-                <div id="section-discipline" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 flex items-center cursor-pointer hover:text-teal-600 select-none transition-colors"
-                            onclick="handleHeaderClick(null, 'discipline-controls')"
-                            title="Double-click to toggle upload/edit buttons">
-                            <i data-lucide="table" class="w-5 h-5 mr-2 text-teal-600"></i>Task Discipline Status
-                        </h3>
-                        <div id="discipline-controls" class="hidden flex space-x-2 animate-fade-in no-print">
-                            <button onclick="openAdoModal('discipline')" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm">
-                                <i data-lucide="cloud-lightning" class="w-4 h-4"></i><span class="text-sm font-medium">Sync ADO</span>
-                            </button>
-                            
-                            <label class="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg cursor-pointer hover:bg-teal-700 transition shadow-sm">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span class="text-sm font-medium">Upload Excel</span>
-                                <input type="file" accept=".xlsx,.xls" onchange="handleDisciplineUpload(this)" class="hidden" />
-                            </label>
-                            <button onclick="openDisciplineModal()" class="flex items-center space-x-2 px-4 py-2 bg-white text-teal-600 border border-teal-600 rounded-lg cursor-pointer hover:bg-teal-50 transition shadow-sm">
-                                <i data-lucide="edit-3" class="w-4 h-4"></i><span class="text-sm font-medium">Edit Data</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6 custom-scroll">
-                        <table class="min-w-full divide-y divide-gray-200" id="discipline-table">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discipline</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Open</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Closed</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hold</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grand Total</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200" id="discipline-tbody"></tbody>
-                        </table>
-                        <div class="bg-gray-50 p-2 border-t border-gray-200 flex justify-center no-print">
-                            <button onclick="toggleL2Details('ALL')" class="text-xs flex items-center text-teal-700 hover:text-teal-900 font-medium px-3 py-1 rounded hover:bg-teal-100 transition">
-                               <i id="l2-eye-icon" data-lucide="eye" class="w-3 h-3 mr-1"></i><span id="l2-btn-text">View All L2 Details</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="l2-container" class="mt-4 animate-fade-in border-t-2 border-teal-100 pt-4 hidden">
-                         <h4 id="l2-header-text" class="text-lg font-medium text-teal-800 mb-4 pl-2 border-l-4 border-teal-500">Detailed Activities</h4>
-                         <div id="l2-content" class="space-y-6"></div>
-                    </div>
-                </div>
-
-                <!-- 3. User Story Section -->
-                <div id="section-user-stories" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 flex items-center cursor-pointer select-none hover:text-indigo-600"
-                            onclick="handleHeaderClick(() => toggleElement('us-action-controls'), null)"
-                            title="Double-click to toggle upload button">
-                            <i data-lucide="list" class="w-5 h-5 mr-2 text-indigo-600"></i>User Story Tracker
-                        </h3>
-                        <div id="us-action-controls" class="flex items-center space-x-2 no-print hidden">
-                             <button onclick="openAdoModal()" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm">
-                                <i data-lucide="cloud-lightning" class="w-4 h-4"></i><span class="text-sm font-medium">Sync ADO</span>
-                            </button>
-                            <button onclick="openUsBugModal('US', null, activeUsStage || usStages[0])" class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-700 transition shadow-sm">
-                                <i data-lucide="plus" class="w-4 h-4"></i><span class="text-sm font-medium">Add Story</span>
-                            </button>
-                            <div id="us-upload-controls">
-                                <label class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-700 transition shadow-sm animate-fade-in">
-                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i><span class="text-sm font-medium">Upload Excel</span>
-                                    <input type="file" accept=".xlsx,.xls" onchange="handleFileUpload(this, 'stories')" class="hidden" />
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="us-tiles"></div>
-                        <p class="text-xs text-gray-400 text-center mt-3 no-print">Double-click on a tile to view detailed User Stories</p>
-                    </div>
-                </div>
-
-                <!-- 3.5 Bugs Tracker Section -->
-                <div id="section-bugs" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 flex items-center cursor-pointer select-none hover:text-red-600"
-                            onclick="handleHeaderClick(() => toggleElement('bug-action-controls'), null)"
-                            title="Double-click to toggle upload button">
-                            <i data-lucide="bug" class="w-5 h-5 mr-2 text-red-600"></i>Bugs Tracker
-                        </h3>
-                        <div id="bug-action-controls" class="flex items-center space-x-2 no-print hidden">
-                             <button onclick="openAdoModal('bugs')" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm">
-                                <i data-lucide="cloud-lightning" class="w-4 h-4"></i><span class="text-sm font-medium">Sync ADO</span>
-                            </button>
-                            <button onclick="openUsBugModal('Bug', null, activeBugStage || bugStages[0])" class="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg cursor-pointer hover:bg-red-700 transition shadow-sm">
-                                <i data-lucide="plus" class="w-4 h-4"></i><span class="text-sm font-medium">Add Bug</span>
-                            </button>
-                            <div id="bug-upload-controls">
-                                <label class="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg cursor-pointer hover:bg-red-700 transition shadow-sm animate-fade-in">
-                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i><span class="text-sm font-medium">Upload Excel</span>
-                                    <input type="file" accept=".xlsx,.xls" onchange="handleFileUpload(this, 'bugs')" class="hidden" />
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="bug-tiles"></div>
-                        <p class="text-xs text-gray-400 text-center mt-3 no-print">Double-click on a tile to view detailed Bugs</p>
-                    </div>
-                </div>
-
-                <!-- 4. Blockers Section -->
-                <div id="section-blockers" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 flex items-center cursor-pointer hover:text-blue-600 transition"
-                            onclick="openBlockerModal()"
-                            title="Click to add new blocker">
-                            <i data-lucide="alert-circle" class="w-5 h-5 mr-2 text-red-500"></i>Active Blockers (<span id="blocker-count">0</span>)
-                        </h3>
-                    </div>
-                    <div id="blocker-list" class="space-y-3"></div>
-                </div>
-
-                <!-- 5. KPI Section -->
-                <div id="section-kpi" class="mb-8 border-b pb-8 border-gray-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700 flex items-center cursor-pointer select-none"
-                            onclick="handleHeaderClick(openKPIModal, 'kpi-upload-controls')"
-                            title="Click to Add KPI | Double click to show/hide upload option">
-                            <i data-lucide="bar-chart-2" class="w-5 h-5 mr-2 text-blue-600"></i>Key Performance Indicators
-                        </h3>
-                        <div id="kpi-upload-controls" class="hidden no-print">
-                             <label class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm animate-fade-in">
-                                <i data-lucide="database" class="w-4 h-4"></i><span class="text-sm font-medium">Upload KPI Excel</span>
-                                <input type="file" accept=".xlsx,.xls" onchange="handleFileUpload(this, 'kpi')" class="hidden" />
-                            </label>
-                        </div>
-                    </div>
-                    <div id="kpi-container" class="space-y-6"></div>
-                </div>
-
-                <!-- 6. BAU Section -->
-                <div id="section-bau">
-                    <h4 class="text-lg font-medium text-gray-700 mb-3">BAU (Business As Usual) Update</h4>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200"><p class="text-xs text-gray-600 mb-1">Total Tickets</p><p id="bau-total" class="text-xl font-bold text-slate-600">0</p></div>
-                        <div class="bg-green-50 p-3 rounded-lg border border-green-200"><p class="text-xs text-gray-600 mb-1">Within SLA</p><p id="bau-within" class="text-xl font-bold text-green-600">0</p></div>
-                        <div class="bg-red-50 p-3 rounded-lg border border-red-200"><p class="text-xs text-gray-600 mb-1">Breached SLA</p><p id="bau-breached" class="text-xl font-bold text-red-600">0</p></div>
-                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-200"><p class="text-xs text-gray-600 mb-1">SLA %</p><p id="bau-sla" class="text-xl font-bold text-blue-600">0%</p></div>
-                    </div>
-                </div>
-
-            </div>
-            <!-- END BUILD TAB -->
-
-            <!-- RUN TAB CONTENT (IFrame Container) -->
-            </div>
-    </div>
-
-    <!-- MODALS -->
-
-    <!-- L3 Task View Modal (New Task Management) -->
-    <div id="modal-l3" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-5xl h-[85vh] flex flex-col animate-fade-in">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800 flex items-center">
-                        <i data-lucide="layers" class="w-5 h-5 mr-2 text-teal-600"></i>
-                        <span id="l3-title">Task Details</span>
-                    </h3>
-                    <p class="text-sm text-gray-500 mt-1">Manage individual tasks for this discipline</p>
-                </div>
-                <button onclick="closeModal('modal-l3')" class="hover:bg-gray-100 p-1 rounded-full"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button>
-            </div>
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm font-medium text-gray-700">Status:</span>
-                    <select id="l3-filter-status" onchange="renderL3Table()" class="text-sm border rounded p-1 bg-gray-50">
-                        <option value="ALL">All</option>
-                        <option value="Open">Open</option>
-                        <option value="Closed">Closed</option>
-                        <option value="Hold">Hold</option>
-                    </select>
-                </div>
-                <button onclick="toggleL3Form()" class="flex items-center space-x-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium shadow-sm transition">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i><span>Add New Task</span>
-                </button>
-            </div>
-            <div id="l3-form" class="hidden bg-gray-50 p-4 rounded-lg border border-teal-100 mb-4 animate-fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                    <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-500 mb-1">Task Title *</label><input type="text" id="l3-input-title" class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-teal-500" placeholder="Task description..."></div>
-                    <div><label class="block text-xs font-medium text-gray-500 mb-1">Status</label><select id="l3-input-status" class="w-full border p-2 rounded text-sm"><option value="Open">Open</option><option value="Closed">Closed</option><option value="Hold">Hold</option></select></div>
-                    <div><label class="block text-xs font-medium text-gray-500 mb-1">Owner</label><input type="text" id="l3-input-owner" class="w-full border p-2 rounded text-sm" placeholder="Assignee"></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                     <div><label class="block text-xs font-medium text-gray-500 mb-1">ETA</label><input type="date" id="l3-input-eta" class="w-full border p-2 rounded text-sm"></div>
-                </div>
-                <div class="flex justify-end space-x-2"><button onclick="toggleL3Form()" class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300">Cancel</button><button onclick="saveL3Task()" class="px-3 py-1 bg-teal-600 text-white rounded text-sm hover:bg-teal-700">Save Task</button></div>
-            </div>
-            <div class="flex-1 overflow-auto custom-scroll border rounded-lg bg-white">
-                <table class="min-w-full divide-y divide-gray-200 relative"><thead class="bg-gray-50 sticky top-0 z-10"><tr id="l3-thead-row"></tr></thead><tbody id="l3-tbody" class="bg-white divide-y divide-gray-200 text-sm"></tbody></table>
-                <div id="l3-empty" class="hidden p-8 text-center text-gray-400 italic">No tasks found. Add manually or Sync ADO.</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report Customization Modal -->
-    <div id="modal-report-config" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm animate-fade-in">
-            <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-800">Customize Report</h3><button onclick="closeModal('modal-report-config')"><i data-lucide="x" class="w-5 h-5 text-gray-500"></i></button></div>
-            <p class="text-sm text-gray-500 mb-4">Select sections to display:</p>
-            <div id="report-toggles" class="space-y-3 mb-6 max-h-[60vh] overflow-y-auto custom-scroll p-1"></div>
-            <div class="flex justify-end space-x-3"><button onclick="selectAllSections(true)" class="text-sm text-blue-600 hover:text-blue-800 mr-auto self-center">Select All</button><button onclick="applyReportView()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Apply View</button></div>
-        </div>
-    </div>
-
-    <!-- Details Modal (Used for US and Bugs) -->
-    <div id="modal-us-details" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl h-[80vh] flex flex-col animate-fade-in">
-            <div class="flex justify-between items-center mb-6"><div><h3 class="text-xl font-bold text-gray-800"><span id="us-modal-type-prefix">User Stories</span>: <span id="us-modal-stage" class="text-blue-600"></span></h3><p class="text-sm text-gray-500"><span id="us-modal-count">0</span> items in this stage</p></div><button onclick="closeModal('modal-us-details')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="flex-1 overflow-auto custom-scroll border rounded-lg"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stage</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ETA</th></tr></thead><tbody id="us-details-tbody" class="bg-white divide-y divide-gray-200"></tbody></table></div>
-            <div class="flex justify-end mt-6"><button onclick="closeModal('modal-us-details')" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Close</button></div>
-        </div>
-    </div>
-
-
-
-    <!-- Add/Edit User Story / Bug Modal -->
-    <div id="modal-usbug" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg animate-fade-in">
-            <div class="flex items-center justify-between mb-4">
-                <h3 id="usbug-modal-title" class="text-lg font-semibold text-gray-800">Add Item</h3>
-                <button onclick="closeModal('modal-usbug')" class="text-gray-400 hover:text-gray-600" aria-label="Close">&times;</button>
-            </div>
-
-            <input type="hidden" id="usbug-datatype" />
-            <input type="hidden" id="usbug-mode" />
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">ID</label>
-                    <input id="usbug-id" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g., US-123 / BUG-123" />
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                    <input id="usbug-type" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g., User Story / Bug" />
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Title</label>
-                    <textarea id="usbug-desc" rows="3" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Short title / description"></textarea>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Stage</label>
-                    <select id="usbug-stage" class="w-full px-3 py-2 border rounded-lg text-sm"></select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Owner</label>
-                    <input id="usbug-owner" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Owner" />
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">ETA</label>
-                    <input id="usbug-eta" type="date" class="w-full px-3 py-2 border rounded-lg text-sm" />
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between mt-6">
-                <button id="usbug-delete-btn" onclick="deleteUsBugFromModal()" class="px-4 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 hidden">Delete</button>
-                <div class="flex gap-2 ml-auto">
-                    <button onclick="closeModal('modal-usbug')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Cancel</button>
-                    <button onclick="saveUsBugFromModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Milestone Modal -->
-    <div id="modal-milestone" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in">
-            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-800" id="milestone-modal-title">Add New Milestone</h3><button onclick="closeModal('modal-milestone')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="space-y-4"><input type="hidden" id="ms-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Activity Name *</label><input type="text" id="ms-phase" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned Start *</label><input type="date" id="ms-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Planned End *</label><input type="date" id="ms-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual Start</label><input type="date" id="ms-act-start" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Actual End</label><input type="date" id="ms-act-end" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Owner</label><input type="text" id="ms-owner" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Owner name"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea id="ms-remark" class="w-full border border-gray-300 rounded-lg p-2 h-20"></textarea></div></div>
-            <div class="flex justify-end space-x-3 mt-6"><button id="btn-delete-ms" onclick="deleteMilestone()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium mr-auto hidden">Delete</button><button onclick="closeModal('modal-milestone')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button onclick="saveMilestone()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Save</button></div>
-        </div>
-    </div>
-
-    <!-- Blocker Modal -->
-    <div id="modal-blocker" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in">
-            <h3 class="text-lg font-bold text-gray-800 mb-4" id="blocker-modal-title">Add New Blocker</h3>
-            <div class="space-y-3"><input type="hidden" id="bl-id"><input type="text" id="bl-title" class="w-full px-3 py-2 border rounded-md text-sm" placeholder="Title *"><select id="bl-severity" class="w-full px-3 py-2 border rounded-md text-sm"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select><input type="text" id="bl-owner" class="w-full px-3 py-2 border rounded-md text-sm" placeholder="Owner *"><input type="text" id="bl-eta" class="w-full px-3 py-2 border rounded-md text-sm" placeholder="ETA *"></div>
-            <div class="flex justify-end space-x-2 mt-6"><button onclick="closeModal('modal-blocker')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm">Cancel</button><button onclick="saveBlocker()" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Save</button></div>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="modal-delete-confirm" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center animate-fade-in">
-             <h3 class="text-lg font-bold text-gray-900 mb-2">Delete Item?</h3><p class="text-sm text-gray-500 mb-6">Are you sure? This cannot be undone.</p><input type="hidden" id="delete-target-id"><input type="hidden" id="delete-type">
-             <div class="flex justify-center space-x-3"><button onclick="closeModal('modal-delete-confirm')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm">Cancel</button><button onclick="confirmDelete()" class="px-4 py-2 bg-red-600 text-white rounded text-sm">Delete</button></div>
-        </div>
-    </div>
-
-    <!-- KPI Modal -->
-    <div id="modal-kpi" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg animate-fade-in">
-            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-800" id="kpi-modal-title">Add/Edit KPI</h3><button onclick="closeModal('modal-kpi')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="space-y-4"><input type="hidden" id="kpi-index"><div><label class="block text-sm font-medium text-gray-700 mb-1">Category</label><input type="text" id="kpi-category" class="w-full border border-gray-300 rounded-lg p-2" placeholder="e.g. Performance"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">KPI Name</label><input type="text" id="kpi-name" class="w-full border border-gray-300 rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Current Value</label><input type="text" id="kpi-value" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Threshold</label><input type="text" id="kpi-threshold" class="w-full border border-gray-300 rounded-lg p-2"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Frequency</label><input type="text" id="kpi-freq" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Tool</label><input type="text" id="kpi-tool" class="w-full border border-gray-300 rounded-lg p-2"></div></div></div>
-            <div class="flex justify-end space-x-3 mt-6"><button id="btn-delete-kpi" onclick="deleteKPI()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium mr-auto hidden">Delete</button><button onclick="closeModal('modal-kpi')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button onclick="saveKPI()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Save</button></div>
-        </div>
-    </div>
-
-    <!-- ADO Sync Modal -->
-    <div id="modal-ado" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg animate-fade-in">
-            <div class="flex justify-between items-center mb-4"><div class="flex items-center"><i data-lucide="cloud-lightning" class="w-6 h-6 text-blue-600 mr-2"></i><h3 class="text-xl font-bold text-gray-800">Sync with Azure DevOps</h3></div><button onclick="closeModal('modal-ado')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 text-sm text-blue-800 mb-4"><p><strong>Note on CORS:</strong> Direct API calls from local files (`file://`) are blocked by modern browsers.</p></div>
-            <div id="ado-error" class="hidden bg-red-50 p-3 rounded-lg border border-red-200 text-sm text-red-800 mb-4 break-words"></div>
-            <div class="space-y-4 mb-6"><div><label class="block text-sm font-medium text-gray-700 mb-1">Organization</label><input type="text" id="ado-org" value="BFLDevOpsOrg" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Project</label><input type="text" id="ado-proj" value="3in1 Agile Board_MarTech" class="w-full border border-gray-300 rounded-lg p-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Query ID</label><input type="text" id="ado-query" value="3a6725c4-6a00-43ff-ac2a-ed550c633088" class="w-full border border-gray-300 rounded-lg p-2 font-mono text-sm"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">PAT Token</label><input type="password" id="ado-pat" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Enter your Personal Access Token"></div></div>
-            <div class="flex justify-end space-x-3"><button onclick="loadMockAdoData()" class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200">Load Mock Data (Demo)</button><button onclick="closeModal('modal-ado')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button id="btn-sync-ado" onclick="handleAdoSync()" class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center">Sync Now</button></div>
-        </div>
-    </div>
-
-    <!-- User Mapping Modal -->
-    <div id="modal-mapping" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl animate-fade-in flex flex-col max-h-[85vh]">
-            <div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="text-xl font-bold text-gray-800">Map Users to Disciplines</h3><button onclick="closeModal('modal-mapping')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="flex-1 overflow-y-auto custom-scroll border rounded-lg p-4 bg-gray-50 mb-4"><div id="mapping-container" class="space-y-3"></div></div>
-            <div class="flex justify-end space-x-3 pt-2 border-t"><button onclick="closeModal('modal-mapping')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Cancel</button><button onclick="applyDisciplineMapping()" class="px-6 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700">Apply & Process</button></div>
-        </div>
-    </div>
-
-    <!-- Discipline Edit Modal (Tabs L1/L2) -->
-    <div id="modal-discipline" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-6xl h-[90vh] flex flex-col animate-fade-in">
-            <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-gray-800">Edit Task Discipline</h3><button onclick="closeModal('modal-discipline')"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button></div>
-            <div class="flex space-x-2 mb-4 border-b border-gray-200"><button id="tab-l1-btn" onclick="switchDiscTab('L1')" class="px-4 py-2 text-sm font-medium border-b-2 border-teal-600 text-teal-600">L1 Summary</button><button id="tab-l2-btn" onclick="switchDiscTab('L2')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500">L2 Detailed</button></div>
-            <div id="disc-tab-content" class="flex-1 overflow-auto p-1 custom-scroll"></div>
-            <div class="flex justify-end mt-4 pt-2 border-t border-gray-200"><button onclick="saveDisciplineData()" class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium">Save & Close</button></div>
-        </div>
-    </div>
-
-    <!-- TEMPLATE FOR RUN TAB -->
-    
-
-    <script>
-        // --- GLOBAL & UTILITY FUNCTIONS ---
-        // L3 Data State
-        let l3Data = []; 
-        let activeL3Discipline = null;
-        
-        // UUID Generator for reliable CRUD
-        function generateUUID() {
-            return 'uuid-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
-        }
-
-        // Helper: Calculate Business Hours (M-F, 8 hours/day roughly)
-        function calculateBusinessHours(startDate, endDate) {
-            let minutes = 0;
-            // Defensive check
-            if (!startDate || !endDate) return 0;
-            
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            if (start >= end) return 0;
-
-            // If duration is extremely long (e.g. > 1 year), return 0 to prevent browser hang
-            if ((end - start) > 31536000000) return 0; 
-
-            let ptr = new Date(start);
-
-            // Iterate by hour for performance (vs minute)
-            while (ptr < end) {
-                const day = ptr.getDay();
-                const hour = ptr.getHours();
-                
-                // Assume 09:00 to 17:00 is working window (8 hours)
-                // 0=Sun, 6=Sat
-                if (day !== 0 && day !== 6) {
-                    if (hour >= 9 && hour < 18) {
-                        minutes += 60;
-                    }
-                }
-                
-                // Advance 1 hour
-                ptr.setHours(ptr.getHours() + 1);
-                ptr.setMinutes(0);
-                ptr.setSeconds(0);
-            }
-            
-            return parseFloat((minutes / 60).toFixed(2));
-        }
-
-        function showAlert(message) {
-            alert(message);
-        }
-
-        let headerClickTimer = null;
-        function handleHeaderClick(singleFn, toggleId) {
-            if (headerClickTimer) {
-                clearTimeout(headerClickTimer);
-                headerClickTimer = null;
-                if(typeof toggleId === 'function') {
-                    toggleId();
-                } else if(toggleId) {
-                    toggleElement(toggleId);
-                }
-            } else {
-                headerClickTimer = setTimeout(() => {
-                    headerClickTimer = null;
-                    if(singleFn) singleFn();
-                }, 250);
-            }
-        }
-
-        function toggleElement(id) {
-            const el = document.getElementById(id);
-            if (el) el.classList.toggle('hidden');
-        }
-
-        function closeModal(id) {
-            const el = document.getElementById(id);
-            if (el) el.classList.remove('open');
-        }
-
-        // --- GLOBAL VARIABLES (Dashboard) ---
-        let milestones = [];
-        let userStories = [];
-        let bugs = []; // Added for Bugs Tracker
-        let blockers = [];
-        let kpiData = [];
-        let taskDisciplines = [
-            { discipline: 'DMT', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-            { discipline: 'Tech', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-            { discipline: 'Content Mgmt.', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-            { discipline: 'QA', totalTasks: 0, openTasks: 0, closedTasks: 0, holdTasks: 0, grandTotal: 0 },
-        ];
-        
-        let pendingDisciplineData = []; 
-        let profileToDisciplineMap = {}; 
-        let l2Columns = [{id:'c1',name:'Col 1'}, {id:'c2',name:'Col 2'}, {id:'c3',name:'Col 3'}];
-        let l2Data = {
-            'DMT': [], 'Tech': [], 'Content Mgmt.': [], 'QA': []
-        };
-        
-        let tempAdoTasks = [];
-        let expandedDiscipline = 'ALL';
-        let activeUsStage = 'New';
-        let activeBugStage = 'New'; // Added for Bugs Tracker
-        let bauData = { totalTickets: 0, withinSLA: 0, breachedSLA: 0, slaPercentage: 0 };
-        let showTrackerDetails = false;
-        let showL2Details = false;
-        let discModalTab = 'L1';
-        const usStages = ['New', 'Development', 'Authoring', 'IT UAT', 'Business UAT', 'Closed'];
-        const bugStages = ['New', 'Active', 'Resolved', 'Hold', 'Closed']; // Added for Bugs Tracker
-        let savedSummaryText = null;
-        let adoSyncSource = null;
-
-        // --- REPORTING LOGIC ---
-        const reportSections = [
-            { id: 'summary-section', label: 'Overall Summary' },
-            { id: 'section-milestones', label: 'Project Milestones' },
-            { id: 'section-discipline', label: 'Task Discipline' },
-            { id: 'section-user-stories', label: 'User Stories' },
-            { id: 'section-bugs', label: 'Bugs Tracker' }, // Added to reporting
-            { id: 'section-blockers', label: 'Active Blockers' },
-            { id: 'section-kpi', label: 'KPIs' },
-            { id: 'section-bau', label: 'BAU Update' }
-        ];
-
-        function openReportModal() {
-            const container = document.getElementById('report-toggles');
-            container.innerHTML = reportSections.map(s => {
-                const el = document.getElementById(s.id);
-                const isHidden = el ? el.classList.contains('hidden-by-report') : false;
-                return `
-                    <label class="flex items-center justify-between p-2 rounded hover:bg-gray-50 border border-transparent hover:border-gray-200 cursor-pointer transition">
-                        <span class="text-sm font-medium text-gray-700">${s.label}</span>
-                        <input type="checkbox" id="toggle-${s.id}" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" ${!isHidden ? 'checked' : ''}>
-                    </label>
-                `;
-            }).join('');
-            document.getElementById('modal-report-config').classList.add('open');
-        }
-
-        function selectAllSections(select) {
-            reportSections.forEach(s => {
-                const cb = document.getElementById(`toggle-${s.id}`);
-                if(cb) cb.checked = select;
-            });
-        }
-
-        function applyReportView() {
-            reportSections.forEach(s => {
-                const cb = document.getElementById(`toggle-${s.id}`);
-                const el = document.getElementById(s.id);
-                if (el && cb) {
-                    if (cb.checked) {
-                        el.classList.remove('hidden-by-report');
-                        if (el.classList.contains('hidden') && s.id !== 'summary-section') el.classList.remove('hidden');
-                        if (s.id === 'summary-section') renderSummary(); 
-                    } else {
-                        el.classList.add('hidden-by-report');
-                        el.classList.add('hidden');
-                    }
-                }
-            });
-            closeModal('modal-report-config');
-        }
-
-        async function exportReport() {
-            // Close menus/backdrops so they don't get captured
-            try {
-                document.getElementById('ws-actions-menu')?.classList.add('hidden');
-                document.getElementById('ws-actions-backdrop')?.classList.add('hidden');
-                document.getElementById('tw-menu')?.classList.add('hidden');
-            } catch (e) {}
-
-            const btn = document.querySelector('[data-ws-action="exportReport"]') || document.querySelector('button[onclick="exportReport()"]');
-            const originalContent = btn ? btn.innerHTML : null;
-
-            try {
-                if (btn) {
-                    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 inline-block align-middle mr-2 animate-spin"></i><span>Generating…</span>`;
-                    try { lucide.createIcons(); } catch (e) {}
-                }
-
-                // settle layout
-                await new Promise(r => setTimeout(r, 220));
-
-                const element = document.getElementById('content-build');
-                if (!element) throw new Error('Build content not found');
-
-                const canvas = await html2canvas(element, {
-                    scale: 2,
-                    backgroundColor: '#f9fafb',
-                    useCORS: true,
-                    cacheBust: true,
-                    ignoreElements: (el) => {
-                        if (el.tagName === 'BUTTON') return true;
-                        if (el.classList && el.classList.contains('no-print')) return true;
-                        const id = (el.id || '').toLowerCase();
-                        if (id.includes('modal') || id.includes('toast') || id.includes('menu') || id.includes('backdrop') || id.includes('loader') || id.includes('overlay')) return true;
-                        return false;
-                    }
-                });
-
-                // Use UNIQUE filename to avoid Android/iOS caching/overwriting showing old image
-                const pad = (n) => String(n).padStart(2,'0');
-                const now = new Date();
-                const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-                const filename = `Executive_Report_${stamp}.jpg`;
-
-                await new Promise((resolve, reject) => {
-                    canvas.toBlob((blob) => {
-                        try {
-                            if (!blob) return reject(new Error('Failed to render image'));
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = filename;
-                            a.rel = 'noopener';
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            // revoke later for Safari reliability
-                            setTimeout(() => { try { URL.revokeObjectURL(url); } catch(e) {} }, 30000);
-                            resolve();
-                        } catch (e) { reject(e); }
-                    }, 'image/jpeg', 0.92);
-                });
-
-                // Cleanup canvas memory
-                try { canvas.width = 1; canvas.height = 1; } catch (e) {}
-            } catch (err) {
-                console.error(err);
-                alert('Failed: ' + (err?.message || err));
-            } finally {
-                if (btn && originalContent !== null) {
-                    btn.innerHTML = originalContent;
-                    try { lucide.createIcons(); } catch (e) {}
-                }
-            }
-        }
-
-        // --- DASHBOARD TABS ---
-        function switchTab(t){
-  const build = document.getElementById('content-build');
-  const run = document.getElementById('content-run');
-  if(build) build.classList.toggle('hidden', t!=='build');
-  if(run) run.classList.toggle('hidden', t!=='run');
-  const tb = document.getElementById('tab-build');
-  const tr = document.getElementById('tab-run');
-  if(tb) tb.className = t==='build' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
-  if(tr) tr.className = t==='run' ? "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm" : "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900";
-}
-        
+          
         function toggleTrackerDetails() {
             showTrackerDetails = !showTrackerDetails;
             const el = document.getElementById('milestone-details');
@@ -2360,7 +1515,7 @@ window.onload = function() {
 // - Save writes to GitHub.
 // =========================
 
-const GH6_ENDPOINT = '/api/state';
+const GH6_ENDPOINT = '/* api-disabled */';
 const GH6_PARAM = 'dash';
 
 function gh6Overlay(show, msg) {
@@ -3193,8 +2348,7 @@ async function wsModalPrimary() {
   function openMenu(){
     const menu = qs('ws-actions-menu');
     const btn  = qs('ws-actions-btn');
-    const back = qs('ws-actions-backdrop');
-    if(!menu || !btn) return;
+    const back = qs('    if(!menu || !btn) return;
     menu.classList.remove('hidden');
     back && back.classList.remove('hidden');
     btn.setAttribute('aria-expanded','true');
@@ -3202,8 +2356,7 @@ async function wsModalPrimary() {
   function closeMenu(){
     const menu = qs('ws-actions-menu');
     const btn  = qs('ws-actions-btn');
-    const back = qs('ws-actions-backdrop');
-    menu && menu.classList.add('hidden');
+    const back = qs('    menu && menu.classList.add('hidden');
     back && back.classList.add('hidden');
     btn && btn.setAttribute('aria-expanded','false');
   }
@@ -3222,8 +2375,7 @@ async function wsModalPrimary() {
   function bind(){
     const btn  = qs('ws-actions-btn');
     const menu = qs('ws-actions-menu');
-    const back = qs('ws-actions-backdrop');
-    if(!btn || !menu) return;
+    const back = qs('    if(!btn || !menu) return;
     if(btn.dataset.twBound==='1') return;
     btn.dataset.twBound='1';
 
@@ -3329,7 +2481,7 @@ async function wsModalPrimary() {
     }
 
     try{
-      const data = await apiJson('/api/users/list', { method:'GET' });
+      const data = await apiJson('/* api-disabled */', { method:'GET' });
       const users = (data.users||[]).filter(u=>u && u.userId);
       const me = window.twMe || {};
       const box = qs('publish-users');
@@ -3364,7 +2516,7 @@ async function wsModalPrimary() {
       if(!dashId) return showErr('No workspace selected.');
       const all = !!qs('publish-all')?.checked;
       const users = all ? [] : Array.from(document.querySelectorAll('.publish-user')).filter(cb=>cb.checked).map(cb=>cb.value);
-      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&publish=1`, { method:'POST', body: JSON.stringify({ all, users }) });
+      await apiJson(`/* api-disabled */'POST', body: JSON.stringify({ all, users }) });
       showOk('Published successfully.');
       try { window.wsCurrentMeta = Object.assign({}, window.wsCurrentMeta||{}, { published:true, visibility:'public', status:'published' }); } catch(e) {}
       try { window.wsUpdatePublishUI && window.wsUpdatePublishUI(window.wsCurrentMeta); } catch(e) {}
@@ -3380,7 +2532,7 @@ async function wsModalPrimary() {
       if(!dashId) return alert('No workspace selected.');
       if(!canPublish()) return alert('Forbidden: only owner or admin can unpublish.');
       if(!confirm('Unpublish this dashboard?')) return;
-      await apiJson(`/api/state?dash=${encodeURIComponent(dashId)}&unpublish=1`, { method:'POST', body: '{}' });
+      await apiJson(`/* api-disabled */'POST', body: '{}' });
       alert('Unpublished successfully.');
       try { window.wsCurrentMeta = Object.assign({}, window.wsCurrentMeta||{}, { published:false, visibility:'private', status:'private' }); } catch(e) {}
       try { window.wsUpdatePublishUI && window.wsUpdatePublishUI(window.wsCurrentMeta); } catch(e) {}
@@ -3416,8 +2568,7 @@ async function wsModalPrimary() {
   window.addEventListener('DOMContentLoaded', function(){
     const btn = qs('ws-actions-btn');
     const menu = qs('ws-actions-menu');
-    const back = qs('ws-actions-backdrop');
-    if(!btn || !menu || !back) return;
+    const back = qs('    if(!btn || !menu || !back) return;
     const open = ()=>{ menu.classList.remove('hidden'); back.classList.remove('hidden'); btn.setAttribute('aria-expanded','true'); };
     const close= ()=>{ menu.classList.add('hidden'); back.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); };
     // avoid double-binding: mark
@@ -3466,49 +2617,28 @@ async function wsModalPrimary() {
 
 
 <script>
-/* === INLINE HEADER MENU LOGIC (MERGED, NO EXTERNAL FILES) === */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
+  const aBtn=document.getElementById("ws-actions-btn");
+  const aMenu=document.getElementById("ws-actions-menu");
+  const uBtn=document.getElementById("tw-menu-btn");
+  const uMenu=document.getElementById("tw-menu");
 
-  const actionBtn = document.getElementById('ws-actions-btn');
-  const actionMenu = document.getElementById('ws-actions-menu');
-  const userBtn = document.getElementById('tw-menu-btn');
-  const userMenu = document.getElementById('tw-menu');
-
-  function hideAll() {
-    actionMenu?.classList.add('hidden');
-    userMenu?.classList.add('hidden');
+  function closeAll(){
+    aMenu?.classList.remove("open");
+    uMenu?.classList.remove("open");
   }
 
-  actionBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userMenu?.classList.add('hidden');
-
-    actionMenu.classList.toggle('hidden');
-
-    // force dropdown direction
-    actionMenu.style.position = 'absolute';
-    actionMenu.style.top = '100%';
-    actionMenu.style.bottom = 'auto';
-    actionMenu.style.right = '0';
-    actionMenu.style.left = 'auto';
-    actionMenu.style.marginTop = '8px';
+  aBtn?.addEventListener("click",e=>{
+    e.preventDefault();e.stopPropagation();
+    closeAll(); aMenu?.classList.toggle("open");
   });
 
-  userBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    actionMenu?.classList.add('hidden');
-
-    userMenu.classList.toggle('hidden');
-
-    // hamburger menu from top
-    userMenu.style.position = 'absolute';
-    userMenu.style.top = '48px';
-    userMenu.style.right = '0';
-    userMenu.style.left = 'auto';
-    userMenu.style.bottom = 'auto';
+  uBtn?.addEventListener("click",e=>{
+    e.preventDefault();e.stopPropagation();
+    closeAll(); uMenu?.classList.toggle("open");
   });
 
-  document.addEventListener('click', hideAll);
+  document.addEventListener("click", closeAll);
 });
 </script>
 
