@@ -123,25 +123,29 @@
 </style>
 
 
-<style id="tw-auto-scale">
-/* === AUTO ZOOM / SCALE FIX (NON-INTRUSIVE) === */
-html {
-  font-size: clamp(14px, 1vw, 16px);
-}
-body {
-  min-width: 320px;
-  overflow-x: hidden;
-}
+<style id="tw-auto-scale-safe">
+/* Auto scale text & layout safely */
+html { font-size: clamp(14px, 1vw, 16px); }
+body { overflow-x: hidden; }
 
-/* Scale dashboard content safely */
-.dashboard-scale {
-  transform: scale(var(--ui-scale, 1));
-  transform-origin: top center;
-}
-
-/* Ensure tables & charts don't overflow */
-table { table-layout: fixed; width: 100%; }
+/* Make tables & charts responsive */
+table { width: 100%; table-layout: fixed; }
 canvas { max-width: 100% !important; height: auto !important; }
+</style>
+
+<style id="tw-header-responsive-safe">
+/* Mobile header layout */
+@media (max-width: 640px) {
+  .tw-sticky-header-fix > div {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Workspace + actions wrap nicely */
+  #ws-select { width: 100% !important; }
+  #ws-actions-btn { width: 100%; justify-content: center; }
+}
 </style>
 
 </head>
@@ -150,49 +154,78 @@ canvas { max-width: 100% !important; height: auto !important; }
 <!-- Toast (Run-style) -->
 <div id="toast" class="hidden fixed top-4 right-4 z-[9999] text-white text-sm px-4 py-3 rounded-xl shadow-lg bg-slate-900"></div>
 
-
-<!-- ===== Header ===== -->
+<!-- ===== Header (Run-style layout + Build workspace actions) ===== -->
 <div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 tw-sticky-header-fix">
-  <div class="max-w-7xl mx-auto px-3 py-2 flex flex-col gap-2">
-
-    <!-- Row 1: Navigation -->
-    <div class="flex items-center gap-3">
-      <button id="tw-menu-btn"
-        class="w-9 h-9 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">
-        ☰
-      </button>
-      <div class="text-base font-extrabold truncate">
-        Executive Dashboard — Build
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="min-w-0">
+      <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
+      <div class="text-xs text-slate-500 truncate">
+        Workspace: <span id="dashPill" class="font-mono">—</span>
       </div>
     </div>
 
-    <!-- Row 2: Workspace + Actions -->
-    <div class="flex items-center gap-2">
-      <select id="ws-select"
-        class="w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <option value="">Loading…</option>
-      </select>
+    <div class="w-full sm:w-auto grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:justify-end">
+      <select id="ws-select" class="ml-0 sm:ml-1 col-span-2 sm:col-auto w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Loading…</option>
+                    </select>
+                    <span id="ws-saved-indicator" class="text-xs text-gray-500 ml-2">Not saved</span>
+
+      <!-- Publish/Private pill (optional, reused from Run ids) -->
+      <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
 
       <div class="relative">
-        <button id="ws-actions-btn"
-          class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2">
-          ⚙️ Actions
-        </button>
-        <!-- Existing actions menu logic is preserved -->
-      </div>
+  <button id="ws-actions-btn" type="button"
+    class="px-3 py-2 text-sm bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 flex items-center gap-2 active:scale-[0.99] transition"
+    aria-haspopup="menu" aria-controls="ws-actions-menu" aria-expanded="false">
+    <span class="text-base">⚙️</span><span>Actions</span>
+    <svg class="w-4 h-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
+  </button>
+  <div id="ws-actions-backdrop" class="hidden fixed inset-0 bg-slate-950/30 z-40" aria-hidden="true"></div>
+  <div id="ws-actions-menu" class="hidden z-50 fixed pb-[env(safe-area-inset-bottom)] inset-x-4 bottom-4 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100%-2rem)] sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-none" role="menu" aria-label="Workspace actions">
+    <div class="sm:hidden px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between"><div class="text-sm font-semibold text-slate-800">Workspace Actions</div><button type="button" class="text-slate-500 hover:text-slate-800" data-ws-close aria-label="Close">✕</button></div>
+    <div class="p-2 overflow-y-auto flex-1 custom-scroll">
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="new" role="menuitem">New workspace</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="rename" role="menuitem">Rename</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="save" role="menuitem">Save</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-red-50 active:bg-red-100 text-red-700" data-ws-action="delete" role="menuitem">Delete</button>
+      <div class="my-2 h-px bg-slate-100"></div>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="export" role="menuitem">Export (JSON)</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportExcel" role="menuitem">Export (Excel)</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="exportReport" role="menuitem">Export Report (JPG)</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="import" role="menuitem">Import</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="publish" role="menuitem" id="ws-action-publish">Publish</button>
+      <button type="button" class="w-full text-left px-3 py-3 sm:py-2 rounded-xl text-sm hover:bg-slate-50 active:bg-slate-100" data-ws-action="unpublish" role="menuitem" id="ws-action-unpublish">Unpublish</button>
     </div>
+    <div class="sm:hidden px-4 py-3 border-t border-slate-100 bg-slate-50"><button type="button" class="w-full px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium" data-ws-close>Done</button></div>
+  </div>
+</div>
 
-    <!-- Row 3: Status -->
-    <div class="flex items-center gap-3 text-xs text-slate-500">
-      <span id="ws-saved-indicator">Not saved</span>
-      <span id="ws-indicator"
-        class="px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
+      <div class="relative">
+          <button id="tw-menu-btn" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center">☰</button>
+          <div id="tw-menu" class="hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+            <div class="px-4 py-3 border-b bg-slate-50">
+              <div class="text-xs text-slate-500">Signed in as</div>
+              <div id="tw-userpill" class="mt-1 text-sm font-semibold">Checking…</div>
+            </div>
+            <div class="p-2">
+              <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
+              <a id="nav-build" href="/build.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🛠️ Build</a>
+              <a id="nav-run" href="/run.html" class="block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">▶️ Run</a>
+              <a id="tw-execboard" href="/executive-board.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
+            </div>
+            <div class="p-2 border-t">
+              <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
+              <a id="tw-usermgr" href="/user-manager.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">👥 User Manager</a>
+              <button id="tw-logout" class="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-700">⎋ Logout</button>
+            </div>
+          </div>
+        </div>
+
+      <input type="file" id="ws-import-file" accept="application/json" class="hidden" />
     </div>
-
   </div>
 </div>
 <!-- ===== /Header ===== -->
-
 
 <style>
   /* Tighten content gap under header */
@@ -3455,50 +3488,6 @@ async function wsModalPrimary() {
   document.addEventListener('DOMContentLoaded', () => {
     try { window.wsUpdatePublishUI(window.wsCurrentMeta); } catch(e) {}
   });
-</script>
-
-
-<script id="tw-menu-fix">
-document.addEventListener('DOMContentLoaded', () => {
-
-  // Hamburger menu
-  const hamBtn = document.getElementById('tw-menu-btn');
-  const hamMenu = document.getElementById('tw-menu');
-
-  if (hamBtn && hamMenu) {
-    hamBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      hamMenu.classList.toggle('hidden');
-    });
-    document.addEventListener('click', () => hamMenu.classList.add('hidden'));
-    hamMenu.addEventListener('click', e => e.stopPropagation());
-  }
-
-  // Workspace Actions menu
-  const actBtn = document.getElementById('ws-actions-btn');
-  const actMenu = document.getElementById('ws-actions-menu');
-  const actBackdrop = document.getElementById('ws-actions-backdrop');
-
-  if (actBtn && actMenu) {
-    actBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      actMenu.classList.toggle('hidden');
-      actBackdrop && actBackdrop.classList.toggle('hidden');
-    });
-
-    document.addEventListener('click', () => {
-      actMenu.classList.add('hidden');
-      actBackdrop && actBackdrop.classList.add('hidden');
-    });
-
-    actMenu.addEventListener('click', e => e.stopPropagation());
-    actBackdrop && actBackdrop.addEventListener('click', () => {
-      actMenu.classList.add('hidden');
-      actBackdrop.classList.add('hidden');
-    });
-  }
-
-});
 </script>
 
 </body>
