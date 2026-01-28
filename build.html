@@ -122,6 +122,44 @@
   }
 </style>
 
+<style>
+/* === ZOOM & SCREEN-FIT RESPONSIVE FIX (AUTO-INJECTED) === */
+html { font-size: clamp(14px, 1vw, 16px); }
+body { min-width: 320px; overflow-x: hidden; }
+
+/* Fluid containers */
+.tw-fluid { width: 100%; max-width: 100vw; margin-left: auto; margin-right: auto; }
+
+/* Tables safe on zoom */
+table { width: 100%; table-layout: fixed; }
+th, td { word-break: break-word; white-space: normal; }
+
+/* Charts responsive */
+canvas { max-width: 100% !important; height: auto !important; }
+
+/* Modals always fit screen */
+.modal > div {
+  max-width: min(95vw, 1200px);
+  max-height: 90vh;
+}
+
+/* Fixed header + fluid body */
+body { display: flex; flex-direction: column; }
+.tw-sticky-header-fix { flex-shrink: 0; }
+.tw-body-scroll { flex: 1; overflow-y: auto; }
+
+/* UI Scale toggle */
+.dashboard-scale {
+  transform: scale(var(--ui-scale, 1));
+  transform-origin: top center;
+}
+
+/* Mobile polish */
+@media (max-width: 768px) {
+  h2, h3 { font-size: 1.1rem; }
+  .shadow-md { box-shadow: none; }
+}
+</style>
 </head>
 <body class="text-gray-800">
 
@@ -130,7 +168,7 @@
 
 <!-- ===== Header (Run-style layout + Build workspace actions) ===== -->
 <div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 tw-sticky-header-fix">
-  <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  <div class="tw-fluid mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div class="min-w-0">
       <div class="text-lg font-extrabold truncate">Executive Dashboard — Build</div>
       <div class="text-xs text-slate-500 truncate">
@@ -146,6 +184,12 @@
 
       <!-- Publish/Private pill (optional, reused from Run ids) -->
       <span id="ws-indicator" class="text-xs text-slate-600 px-2 py-1 rounded-full bg-slate-50 border border-slate-200"></span>
+<div class="flex items-center gap-1 text-xs">
+  <button onclick="document.documentElement.style.setProperty('--ui-scale',0.8)" class="px-2 py-1 border rounded">80%</button>
+  <button onclick="document.documentElement.style.setProperty('--ui-scale',0.9)" class="px-2 py-1 border rounded">90%</button>
+  <button onclick="document.documentElement.style.setProperty('--ui-scale',1)" class="px-2 py-1 border rounded bg-slate-900 text-white">100%</button>
+</div>
+
 
       <div class="relative">
   <button id="ws-actions-btn" type="button"
@@ -227,7 +271,7 @@
 </div>
 
 
-    <div class="max-w-7xl mx-auto px-6 pb-6 pt-3 min-h-screen">
+    <div class="tw-fluid mx-auto px-6 pb-6 pt-3 min-h-screen">
         <!-- Header -->
 
 
