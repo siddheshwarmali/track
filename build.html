@@ -199,204 +199,97 @@ canvas {
 </style>
 
 
-<!-- === FINAL MOBILE + ZOOM SAFE FIX (NO FEATURE CHANGES) === -->
-<style id="tw-final-mobile-safe">
-/* -------- Text wrapping (fix vertical text on mobile/zoom) -------- */
-th, td, p, span, div {
-  word-break: normal !important;
-  overflow-wrap: anywhere !important;
-  white-space: normal !important;
+<!-- === MOBILE-FIRST RESPONSIVE UI FIX (PRODUCTION SAFE) === -->
+<style id="tw-mobile-responsive-final">
+
+/* ---------- GLOBAL SAFETY ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ---------- TEXT: ALWAYS HORIZONTAL ---------- */
+p, span, label, h1, h2, h3, h4, h5, h6, td, th {
   writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  white-space: normal;
+  word-break: break-word;
 }
 
-/* Tables should scroll instead of squeezing text */
-table { table-layout: auto !important; }
-.overflow-x-auto { overflow-x: auto !important; }
+/* ---------- TABLES ---------- */
+/* Tables should NEVER squeeze on mobile */
+@media (max-width: 768px) {
+  .overflow-x-auto,
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 
-/* -------- Global zoom stability -------- */
-html { font-size: clamp(14px, 1vw + 0.25rem, 16px); }
-html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  table {
+    min-width: 640px; /* forces scroll instead of vertical text */
+  }
 
-/* -------- Header action menu: ALWAYS stay in viewport -------- */
-#ws-actions-menu {
-  position: fixed !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  bottom: max(12px, env(safe-area-inset-bottom)) !important;
-  top: auto !important;
-  width: min(92vw, 20rem) !important;
-  max-height: 80vh !important;
-  overflow-y: auto !important;
-}
-
-/* Desktop behavior restored safely */
-@media (min-width: 640px) {
-  #ws-actions-menu {
-    position: absolute !important;
-    left: auto !important;
-    right: 0 !important;
-    top: 100% !important;
-    bottom: auto !important;
-    transform: none !important;
-    width: 16rem !important;
-    max-height: none !important;
+  th, td {
+    white-space: nowrap;
   }
 }
 
-/* User menu safety */
-#tw-menu {
-  max-height: 80vh;
-  overflow-y: auto;
-}
-</style>
-<!-- === /FINAL MOBILE + ZOOM SAFE FIX === -->
+/* ---------- KPI / TILE / CARD GRIDS ---------- */
+@media (max-width: 768px) {
 
+  /* Generic grid normalization */
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem;
+  }
 
-<!-- === ADVANCED RESPONSIVE UI/UX FIX (NO FEATURE CHANGE) === -->
-<style id="tw-ultimate-responsive-fix">
-/* FORCE horizontal text everywhere */
-* {
-  writing-mode: horizontal-tb !important;
-  text-orientation: mixed !important;
-}
+  /* KPI cards */
+  #kpi-container > div {
+    width: 100%;
+  }
 
-/* Prevent vertical labels/titles/values */
-label, p, span, h1, h2, h3, h4, h5, h6, td, th, div {
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow-wrap: break-word !important;
-  line-height: 1.45;
-}
+  /* BAU cards */
+  #section-bau .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 
-/* Table stability */
-table { table-layout: auto !important; }
-th, td { vertical-align: middle; }
-
-/* Card / tile layout stability */
-.grid > div {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-/* Responsive font scaling */
-html {
-  font-size: clamp(14px, 0.9vw + 0.3rem, 16px);
-}
-
-/* Mobile grid normalization */
-@media (max-width: 640px) {
-  .grid-cols-4,
-  .grid-cols-6 {
+  /* US / Bug tiles */
+  #us-tiles,
+  #bug-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
-/* Overflow safety */
-html, body {
-  overflow-x: hidden;
-  max-width: 100%;
-}
-</style>
-<!-- === /ADVANCED RESPONSIVE UI/UX FIX === -->
-
-
-<!-- === FINAL MOBILE HORIZONTAL TEXT FIX (ABSOLUTE) === -->
-<style id="tw-mobile-horizontal-lock">
-/* HARD RESET FOR MOBILE */
+/* ---------- HEADER ACTION MENU ---------- */
 @media (max-width: 768px) {
-
-  /* Force layout width so text never collapses */
-  body, .max-w-7xl, .bg-white {
-    min-width: 360px;
-  }
-
-  /* Grid items must not shrink */
-  .grid > * {
-    min-width: 0;
-  }
-
-  /* FORCE HORIZONTAL TEXT */
-  * {
-    writing-mode: horizontal-tb !important;
-    text-orientation: mixed !important;
-    transform: none !important;
-  }
-
-  /* Prevent character-by-character stacking */
-  p, span, label, h1, h2, h3, h4, h5, h6, td, th, div {
-    white-space: normal !important;
-    word-break: normal !important;
-    overflow-wrap: break-word !important;
-    text-align: left !important;
-  }
-
-  /* Cards / tiles must stretch */
-  .grid {
-    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-  }
-
-  /* KPI / BAU / tiles value readability */
-  .text-xl, .text-2xl, .text-lg {
-    word-break: keep-all !important;
-  }
-
-  /* Tables scroll instead of compress */
-  table {
-    table-layout: auto !important;
-  }
-
-  .overflow-x-auto {
-    overflow-x: auto !important;
+  #ws-actions-menu {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    border-radius: 16px 16px 0 0;
+    max-height: 85vh;
   }
 }
-</style>
-<!-- === /FINAL MOBILE HORIZONTAL TEXT FIX === -->
 
-
-<!-- === NUCLEAR MOBILE HORIZONTAL TEXT FIX (GUARANTEED) === -->
-<style id="tw-nuclear-mobile-fix">
+/* ---------- MODALS ---------- */
 @media (max-width: 768px) {
-
-  /* 1) Never allow characters to stack vertically */
-  p, span, label, a, button,
-  h1, h2, h3, h4, h5, h6,
-  td, th, li, strong, em {
-    white-space: nowrap !important;
-    word-break: keep-all !important;
-    overflow-wrap: normal !important;
-    writing-mode: horizontal-tb !important;
-    text-orientation: mixed !important;
-  }
-
-  /* 2) Containers scroll horizontally instead of shrinking text */
-  .overflow-x-auto,
-  table,
-  .grid,
-  .flex {
-    overflow-x: auto !important;
-  }
-
-  /* 3) Force single-column stacking for cards/tiles */
-  .grid-cols-2,
-  .grid-cols-3,
-  .grid-cols-4,
-  .grid-cols-6 {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* 4) Prevent browser auto text rotation */
-  * {
-    transform: none !important;
-  }
-
-  /* 5) Keep layout readable */
-  body {
-    font-size: 15px;
+  .modal > div {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    border-radius: 0 !important;
   }
 }
+
 </style>
-<!-- === /NUCLEAR MOBILE HORIZONTAL TEXT FIX === -->
+<!-- === /MOBILE-FIRST RESPONSIVE UI FIX === -->
 
 </head>
 <body class="text-gray-800">
