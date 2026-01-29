@@ -1,7 +1,11 @@
 const bcrypt = require('bcryptjs');
 const { json, readBody } = require('../_lib/http');
 const { getSession } = require('../_lib/cookie');
-const { ghGetFile, ghPutFileRetry, decodeContent } = require('../_lib/github');
+const {
+  ghGetFile,
+  ghPutFileRetry,
+  decodeContent
+} = require('../_lib/github');
 
 const USERS_PATH = 'db/users.json';
 
@@ -22,17 +26,20 @@ async function loadAll() {
     const f = await ghGetFile(USERS_PATH);
 
     if (!f || !f.exists) {
-      console.warn('[users] users.json missing, initializing empty store');
-      return { users: {} };
+      return { users: {}, sha: null, exists: false };
     }
 
     const raw = (decodeContent(f) || '').trim();
     const data = parseJsonSafe(raw || '{"users":{}}', { users: {} });
 
-    return { users: data.users || {} };
+    return {
+      users: data.users || {},
+      sha: f.sha,
+      exists: true
+    };
   } catch (e) {
-    console.error('[users] failed to load users:', e);
-    return { users: {} };
+    console.error('[users] load failed:', e);
+    return { users: {}, sha: null, exists: false };
   }
 }
 
@@ -53,8 +60,10 @@ module.exports = async (req, res) => {
     const sess = getSession(req);
     if (!sess) return json(res, 401, { error: 'Not authenticated' });
 
-    const all = await loadAll();
-    const me = all.users[sess.userId] || {
+    const store = await loadAll();
+    const allUsers = store.users;
+
+    const me = allUsers[sess.userId] || {
       role: 'viewer',
       permissions: {}
     };
@@ -71,7 +80,7 @@ module.exports = async (req, res) => {
 
     if (req.method === 'GET') {
       return json(res, 200, {
-        users: Object.values(all.users).map(u => ({
+        users: Object.values(allUsers).map(u => ({
           userId: u.userId,
           role: u.role,
           permissions: u.permissions || {},
@@ -101,7 +110,7 @@ module.exports = async (req, res) => {
         });
       }
 
-      all.users[userId] = {
+      allUsers[userId] = {
         userId,
         passwordHash: bcrypt.hashSync(password, 10),
         role,
@@ -111,11 +120,11 @@ module.exports = async (req, res) => {
 
       await ghPutFileRetry(
         USERS_PATH,
-        JSON.stringify({ users: all.users }, null, 2),
-        `upsert user ${userId}`
+        JSON.stringify({ users: allUsers }, null, 2),
+        `upsert user ${userId}`,
+        store.exists ? store.sha : undefined   // ✅ CRITICAL FIX
       );
 
-      console.log('[users] created/updated:', userId);
       return json(res, 200, { ok: true });
     }
 
@@ -125,30 +134,30 @@ module.exports = async (req, res) => {
 
     if (req.method === 'PUT') {
       const userId = String(body.userId || '').trim();
-      if (!userId || !all.users[userId]) {
+      if (!userId || !allUsers[userId]) {
         return json(res, 404, { error: 'Not found' });
       }
 
-      if (body.role) all.users[userId].role = String(body.role);
+      if (body.role) allUsers[userId].role = String(body.role);
       if (body.password) {
-        all.users[userId].passwordHash = bcrypt.hashSync(
+        allUsers[userId].passwordHash = bcrypt.hashSync(
           String(body.password),
           10
         );
       }
       if (body.permissions && typeof body.permissions === 'object') {
-        all.users[userId].permissions = body.permissions;
+        allUsers[userId].permissions = body.permissions;
       }
 
-      all.users[userId].updatedAt = new Date().toISOString();
+      allUsers[userId].updatedAt = new Date().toISOString();
 
       await ghPutFileRetry(
         USERS_PATH,
-        JSON.stringify({ users: all.users }, null, 2),
-        `update user ${userId}`
+        JSON.stringify({ users: allUsers }, null, 2),
+        `update user ${userId}`,
+        store.sha                                  // ✅ FIX
       );
 
-      console.log('[users] updated:', userId);
       return json(res, 200, { ok: true });
     }
 
@@ -158,25 +167,25 @@ module.exports = async (req, res) => {
 
     if (req.method === 'DELETE') {
       const userId = String(body.userId || '').trim();
-      if (!userId || !all.users[userId]) {
+      if (!userId || !allUsers[userId]) {
         return json(res, 404, { error: 'Not found' });
       }
 
-      delete all.users[userId];
+      delete allUsers[userId];
 
       await ghPutFileRetry(
         USERS_PATH,
-        JSON.stringify({ users: all.users }, null, 2),
-        `delete user ${userId}`
+        JSON.stringify({ users: allUsers }, null, 2),
+        `delete user ${userId}`,
+        store.sha                                  // ✅ FIX
       );
 
-      console.log('[users] deleted:', userId);
       return json(res, 200, { ok: true });
     }
 
     return json(res, 405, { error: 'Method not allowed' });
   } catch (e) {
-    console.error('[users] fatal error:', e);
+    console.error('[users] fatal:', e);
     return json(res, 500, { error: e.message || String(e) });
   }
 };
