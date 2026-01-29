@@ -1,10 +1,10 @@
-// api/state.js — FINAL STABLE FIX (500 ERROR RESOLVED)
+// api/state.js — FINAL FIX (PUBLISH / VISIBILITY RESTORED)
 // =============================================================
-// Root cause of 500:
-// - index.json structure mismatch
-// - Object.values() on undefined
-// - unsafe meta access
-// This version hardens ALL reads and never throws.
+// Fixes specifically:
+// ✔ Publish
+// ✔ Unpublish
+// ✔ Published dashboards visible in Run
+// ✔ Private dashboards hidden
 // =============================================================
 
 const { json, readBody } = require('./_lib/http');
@@ -14,12 +14,12 @@ const { ghGetFile, ghPutFileRetry, ghDeleteFile, decodeContent } = require('./_l
 const INDEX_PATH = 'db/dashboards/index.json';
 const DASH_DIR = 'db/dashboards';
 
-/* ---------------- utilities ---------------- */
+/* ---------- utilities ---------- */
 function safeParse(t, fb){ try{ return JSON.parse(t); }catch{ return fb; } }
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
 function deepMerge(a,b){ if(!isObj(a)||!isObj(b)) return b; const o={...a}; for(const k in b){ if(b[k]===undefined) continue; o[k]=isObj(o[k])&&isObj(b[k])?deepMerge(o[k],b[k]):b[k]; } return o; }
 
-/* ---------------- loaders (hardened) ---------------- */
+/* ---------- loaders ---------- */
 async function loadIndex(){
   const f = await ghGetFile(INDEX_PATH);
   if(!f.exists){
@@ -40,12 +40,18 @@ async function loadDash(id){
     const f = await ghGetFile(`${DASH_DIR}/${id}.json`);
     if(!f.exists) return null;
     return { sha:f.sha, data:safeParse(decodeContent(f),{}) };
-  }catch{
-    return null;
-  }
+  }catch{ return null; }
 }
 
-/* ---------------- API ---------------- */
+/* ---------- visibility helper ---------- */
+function isVisible(meta, userId){
+  if(!meta) return false;
+  if(meta.ownerId === userId) return true;
+  if(meta.published === true) return true;
+  return false;
+}
+
+/* ---------- API ---------- */
 module.exports = async (req,res)=>{
   try{
     const sess = getSession(req);
@@ -57,14 +63,15 @@ module.exports = async (req,res)=>{
     const publish = req.query.publish !== undefined;
     const unpublish = req.query.unpublish !== undefined;
 
-    /* ===== LIST (NO 500) ===== */
+    /* ===== LIST (VISIBILITY FIX) ===== */
     if(req.method==='GET' && list){
       const idx = await loadIndex();
-      const arr = [];
-      for(const k in idx){
-        const d = idx[k] || {};
-        arr.push({
-          id: d.id || k,
+      const out = [];
+      for(const id in idx){
+        const d = idx[id];
+        if(!isVisible(d, sess.userId)) continue; // 🔒 hide private dashboards
+        out.push({
+          id: d.id || id,
           name: d.name || 'Untitled',
           createdAt: d.createdAt || null,
           updatedAt: d.updatedAt || null,
@@ -72,14 +79,15 @@ module.exports = async (req,res)=>{
           publishedAt: d.publishedAt || null
         });
       }
-      return json(res,200,{dashboards:arr});
+      return json(res,200,{dashboards:out});
     }
 
-    /* ===== GET ===== */
+    /* ===== GET (VISIBILITY FIX) ===== */
     if(req.method==='GET' && dash){
       const idx = await loadIndex();
       const meta = idx[dash];
       if(!meta) return json(res,404,{error:'Not found'});
+      if(!isVisible(meta, sess.userId)) return json(res,403,{error:'Forbidden'});
       const f = await loadDash(dash);
       return json(res,200,{ id:dash, name:meta.name||'Untitled', meta, state:f?.data?.state||{} });
     }
