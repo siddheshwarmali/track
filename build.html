@@ -291,6 +291,61 @@ p, span, label, h1, h2, h3, h4, h5, h6, td, th {
 </style>
 <!-- === /MOBILE-FIRST RESPONSIVE UI FIX === -->
 
+
+<!-- === BUTTON RESPONSIVENESS FIX (MOBILE + WEB SAFE) === -->
+<style id="tw-button-responsive-fix">
+
+/* ---------- GLOBAL BUTTON SAFETY ---------- */
+button,
+a.button,
+input[type="button"],
+input[type="submit"] {
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ---------- MOBILE BUTTON FIX ---------- */
+@media (max-width: 768px) {
+
+  /* Stack action buttons vertically */
+  .no-print.mobile-stack-actions,
+  .flex.gap-2,
+  .flex.space-x-2,
+  .flex.space-x-3 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Full-width buttons on mobile */
+  button,
+  .btn,
+  a.button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Header action buttons */
+  #ws-actions-btn,
+  #tw-menu-btn {
+    width: 100% !important;
+  }
+
+  /* Prevent button text breaking */
+  button span {
+    white-space: nowrap;
+  }
+}
+
+/* ---------- DESKTOP (UNCHANGED) ---------- */
+@media (min-width: 769px) {
+  button {
+    width: auto;
+  }
+}
+
+</style>
+<!-- === /BUTTON RESPONSIVENESS FIX === -->
+
 </head>
 <body class="text-gray-800">
 
