@@ -1,9 +1,5 @@
 import { getUser } from './auth.js';
-import {
-  ghGetFile,
-  ghPutFileRetry,
-  ghDeleteFile
-} from './github.js';
+import { ghGetFile, ghPutFileRetry, ghDeleteFile } from './github.js';
 
 /* =========================
    Helpers
@@ -15,52 +11,48 @@ function json(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-// Safe body parsing (Netlify / Cloudflare / Vercel)
 async function getBody(req) {
   if (req.body && typeof req.body === 'object') return req.body;
-
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     let raw = '';
-    req.on('data', chunk => (raw += chunk));
+    req.on('data', c => (raw += c));
     req.on('end', () => {
       try {
         resolve(JSON.parse(raw || '{}'));
       } catch {
-        console.warn('[state] body parse failed');
         resolve({});
       }
     });
   });
 }
 
-function normalizeStateFromFile(file) {
-  return file?.state || {};
-}
-
-async function loadDash(dash) {
-  const path = `data/dashboards/${dash}.json`;
+async function getIndex() {
   try {
-    const { content, sha } = await ghGetFile(path);
-    const data = JSON.parse(Buffer.from(content, 'base64').toString());
-    return { exists: true, path, sha, data };
+    const f = await ghGetFile('data/dashboards/index.json');
+    const data = JSON.parse(Buffer.from(f.content, 'base64').toString());
+    return { list: data || [], sha: f.sha, exists: true };
   } catch {
-    return { exists: false, path, sha: null, data: null };
+    return { list: [], sha: null, exists: false };
   }
 }
 
-// 🔹 LIST DASHBOARDS (FIX FOR 500 ERROR)
-async function listDashboards(userId) {
-  try {
-    const { content } = await ghGetFile('data/dashboards/index.json');
-    const list = JSON.parse(Buffer.from(content, 'base64').toString());
+async function saveIndex(list, sha) {
+  await ghPutFileRetry(
+    'data/dashboards/index.json',
+    JSON.stringify(list, null, 2),
+    'update dashboard index',
+    sha || undefined
+  );
+}
 
-    return list.filter(d =>
-      d.ownerId === userId ||
-      d.allowedUsers?.includes('*') ||
-      d.allowedUsers?.includes(userId)
-    );
+async function loadDash(id) {
+  const path = `data/dashboards/${id}.json`;
+  try {
+    const f = await ghGetFile(path);
+    const data = JSON.parse(Buffer.from(f.content, 'base64').toString());
+    return { exists: true, path, sha: f.sha, data };
   } catch {
-    return [];
+    return { exists: false, path, sha: null, data: null };
   }
 }
 
@@ -69,171 +61,100 @@ async function listDashboards(userId) {
 ========================= */
 
 export default async function handler(req, res) {
-  console.log(`[state] ${req.method} ${req.url}`);
+  try {
+    const user = await getUser(req);
+    if (!user) return json(res, 401, { error: 'unauthorized' });
 
-  const user = await getUser(req);
-  if (!user) return json(res, 401, { error: 'unauthorized' });
-
-  // =========================
-  // LIST DASHBOARDS
-  // =========================
-  if (req.method === 'GET' && req.query.list !== undefined) {
-    const list = await listDashboards(user.id);
-    console.log('[state] list dashboards:', list.length);
-    return json(res, 200, list);
-  }
-
-  const dash = req.query.dash;
-  if (!dash) return json(res, 400, { error: 'dash required' });
-
-  const publish = req.query.publish !== undefined;
-  const unpublish = req.query.unpublish !== undefined;
-  const merge = req.query.merge !== undefined;
-
-  // Prevent publish/unpublish conflict
-  if (publish && unpublish) {
-    return json(res, 400, {
-      error: 'Cannot publish and unpublish at the same time'
-    });
-  }
-
-  const d = await loadDash(dash);
-
-  /* =========================
-     GET DASHBOARD
-  ========================= */
-
-  if (req.method === 'GET') {
-    if (!d.exists) return json(res, 404, { error: 'not found' });
-
-    const rec = d.data;
-    const allowed = rec.allowedUsers || [];
-
-    if (
-      !allowed.includes('*') &&
-      rec.ownerId !== user.id &&
-      !allowed.includes(user.id)
-    ) {
-      return json(res, 403, { error: 'forbidden' });
+    /* =========================
+       LIST DASHBOARDS
+    ========================= */
+    if (req.method === 'GET' && req.query.list !== undefined) {
+      const idx = await getIndex();
+      const visible = idx.list.filter(
+        d =>
+          d.ownerId === user.id ||
+          d.allowedUsers?.includes('*') ||
+          d.allowedUsers?.includes(user.id)
+      );
+      return json(res, 200, visible);
     }
 
-    console.log('[state] loaded dashboard:', dash);
-    return json(res, 200, rec);
-  }
+    const dash = req.query.dash;
+    if (!dash) return json(res, 400, { error: 'dash required' });
 
-  /* =========================
-     DELETE DASHBOARD
-  ========================= */
+    const publish = req.query.publish !== undefined;
+    const unpublish = req.query.unpublish !== undefined;
+    const merge = req.query.merge !== undefined;
 
-  if (req.method === 'DELETE') {
-    if (!d.exists) return json(res, 404, { error: 'not found' });
-    if (d.data.ownerId !== user.id) {
-      return json(res, 403, { error: 'forbidden' });
+    if (publish && unpublish) {
+      return json(res, 400, { error: 'conflict' });
     }
 
-    await ghDeleteFile(d.path, d.sha, 'delete dashboard');
-    console.log('[state] deleted dashboard:', dash);
-    return json(res, 200, { ok: true });
-  }
+    const d = await loadDash(dash);
 
-  /* =========================
-     POST (SAVE / RUN / PUBLISH)
-  ========================= */
-
-  if (req.method === 'POST') {
-    const body = await getBody(req);
-    const name = body.name || d.data?.name || 'Untitled';
-
-    /* ---------- PUBLISH / UNPUBLISH ---------- */
-
-    if (publish || unpublish) {
+    /* =========================
+       GET DASHBOARD
+    ========================= */
+    if (req.method === 'GET') {
       if (!d.exists) return json(res, 404, { error: 'not found' });
-      if (d.data.ownerId !== user.id) {
+      const a = d.data.allowedUsers || [];
+      if (
+        d.data.ownerId !== user.id &&
+        !a.includes('*') &&
+        !a.includes(user.id)
+      ) {
         return json(res, 403, { error: 'forbidden' });
       }
+      return json(res, 200, d.data);
+    }
 
-      const rec = d.data;
+    /* =========================
+       POST (CREATE / SAVE)
+    ========================= */
+    if (req.method === 'POST') {
+      const body = await getBody(req);
+      const idx = await getIndex();
 
-      if (unpublish) {
-        rec.published = false;
-        rec.allowedUsers = [rec.ownerId];
-        console.log('[state] unpublished dashboard:', dash);
-      }
+      const state = body.state || {};
+      const rec = d.exists
+        ? { ...d.data }
+        : {
+            id: dash,
+            name: body.name || 'Untitled',
+            ownerId: user.id,
+            published: false,
+            allowedUsers: [user.id],
+            state: {}
+          };
 
-      if (publish) {
-        const users = Array.isArray(body.users) ? body.users : [];
-        const publishAll = body.all === true;
-
-        rec.published = true;
-        rec.allowedUsers = publishAll
-          ? ['*']
-          : Array.from(new Set([rec.ownerId, ...users]));
-
-        console.log(
-          '[state] published dashboard:',
-          dash,
-          publishAll ? '(public)' : '(restricted)'
-        );
-      }
+      rec.state = merge
+        ? { ...rec.state, ...state }
+        : { ...rec.state, ...state, run: state.run ?? rec.state.run };
 
       await ghPutFileRetry(
         d.path,
         JSON.stringify(rec, null, 2),
-        'update publish state',
-        d.sha
+        'save dashboard',
+        d.exists ? d.sha : undefined
       );
+
+      // 🔑 ensure index.json is updated
+      if (!idx.list.find(x => x.id === dash)) {
+        idx.list.push({
+          id: dash,
+          name: rec.name,
+          ownerId: rec.ownerId,
+          allowedUsers: rec.allowedUsers
+        });
+        await saveIndex(idx.list, idx.sha);
+      }
 
       return json(res, 200, { ok: true });
     }
 
-    /* ---------- SAVE STATE ---------- */
-
-    const incomingState = body.state;
-    if (!incomingState || typeof incomingState !== 'object') {
-      return json(res, 400, { error: 'state required' });
-    }
-
-    const existingState = d.exists
-      ? normalizeStateFromFile(d.data)
-      : {};
-
-    let finalState;
-
-    if (merge) {
-      // RUN MODE — merge only
-      finalState = {
-        ...existingState,
-        ...incomingState
-      };
-      console.log('[state] run state merged:', dash);
-    } else {
-      // BUILD MODE — preserve run data
-      finalState = {
-        ...existingState,
-        ...incomingState,
-        run: incomingState.run ?? existingState.run
-      };
-      console.log('[state] build state saved:', dash);
-    }
-
-    const record = {
-      id: dash,
-      name,
-      ownerId: d.data?.ownerId || user.id,
-      published: d.data?.published || false,
-      allowedUsers: d.data?.allowedUsers || [user.id],
-      state: finalState
-    };
-
-    await ghPutFileRetry(
-      d.path,
-      JSON.stringify(record, null, 2),
-      'save dashboard',
-      d.sha
-    );
-
-    return json(res, 200, { ok: true });
+    return json(res, 405, { error: 'method not allowed' });
+  } catch (e) {
+    console.error('[state] FATAL:', e);
+    return json(res, 500, { error: 'server error' });
   }
-
-  return json(res, 405, { error: 'method not allowed' });
 }
