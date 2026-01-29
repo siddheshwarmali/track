@@ -142,20 +142,36 @@ module.exports=async(req,res)=>{
       return json(res,200,{ok:true});
     }
 
-    /* ===== PUBLISH ===== */
+    /* ===== PUBLISH (FIX PRIVATE/PUBLIC CONFLICT) ===== */
+    // Frontend may NOT send body.all or users.
+    // Default behavior: publish to ALL if no users specified.
     if(req.method==='POST' && dash && publish){
-      const body=await readBody(req);
-      const idx=await loadIndex();
-      const rec=idx[dash];
+      const body = await readBody(req);
+      const idx = await loadIndex();
+      const rec = idx[dash];
       if(!rec) return json(res,404,{error:'Not found'});
       if(rec.ownerId!==s.userId && !isAdmin) return json(res,403,{error:'Forbidden'});
-      rec.published=true;
-      rec.publishedToAll=!!body.all;
-      rec.allowedUsers=rec.publishedToAll?[rec.ownerId]:Array.from(new Set([rec.ownerId,...(body.users||[])]));
-      rec.updatedAt=new Date().toISOString();
-      idx[dash]=rec;
+
+      const usersList = Array.isArray(body.users)
+        ? body.users.map(String).filter(Boolean)
+        : [];
+
+      // 🔒 FIX: if no users provided, publish to ALL
+      const publishToAll = body.all === true || usersList.length === 0;
+
+      rec.published = true;
+      rec.publishedToAll = publishToAll;
+      rec.allowedUsers = publishToAll
+        ? [rec.ownerId]
+        : Array.from(new Set([rec.ownerId, ...usersList]));
+
+      rec.publishedAt = new Date().toISOString();
+      rec.updatedAt = rec.publishedAt;
+      idx[dash] = rec;
+
       await saveIndex(idx);
-      return json(res,200,{ok:true});
+      return json(res,200,{ok:true,published:true,publishedToAll:publishToAll});
+    }
     }
 
     /* ===== UNPUBLISH ===== */
