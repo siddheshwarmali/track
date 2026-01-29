@@ -300,6 +300,59 @@ html, body {
 </style>
 <!-- === /ADVANCED RESPONSIVE UI/UX FIX === -->
 
+
+<!-- === FINAL MOBILE HORIZONTAL TEXT FIX (ABSOLUTE) === -->
+<style id="tw-mobile-horizontal-lock">
+/* HARD RESET FOR MOBILE */
+@media (max-width: 768px) {
+
+  /* Force layout width so text never collapses */
+  body, .max-w-7xl, .bg-white {
+    min-width: 360px;
+  }
+
+  /* Grid items must not shrink */
+  .grid > * {
+    min-width: 0;
+  }
+
+  /* FORCE HORIZONTAL TEXT */
+  * {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    transform: none !important;
+  }
+
+  /* Prevent character-by-character stacking */
+  p, span, label, h1, h2, h3, h4, h5, h6, td, th, div {
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    text-align: left !important;
+  }
+
+  /* Cards / tiles must stretch */
+  .grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  /* KPI / BAU / tiles value readability */
+  .text-xl, .text-2xl, .text-lg {
+    word-break: keep-all !important;
+  }
+
+  /* Tables scroll instead of compress */
+  table {
+    table-layout: auto !important;
+  }
+
+  .overflow-x-auto {
+    overflow-x: auto !important;
+  }
+}
+</style>
+<!-- === /FINAL MOBILE HORIZONTAL TEXT FIX === -->
+
 </head>
 <body class="text-gray-800">
 
