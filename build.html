@@ -353,6 +353,51 @@ html, body {
 </style>
 <!-- === /FINAL MOBILE HORIZONTAL TEXT FIX === -->
 
+
+<!-- === NUCLEAR MOBILE HORIZONTAL TEXT FIX (GUARANTEED) === -->
+<style id="tw-nuclear-mobile-fix">
+@media (max-width: 768px) {
+
+  /* 1) Never allow characters to stack vertically */
+  p, span, label, a, button,
+  h1, h2, h3, h4, h5, h6,
+  td, th, li, strong, em {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+  }
+
+  /* 2) Containers scroll horizontally instead of shrinking text */
+  .overflow-x-auto,
+  table,
+  .grid,
+  .flex {
+    overflow-x: auto !important;
+  }
+
+  /* 3) Force single-column stacking for cards/tiles */
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-6 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 4) Prevent browser auto text rotation */
+  * {
+    transform: none !important;
+  }
+
+  /* 5) Keep layout readable */
+  body {
+    font-size: 15px;
+  }
+}
+</style>
+<!-- === /NUCLEAR MOBILE HORIZONTAL TEXT FIX === -->
+
 </head>
 <body class="text-gray-800">
 
