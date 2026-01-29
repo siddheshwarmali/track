@@ -251,6 +251,55 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 </style>
 <!-- === /FINAL MOBILE + ZOOM SAFE FIX === -->
 
+
+<!-- === ADVANCED RESPONSIVE UI/UX FIX (NO FEATURE CHANGE) === -->
+<style id="tw-ultimate-responsive-fix">
+/* FORCE horizontal text everywhere */
+* {
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+}
+
+/* Prevent vertical labels/titles/values */
+label, p, span, h1, h2, h3, h4, h5, h6, td, th, div {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.45;
+}
+
+/* Table stability */
+table { table-layout: auto !important; }
+th, td { vertical-align: middle; }
+
+/* Card / tile layout stability */
+.grid > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Responsive font scaling */
+html {
+  font-size: clamp(14px, 0.9vw + 0.3rem, 16px);
+}
+
+/* Mobile grid normalization */
+@media (max-width: 640px) {
+  .grid-cols-4,
+  .grid-cols-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Overflow safety */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+</style>
+<!-- === /ADVANCED RESPONSIVE UI/UX FIX === -->
+
 </head>
 <body class="text-gray-800">
 
