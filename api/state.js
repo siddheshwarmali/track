@@ -25,7 +25,7 @@ async function getBody(req) {
     req.on('end', () => {
       try {
         resolve(JSON.parse(raw || '{}'));
-      } catch (e) {
+      } catch {
         console.warn('[state] body parse failed');
         resolve({});
       }
@@ -48,6 +48,22 @@ async function loadDash(dash) {
   }
 }
 
+// 🔹 LIST DASHBOARDS (FIX FOR 500 ERROR)
+async function listDashboards(userId) {
+  try {
+    const { content } = await ghGetFile('data/dashboards/index.json');
+    const list = JSON.parse(Buffer.from(content, 'base64').toString());
+
+    return list.filter(d =>
+      d.ownerId === userId ||
+      d.allowedUsers?.includes('*') ||
+      d.allowedUsers?.includes(userId)
+    );
+  } catch {
+    return [];
+  }
+}
+
 /* =========================
    Handler
 ========================= */
@@ -57,6 +73,15 @@ export default async function handler(req, res) {
 
   const user = await getUser(req);
   if (!user) return json(res, 401, { error: 'unauthorized' });
+
+  // =========================
+  // LIST DASHBOARDS
+  // =========================
+  if (req.method === 'GET' && req.query.list !== undefined) {
+    const list = await listDashboards(user.id);
+    console.log('[state] list dashboards:', list.length);
+    return json(res, 200, list);
+  }
 
   const dash = req.query.dash;
   if (!dash) return json(res, 400, { error: 'dash required' });
@@ -165,7 +190,6 @@ export default async function handler(req, res) {
 
     const incomingState = body.state;
     if (!incomingState || typeof incomingState !== 'object') {
-      console.warn('[state] invalid state payload');
       return json(res, 400, { error: 'state required' });
     }
 
