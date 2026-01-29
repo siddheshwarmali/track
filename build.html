@@ -148,6 +148,56 @@ canvas { max-width: 100% !important; height: auto !important; }
 }
 </style>
 
+
+<style id="tw-zoom-fix">
+/* === GLOBAL ZOOM & FIT FIX === */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: clamp(14px, 0.95vw + 0.2rem, 16px);
+}
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Fluid page containers */
+.tw-page,
+.max-w-7xl {
+  width: 100%;
+  max-width: 100% !important;
+  margin-inline: auto;
+  padding-inline: clamp(12px, 2vw, 24px);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  table-layout: fixed;
+}
+th, td {
+  word-break: break-word;
+}
+
+/* Charts */
+canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Sticky header stability */
+.tw-sticky-header-fix {
+  inset-inline: 0;
+}
+
+/* Modal safety */
+.modal > div {
+  max-width: min(95vw, 100%);
+}
+</style>
+
 </head>
 <body class="text-gray-800">
 
