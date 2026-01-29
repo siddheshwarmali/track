@@ -346,6 +346,75 @@ input[type="submit"] {
 </style>
 <!-- === /BUTTON RESPONSIVENESS FIX === -->
 
+
+<!-- === MOBILE UI POLISH: BUTTONS + TITLES (FINAL) === -->
+<style id="tw-mobile-polish">
+
+/* ---------- TITLES (User Story / Bugs) ---------- */
+@media (max-width: 768px) {
+  #section-user-stories h3,
+  #section-bugs h3 {
+    font-size: 1rem !important;
+    line-height: 1.3 !important;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  #section-user-stories h3 i,
+  #section-bugs h3 i {
+    width: 18px;
+    height: 18px;
+    margin-right: 0.25rem;
+  }
+}
+
+/* ---------- BUTTON SIZE NORMALIZATION ---------- */
+@media (max-width: 768px) {
+
+  /* Reset oversized buttons */
+  button {
+    width: auto !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.5rem !important;
+  }
+
+  /* Action groups: wrap instead of stack */
+  .flex.space-x-2,
+  .flex.space-x-3,
+  .flex.gap-2 {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Only critical action buttons full-width */
+  .mobile-primary {
+    width: 100% !important;
+  }
+
+  /* Header buttons stay compact */
+  #ws-actions-btn,
+  #tw-menu-btn {
+    width: auto !important;
+    min-width: 44px;
+    height: 40px;
+    padding: 0 0.75rem !important;
+  }
+}
+
+/* ---------- DESKTOP SAFETY ---------- */
+@media (min-width: 769px) {
+  button {
+    font-size: inherit;
+    padding: inherit;
+  }
+}
+
+</style>
+<!-- === /MOBILE UI POLISH === -->
+
 </head>
 <body class="text-gray-800">
 
