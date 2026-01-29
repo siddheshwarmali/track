@@ -1,4 +1,4 @@
-// api/state.js — ONE FINAL, FRONTEND-COMPATIBLE VERSION
+// api/state.js — ONE FINAL, FRONTEND‑COMPATIBLE VERSION
 // =============================================================
 // This file matches the EXACT expectations of the existing UI.
 // Features supported:
@@ -127,14 +127,23 @@ module.exports = async (req,res)=>{
       return json(res,200,{ok:true});
     }
 
-    /* ===== DELETE ===== */
-    if(req.method==='DELETE' && dash){
+    /* ===== DELETE (frontend-compatible) ===== */
+    // Frontend may call DELETE or POST with action=delete
+    if((req.method==='DELETE' && dash) || (req.method==='POST' && dash && req.query.delete!==undefined)){
       const idx = await loadIndex();
       if(!idx[dash]) return json(res,404,{error:'Not found'});
+
+      // Remove from index
       delete idx[dash];
       await saveIndex(idx);
-      await ghDeleteFile(`${DASH_DIR}/${dash}.json`, 'delete dashboard');
+
+      // Remove dashboard file if exists
+      try{
+        await ghDeleteFile(`${DASH_DIR}/${dash}.json`, 'delete dashboard');
+      }catch(e){ /* ignore if already deleted */ }
+
       return json(res,200,{ok:true});
+    }
     }
 
     /* ===== PUBLISH ===== */
