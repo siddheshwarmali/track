@@ -198,6 +198,59 @@ canvas {
 }
 </style>
 
+
+<!-- === FINAL MOBILE + ZOOM SAFE FIX (NO FEATURE CHANGES) === -->
+<style id="tw-final-mobile-safe">
+/* -------- Text wrapping (fix vertical text on mobile/zoom) -------- */
+th, td, p, span, div {
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+  writing-mode: horizontal-tb !important;
+}
+
+/* Tables should scroll instead of squeezing text */
+table { table-layout: auto !important; }
+.overflow-x-auto { overflow-x: auto !important; }
+
+/* -------- Global zoom stability -------- */
+html { font-size: clamp(14px, 1vw + 0.25rem, 16px); }
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+
+/* -------- Header action menu: ALWAYS stay in viewport -------- */
+#ws-actions-menu {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  top: auto !important;
+  width: min(92vw, 20rem) !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+}
+
+/* Desktop behavior restored safely */
+@media (min-width: 640px) {
+  #ws-actions-menu {
+    position: absolute !important;
+    left: auto !important;
+    right: 0 !important;
+    top: 100% !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 16rem !important;
+    max-height: none !important;
+  }
+}
+
+/* User menu safety */
+#tw-menu {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+</style>
+<!-- === /FINAL MOBILE + ZOOM SAFE FIX === -->
+
 </head>
 <body class="text-gray-800">
 
