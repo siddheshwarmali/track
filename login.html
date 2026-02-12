@@ -31,7 +31,7 @@
   const err = (t)=>{ const e=document.getElementById('err'); e.textContent=t; e.classList.remove('hidden'); };
   function nextUrl(){
     const u = new URL(location.href);
-    return u.searchParams.get('next') || '/';
+    return u.searchParams.get('next') || '/build.html';
   }
 
   async function login(){

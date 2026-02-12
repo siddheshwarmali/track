@@ -54,7 +54,7 @@ export default {
     globalThis.process = { env: { ...env, NODE_ENV: 'production' } };
 
     // FIX: Redirect root URL to login.html since index.html doesn't exist
-    if (path === '/' || path === '/build.html') {
+    if (path === '/' || path === '/index.html') {
       return Response.redirect(url.origin + '/login.html', 302);
     }
 
