@@ -5,6 +5,11 @@ import usersHandler from './api/users/index.js';
 import adoSync from './api/ado/sync.js';
 import logsHandler from './api/logs.js';
 import boardHandler from './api/board.js';
+import cookieLib from './api/_lib/cookie.js';
+import githubLib from './api/_lib/github.js';
+
+const { getSession } = cookieLib;
+const { ghGetFile, decodeContent } = githubLib;
 
 // Mock Node.js Request/Response for existing handlers
 function createAdapters(request) {
@@ -67,12 +72,26 @@ export default {
         
         // Mock Auth Endpoints (from server.js logic)
         else if (path === '/api/auth/me') {
-          // In prod, you might want real session check here. 
-          // For now, mimicking server.js mock if no cookie logic exists yet.
-          // But since we use cookie.js, let's try to verify session if possible.
-          // For simplicity, returning the mock admin as per server.js fallback
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ authenticated: true, userId: 'admin', role: 'admin', permissions: { userManager: true } }));
+          const sess = getSession(req);
+          if (!sess) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ authenticated: false }));
+          } else {
+            // Load user details to get role/permissions
+            let user = { userId: sess.userId, role: 'viewer', permissions: {} };
+            try {
+              const f = await ghGetFile('db/users.json');
+              if (f.exists) {
+                const json = JSON.parse(decodeContent(f) || '{"users":{}}');
+                if (json.users && json.users[sess.userId]) {
+                  user = json.users[sess.userId];
+                }
+              }
+            } catch (e) { console.error('Auth check error', e); }
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ authenticated: true, userId: user.userId, role: user.role, permissions: user.permissions }));
+          }
         }
         else if (path === '/api/auth/logout') {
            res.writeHead(200, { 'Content-Type': 'application/json', 'Set-Cookie': 'execdash_session=; Path=/; HttpOnly; Max-Age=0' });
