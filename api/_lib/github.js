@@ -2,8 +2,6 @@
 // GitHub Contents API helper with safe SHA handling for updates.
 // Fixes: "Invalid request. "sha" wasn't supplied." when updating existing files.
 
-const fs = require('fs');
-const pathPkg = require('path');
 const GH_API = 'https://api.github.com';
 
 function must(name){
@@ -35,14 +33,6 @@ function encodePath(path){
 }
 
 async function ghGetFile(path){
-  const localRoot = process.env.LOCAL_DB_ROOT || (!process.env.GITHUB_OWNER ? 'D:\\My Project\\Database-main' : null);
-  if (localRoot) {
-    const fullPath = pathPkg.join(localRoot, path);
-    if (!fs.existsSync(fullPath)) return { exists: false };
-    const content = fs.readFileSync(fullPath, 'utf-8');
-    return { exists: true, sha: 'local', content, encoding: 'utf-8' };
-  }
-
   const c = cfg();
   const url = `${GH_API}/repos/${c.owner}/${c.repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(c.branch)}`;
   const r = await fetch(url, { headers: headers(c) });
@@ -59,15 +49,6 @@ function decodeContent(file){
 }
 
 async function ghPutFile(path, textContent, message, sha){
-  const localRoot = process.env.LOCAL_DB_ROOT || (!process.env.GITHUB_OWNER ? 'D:\\My Project\\Database-main' : null);
-  if (localRoot) {
-    const fullPath = pathPkg.join(localRoot, path);
-    const dir = pathPkg.dirname(fullPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(fullPath, textContent, 'utf-8');
-    return { content: { sha: 'local' } };
-  }
-
   const c = cfg();
   const url = `${GH_API}/repos/${c.owner}/${c.repo}/contents/${encodePath(path)}`;
   const body = {
@@ -89,13 +70,6 @@ async function ghPutFile(path, textContent, message, sha){
 }
 
 async function ghDeleteFile(path, message, sha){
-  const localRoot = process.env.LOCAL_DB_ROOT || (!process.env.GITHUB_OWNER ? 'D:\\My Project\\Database-main' : null);
-  if (localRoot) {
-    const fullPath = pathPkg.join(localRoot, path);
-    if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-    return { content: { sha: 'local' } };
-  }
-
   const c = cfg();
   const url = `${GH_API}/repos/${c.owner}/${c.repo}/contents/${encodePath(path)}`;
   const body = { message, sha, branch: c.branch };
