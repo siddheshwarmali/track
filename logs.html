@@ -1,0 +1,251 @@
+<!-- d:\My Project\CycleCipher-main\logs.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System Logs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f8fafc; }
+    .log-row:hover { background-color: #f1f5f9; }
+  </style>
+</head>
+<body class="text-slate-900">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">System Logs</h1>
+        <p class="text-sm text-slate-500">View activity logs captured by week.</p>
+      </div>
+      <div class="flex gap-3">
+        <input type="week" id="weekPicker" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white" />
+        <button onclick="loadLogs()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Refresh</button>
+        <div class='relative'>
+          <button id='tw-menu-btn' class='w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center'>☰</button>
+          <div id='tw-menu' class='hidden absolute right-0 mt-2 w-80 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50'>
+            <div class='px-4 py-3 border-b bg-slate-50'>
+              <div class='text-xs text-slate-500'>Signed in as</div>
+              <div id='tw-userpill' class='mt-1 text-sm font-semibold'>Checking…</div>
+            </div>
+            <div class='p-2'>
+              <div class='px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider'>Navigation</div>
+              <a href='/build.html' class='block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm'>🛠️ Build</a>
+              <a href='/run.html' class='block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm'>▶️ Run</a>
+              <a id="tw-execboard" href="/executive-board.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">🗂️ Executive Board</a>
+            </div>
+            <div class='p-2 border-t'>
+              <div class='px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider'>Account</div>
+              <a id='tw-usermgr' href='/user-manager.html' class='hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm'>👥 User Manager</a>
+              <a id='tw-logs' href='/logs.html' class='hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm'>📜 System Logs</a>
+              <button id='tw-logout' class='w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-700'>⎋ Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col gap-3">
+        <div class="flex gap-4 items-center">
+          <input id="search" placeholder="Filter logs (User, Action, Details)..." class="w-full max-w-md border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <button id="toggleAdv" class="text-sm text-indigo-600 font-medium hover:underline whitespace-nowrap">Advanced Filters</button>
+          <div class="text-xs text-slate-500 ml-auto" id="status">Loading...</div>
+        </div>
+        <div id="advFilters" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-200">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Start Time</label>
+            <input type="datetime-local" id="filterStart" class="w-full border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">End Time</label>
+            <input type="datetime-local" id="filterEnd" class="w-full border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Action</label>
+            <select id="filterAction" class="w-full border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white"><option value="">All Actions</option></select>
+          </div>
+          <div class="flex items-end"><button onclick="resetFilters()" class="text-xs text-slate-500 hover:text-slate-800 underline mb-2">Reset Filters</button></div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3 w-40">Timestamp</th>
+              <th class="px-4 py-3 w-32">User</th>
+              <th class="px-4 py-3 w-32">Action</th>
+              <th class="px-4 py-3 w-40">Workspace</th>
+              <th class="px-4 py-3">Details</th>
+            </tr>
+          </thead>
+          <tbody id="tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+
+    async function twJson(url, opt){
+      const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
+      const t = await r.text();
+      let j={};
+      try{ j=JSON.parse(t||'{}'); }catch(e){ j={error:t}; }
+      if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
+      return j;
+    }
+
+    async function twInit(){
+      const pill=document.getElementById('tw-userpill');
+      const mgr=document.getElementById('tw-usermgr');
+      const lo=document.getElementById('tw-logout');
+      try{
+        const me = await twJson('/api/auth/me');
+        if(!me || !me.authenticated){
+          const next=encodeURIComponent(location.pathname+location.search+location.hash);
+          location.replace('/login.html?next='+next);
+          return;
+        }
+        const role = me.role || 'viewer';
+        document.body.classList.remove('role-admin','role-creator','role-viewer');
+        document.body.classList.add('role-'+role);
+        if(pill) pill.textContent = (me.userId||'User') + ' • ' + role;
+        if(mgr) mgr.classList.toggle('hidden', role!=='admin');
+        const logs=document.getElementById('tw-logs');
+        if(logs) logs.classList.toggle('hidden', role!=='admin');
+        const eb=document.getElementById('tw-execboard');
+        if(eb){ const perms = me.permissions || {}; eb.classList.toggle('hidden', !(role==='admin' || perms.executiveBoard)); }
+        if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
+      }catch(e){
+        const next=encodeURIComponent(location.pathname+location.search+location.hash);
+        location.replace('/login.html?next='+next);
+      }
+    }
+    
+    async function loadLogs() {
+      const week = document.getElementById('weekPicker').value;
+      const status = document.getElementById('status');
+      const tbody = document.getElementById('tbody');
+      
+      status.textContent = 'Fetching...';
+      tbody.innerHTML = '';
+
+      try {
+        const url = week ? `/api/logs?week=${week}` : '/api/logs';
+        const res = await fetch(url);
+        if (res.status === 403) throw new Error('Access Denied (Admin only)');
+        if (!res.ok) throw new Error('Failed to load logs');
+        
+        const data = await res.json();
+        const logs = data.logs || [];
+        
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No logs found for this week.</td></tr>';
+        } else {
+          renderTable(logs);
+        }
+        populateActions(logs);
+        status.textContent = `${logs.length} entries loaded.`;
+        window.allLogs = logs;
+        applyFilters();
+      } catch (e) {
+        status.textContent = 'Error';
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-600">${esc(e.message)}</td></tr>`;
+      }
+    }
+
+    function renderTable(logs) {
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = logs.map(l => {
+        let color = 'text-slate-600';
+        if (l.act === 'login') color = 'text-green-600 font-medium';
+        if (l.act === 'delete' || l.act === 'remove') color = 'text-red-600 font-medium';
+        if (l.act === 'save') color = 'text-blue-600';
+        
+        return `
+          <tr class="log-row transition-colors">
+            <td class="px-4 py-2 text-slate-500 whitespace-nowrap">${new Date(l.ts).toLocaleString()}</td>
+            <td class="px-4 py-2 font-mono text-xs">${esc(l.user)}</td>
+            <td class="px-4 py-2 ${color}">${esc(l.act)}</td>
+            <td class="px-4 py-2 text-slate-500">${esc(l.ws)}</td>
+            <td class="px-4 py-2 text-slate-700 break-all">${esc(l.det)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function populateActions(logs) {
+      const actions = new Set(logs.map(l => l.act));
+      const sel = document.getElementById('filterAction');
+      const current = sel.value;
+      const sorted = Array.from(actions).sort();
+      sel.innerHTML = '<option value="">All Actions</option>' + sorted.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+      if(sorted.includes(current)) sel.value = current;
+    }
+
+    function applyFilters() {
+      if (!window.allLogs) return;
+      const term = document.getElementById('search').value.toLowerCase();
+      const startVal = document.getElementById('filterStart').value;
+      const endVal = document.getElementById('filterEnd').value;
+      const actionVal = document.getElementById('filterAction').value;
+      const startDate = startVal ? new Date(startVal) : null;
+      const endDate = endVal ? new Date(endVal) : null;
+
+      const filtered = window.allLogs.filter(l => {
+        const matchesTerm = !term || l.user.toLowerCase().includes(term) || l.act.toLowerCase().includes(term) || l.det.toLowerCase().includes(term) || l.ws.toLowerCase().includes(term);
+        if (!matchesTerm) return false;
+        const logDate = new Date(l.ts);
+        if (startDate && logDate < startDate) return false;
+        if (endDate && logDate > endDate) return false;
+        if (actionVal && l.act !== actionVal) return false;
+        return true;
+      });
+      renderTable(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById('search').value = '';
+      document.getElementById('filterStart').value = '';
+      document.getElementById('filterEnd').value = '';
+      document.getElementById('filterAction').value = '';
+      applyFilters();
+    }
+
+    document.getElementById('search').addEventListener('input', applyFilters);
+    document.getElementById('filterStart').addEventListener('change', applyFilters);
+    document.getElementById('filterEnd').addEventListener('change', applyFilters);
+    document.getElementById('filterAction').addEventListener('change', applyFilters);
+    document.getElementById('toggleAdv').addEventListener('click', () => document.getElementById('advFilters').classList.toggle('hidden'));
+
+    // Set default week to current week
+    function getWeekStr() {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+      return `${d.getFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+    }
+    document.getElementById('weekPicker').value = getWeekStr();
+
+    // Menu toggle & Init
+    (function(){
+      function toggle(el){ if(el) el.classList.toggle('hidden'); }
+      window.addEventListener('DOMContentLoaded', function(){
+        twInit();
+        const hb=document.getElementById('tw-menu-btn');
+        const hm=document.getElementById('tw-menu');
+        if(hb) hb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); toggle(hm); });
+        document.addEventListener('click', function(e){
+          if(hm && !hm.classList.contains('hidden') && !(hm.contains(e.target) || hb.contains(e.target))) hm.classList.add('hidden');
+        });
+      });
+    })();
+
+    loadLogs();
+  </script>
+</body>
+</html>

@@ -97,6 +97,9 @@
         const um = qs('tw-usermgr');
         if(um) um.classList.toggle('hidden', me.role!=='admin');
 
+        const logs = qs('tw-logs');
+        if(logs) logs.classList.toggle('hidden', me.role!=='admin');
+
         const lo = qs('tw-logout');
         if(lo) lo.onclick = async ()=>{
           try{ await twJson('/api/auth/logout',{method:'POST',body:'{}'}); }catch(e){}
@@ -270,8 +273,8 @@
       keyDashIndex: 'tw_dash_index_v1',
       keyTickets: (dash)=> `tw_run_tickets_${dash}`,
 
-      saveTickets(dash, tickets, runUpdatedAt){
-        try{ localStorage.setItem(this.keyTickets(dash), JSON.stringify({tickets, runUpdatedAt: runUpdatedAt||null, cachedAt: Date.now()})); }catch(e){}
+      saveTickets(dash, tickets, config, runUpdatedAt){
+        try{ localStorage.setItem(this.keyTickets(dash), JSON.stringify({tickets, config, runUpdatedAt: runUpdatedAt||null, cachedAt: Date.now()})); }catch(e){}
       },
       loadTickets(dash){
         try{ const raw = localStorage.getItem(this.keyTickets(dash)); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
@@ -294,8 +297,25 @@
     ========================================================= */
     (function(){
       let tickets = [];
-      let pieChart=null, barChart=null;
-      const thresholds = {Small:4, Medium:6, Large:8};
+      let runConfig = window.runConfig = {
+        fields: [
+          { id: 'id', label: 'ID', type: 'text' },
+          { id: 'title', label: 'Title', type: 'text' },
+          { id: 'type', label: 'Type', type: 'text' },
+          { id: 'startAt', label: 'Start Date', type: 'datetime' },
+          { id: 'endAt', label: 'End Date', type: 'datetime' },
+          { id: 'threshold', label: 'Threshold', type: 'number' },
+          { id: 'actualTime', label: 'Actual', type: 'number' }
+        ],
+        charts: [
+          { id: 'c1', title: 'SLA Overview', type: 'doughnut', groupBy: 'sla_status' },
+          { id: 'c2', title: 'Ticket Types', type: 'bar', groupBy: 'type' }
+        ],
+        sections: ['kpi', 'charts', 'summary', 'tickets'],
+        summaryGroupBy: 'type',
+        sla: { fieldActual: 'actualTime', fieldThreshold: 'threshold', operator: '<=' }
+      };
+      let chartInstances = {};
       let dirty = false;
       let loadToken = 0;
 
@@ -309,39 +329,31 @@
       }
       function clearDirty(){ dirty = false; }
 
-      function typeFromTags(tags, fallback){
-        const t = String(tags||'').toLowerCase();
-        if(t.includes('small')) return 'Small';
-        if(t.includes('medium')) return 'Medium';
-        if(t.includes('large')) return 'Large';
-        return fallback || 'Medium';
+      function checkSla(t) {
+        const cfg = window.runConfig.sla || { fieldActual: 'actualTime', fieldThreshold: 'threshold', operator: '<=' };
+        const act = Number(t[cfg.fieldActual]);
+        const thr = Number(t[cfg.fieldThreshold]);
+        const op = cfg.operator;
+        
+        if (isNaN(act) || isNaN(thr)) return false;
+        
+        if (op === '<=') return act <= thr;
+        if (op === '>=') return act >= thr;
+        if (op === '<') return act < thr;
+        if (op === '>') return act > thr;
+        if (op === '==') return act === thr;
+        return act <= thr;
       }
 
       function computeTotals(){
         const total = tickets.length;
         let onTime = 0;
         for(const t of tickets){
-          if(Number(t.actualTime) <= Number(t.threshold)) onTime++;
+          if(checkSla(t)) onTime++;
         }
         const breached = total - onTime;
         const sla = total ? ((onTime/total)*100).toFixed(1) : '0.0';
         return {total,onTime,breached,sla};
-      }
-
-      function buildBarData(){
-        const map = {};
-        for(const t of tickets){
-          const tp = t.type || 'Medium';
-          map[tp] ||= {type:tp,total:0,onTime:0,breached:0,totalTime:0};
-          map[tp].total++;
-          map[tp].totalTime += Number(t.actualTime||0);
-          if(Number(t.actualTime) <= Number(t.threshold)) map[tp].onTime++;
-          else map[tp].breached++;
-        }
-        const arr = Object.values(map);
-        const order={Small:1,Medium:2,Large:3};
-        arr.sort((a,b)=>(order[a.type]||99)-(order[b.type]||99) || a.type.localeCompare(b.type));
-        return arr;
       }
 
       function renderKPIs(t){
@@ -351,52 +363,150 @@
         qs('kpiSla').textContent = t.sla + '%';
       }
 
-      function renderCharts(totals, barData){
+      function renderCharts(){
         if(typeof Chart === 'undefined'){ toast('Chart.js not loaded','error'); return; }
         if(typeof ChartDataLabels !== 'undefined'){ try{ Chart.register(ChartDataLabels); }catch(e){} }
 
-        const pie = qs('pieChart');
-        const bar = qs('barChart');
-        if(!pie || !bar) return;
+        const container = qs('sec_charts');
+        if(!container) return;
+        container.innerHTML = '';
 
-        if(pieChart) pieChart.destroy();
-        pieChart = new Chart(pie.getContext('2d'), {
-          type:'doughnut',
-          data:{ labels:['On Time','Breached'], datasets:[{ data:[totals.onTime, totals.breached], backgroundColor:['#10b981','#ef4444'], borderWidth:0 }]},
-          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom'}, datalabels:{color:'#111',font:{weight:'bold'},formatter:v=>v} } }
-        });
+        // Cleanup old charts
+        Object.values(chartInstances).forEach(c => c.destroy());
+        chartInstances = {};
 
-        if(barChart) barChart.destroy();
-        barChart = new Chart(bar.getContext('2d'), {
-          type:'bar',
-          data:{
-            labels: barData.map(d=>d.type),
-            datasets:[
-              {label:'On Time', data:barData.map(d=>d.onTime), backgroundColor:'#10b981'},
-              {label:'Breached', data:barData.map(d=>d.breached), backgroundColor:'#ef4444'}
-            ]
-          },
-          options:{ responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}, plugins:{legend:{position:'bottom'}} }
+        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#06b6d4'];
+        const staticColors = {
+            'On Time': '#10b981', 'Breached': '#ef4444',
+            'Small': '#10b981', 'Medium': '#f59e0b', 'Large': '#ef4444',
+            'Low': '#10b981', 'Normal': '#3b82f6', 'High': '#f59e0b', 'Critical': '#ef4444',
+            'New': '#94a3b8', 'Active': '#3b82f6', 'Resolved': '#10b981', 'Closed': '#059669', 'Removed': '#cbd5e1'
+        };
+
+        runConfig.charts.forEach(cfg => {
+            const div = document.createElement('div');
+            div.className = 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm';
+            div.innerHTML = `<div class="text-sm font-bold text-slate-700 mb-4 flex justify-between"><span>${esc(cfg.title)}</span><span class="text-xs font-normal text-slate-400 bg-slate-50 px-2 py-1 rounded">${cfg.type}</span></div><div class="h-64 relative"><canvas id="chart_${cfg.id}"></canvas></div>`;
+            container.appendChild(div);
+
+            const ctx = div.querySelector('canvas').getContext('2d');
+            
+            let labels = [];
+            let datasets = [];
+            const pivot = cfg.pivotBy;
+            const group = cfg.groupBy || 'type';
+
+            if(pivot){
+                // 2D Pivot (Stacked/Grouped)
+                const xSet = new Set();
+                const pSet = new Set();
+                const matrix = {}; // matrix[x][p] = count
+
+                tickets.forEach(t => {
+                    let xVal = (group==='sla_status') ? (checkSla(t)?'On Time':'Breached') : (t[group]||'Unknown');
+                    let pVal = (pivot==='sla_status') ? (checkSla(t)?'On Time':'Breached') : (t[pivot]||'Unknown');
+                    xSet.add(xVal);
+                    pSet.add(pVal);
+                    if(!matrix[xVal]) matrix[xVal]={};
+                    matrix[xVal][pVal] = (matrix[xVal][pVal]||0)+1;
+                });
+
+                labels = Array.from(xSet).sort();
+                const pLabels = Array.from(pSet).sort();
+
+                datasets = pLabels.map((pVal, i) => {
+                    const data = labels.map(x => matrix[x]?.[pVal] || 0);
+                    const color = staticColors[pVal] || colors[i % colors.length];
+                    return {
+                        label: pVal,
+                        data: data,
+                        backgroundColor: color,
+                        borderColor: '#ffffff',
+                        borderWidth: 1,
+                        stack: (cfg.type === 'bar' || cfg.type === 'horizontalBar') ? 'stack1' : undefined
+                    };
+                });
+            } else {
+                // 1D Group (Standard)
+                const counts = {};
+                tickets.forEach(t => {
+                    let key = (group==='sla_status') ? (checkSla(t)?'On Time':'Breached') : (t[group]||'Unknown');
+                    counts[key] = (counts[key] || 0) + 1;
+                });
+                labels = Object.keys(counts).sort();
+                const data = labels.map(k => counts[k]);
+                const bgColors = labels.map((l, i) => staticColors[l] || colors[i % colors.length]);
+
+                datasets = [{
+                    label: 'Count',
+                    data: data,
+                    backgroundColor: bgColors,
+                    borderWidth: 1
+                }];
+            }
+
+            const isStacked = !!pivot && (cfg.type === 'bar' || cfg.type === 'horizontalBar');
+            const chartType = (cfg.type === 'horizontalBar') ? 'bar' : cfg.type;
+
+            chartInstances[cfg.id] = new Chart(ctx, {
+                type: chartType,
+                data: { labels, datasets },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    indexAxis: cfg.type === 'horizontalBar' ? 'y' : 'x',
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+                        datalabels: { 
+                            color: '#fff', 
+                            font: { weight: 'bold', size: 10 }, 
+                            formatter: (v) => v > 0 ? v : '',
+                            display: 'auto'
+                        },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: (chartType === 'bar' || chartType === 'line') ? {
+                        x: { stacked: isStacked, grid: { display: false } },
+                        y: { stacked: isStacked, beginAtZero: true, grid: { color: '#f1f5f9' } }
+                    } : {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
         });
       }
 
-      function renderSummary(barData){
+      function renderSummary(){
         const body = qs('tableBody');
         const cards = qs('summaryCards');
+        const groupField = runConfig.summaryGroupBy || 'type';
+        
+        // Aggregate
+        const map = {};
+        tickets.forEach(t => {
+            const key = t[groupField] || 'Unknown';
+            map[key] = map[key] || { key, total: 0, onTime: 0, breached: 0, totalTime: 0 };
+            map[key].total++;
+            map[key].totalTime += Number(t.actualTime || 0);
+            if (checkSla(t)) map[key].onTime++;
+            else map[key].breached++;
+        });
+        const data = Object.values(map).sort((a,b) => b.total - a.total);
 
         if(body){
           body.innerHTML = '';
-          for(const d of barData){
+          qs('summaryGroupHeader').textContent = runConfig.fields.find(f=>f.id===groupField)?.label || groupField;
+          
+          for(const d of data){
             const avg = d.total ? (d.totalTime/d.total).toFixed(2) : '0.00';
             const sla = d.total ? ((d.onTime/d.total)*100).toFixed(1) : '0.0';
             let badgeClass='badge-green';
             if(Number(sla)<70) badgeClass='badge-red';
             else if(Number(sla)<90) badgeClass='badge-yellow';
-            const thr = (thresholds[d.type]!==undefined) ? thresholds[d.type] : '-';
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td class="py-2"><strong>${esc(d.type)}</strong></td>
-              <td class="py-2 text-center">${thr}</td>
+              <td class="py-2"><strong>${esc(d.key)}</strong></td>
               <td class="py-2 text-center">${d.total}</td>
               <td class="py-2 text-center"><span class="badge badge-green">${d.onTime}</span></td>
               <td class="py-2 text-center"><span class="badge badge-red">${d.breached}</span></td>
@@ -409,23 +519,21 @@
 
         if(cards){
           cards.innerHTML = '';
-          for(const d of barData){
+          for(const d of data){
             const avg = d.total ? (d.totalTime/d.total).toFixed(2) : '0.00';
             const sla = d.total ? ((d.onTime/d.total)*100).toFixed(1) : '0.0';
             let badgeClass='badge-green';
             if(Number(sla)<70) badgeClass='badge-red';
             else if(Number(sla)<90) badgeClass='badge-yellow';
-            const thr = (thresholds[d.type]!==undefined) ? thresholds[d.type] : '-';
 
             const div = document.createElement('div');
             div.className = 'rounded-2xl border border-slate-200 p-4 bg-white';
             div.innerHTML = `
               <div class="flex items-center justify-between gap-2">
-                <div class="font-semibold">${esc(d.type)}</div>
+                <div class="font-semibold">${esc(d.key)}</div>
                 <span class="badge ${badgeClass}">${sla}%</span>
               </div>
               <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                <div class="text-slate-500">Threshold</div><div class="text-right">${thr}</div>
                 <div class="text-slate-500">Total</div><div class="text-right">${d.total}</div>
                 <div class="text-slate-500">On Time</div><div class="text-right">${d.onTime}</div>
                 <div class="text-slate-500">Breached</div><div class="text-right">${d.breached}</div>
@@ -440,21 +548,28 @@
       function renderTickets(){
         const tb = qs('ticketTbody');
         if(!tb) return;
+        
+        // Render Headers
+        const thead = qs('ticketTheadRow');
+        thead.innerHTML = runConfig.fields.map(f => `<th class="py-2 pr-3 text-left whitespace-nowrap">${esc(f.label)}</th>`).join('') + `<th class="py-2 text-right">Actions</th>`;
+
         const q = (qs('searchBox')?.value || '').toLowerCase().trim();
         tb.innerHTML = '';
 
         tickets.forEach((t, idx)=>{
-          const hay = (String(t.id)+' '+String(t.title)+' '+String(t.type)).toLowerCase();
+          const hay = Object.values(t).join(' ').toLowerCase();
           if(q && !hay.includes(q)) return;
 
           const tr = document.createElement('tr');
           tr.className = 'border-b hover:bg-slate-50';
-          tr.innerHTML = `
-            <td class="py-2 pr-3 font-mono text-slate-700 whitespace-nowrap">${esc(t.id)}</td>
-            <td class="py-2 pr-3 text-slate-800 min-w-[260px]">${esc(t.title)}</td>
-            <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">${esc(t.type)}</td>
-            <td class="py-2 pr-3 text-right text-slate-700 whitespace-nowrap">${Number(t.actualTime||0).toFixed(2)}</td>
-            <td class="py-2 pr-3 text-right text-slate-700 whitespace-nowrap">${Number(t.threshold||0).toFixed(2)}</td>
+          
+          let cells = runConfig.fields.map(f => {
+              let val = t[f.id];
+              if (f.type === 'number' && val !== undefined) val = Number(val).toFixed(2);
+              return `<td class="py-2 pr-3 text-slate-700 whitespace-nowrap text-sm">${esc(val)}</td>`;
+          }).join('');
+
+          tr.innerHTML = cells + `
             <td class="py-2 text-right whitespace-nowrap">
               <button class="ticketEdit text-indigo-600 hover:underline text-xs" data-idx="${idx}">Edit</button>
               <span class="mx-1 text-slate-300">|</span>
@@ -466,12 +581,20 @@
       }
 
       function renderAll(){
+        // Reorder Sections
+        const layout = qs('captureRegion');
+        runConfig.sections.forEach(secId => {
+            const el = qs('sec_' + secId);
+            if(el) layout.appendChild(el);
+        });
+
         const totals = computeTotals();
         renderKPIs(totals);
-        const bar = buildBarData();
-        renderCharts(totals, bar);
-        renderSummary(bar);
+        renderCharts();
+        renderSummary();
         renderTickets();
+        
+        qs('filePill').textContent = tickets.length ? `Loaded (${tickets.length} tickets)` : 'No data loaded';
       }
 
       /* ---------- Modals ---------- */
@@ -486,23 +609,31 @@
         m.dataset.mode = mode;
         m.dataset.idx = (idx!==undefined && idx!==null) ? String(idx) : '';
 
-        const t = (mode==='edit' && tickets[idx]) ? tickets[idx] : {
-          id:'', title:'', type:'Medium', startAt:'', endAt:'', actualTime:0, threshold:6
-        };
+        const t = (mode==='edit' && tickets[idx]) ? tickets[idx] : {};
+        const container = qs('ticketFormFields');
+        container.innerHTML = '';
 
-        qs('tId').value = t.id || '';
-        qs('tTitle').value = t.title || '';
-        qs('tType').value = t.type || 'Medium';
-        qs('tStart').value = toDatetimeLocal(t.startAt);
-        qs('tEnd').value = toDatetimeLocal(t.endAt);
-        qs('tThr').value = String(t.threshold ?? (thresholds[t.type]||6));
-        qs('tActual').value = Number(t.actualTime||0).toFixed(2);
-
+        runConfig.fields.forEach(f => {
+            const div = document.createElement('div');
+            div.className = f.id === 'title' ? 'md:col-span-2' : '';
+            let inputHtml = '';
+            const val = t[f.id] || '';
+            
+            if (f.type === 'datetime') {
+                inputHtml = `<input type="datetime-local" data-fid="${f.id}" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="${toDatetimeLocal(val)}">`;
+            } else if (f.type === 'number') {
+                inputHtml = `<input type="number" step="0.01" data-fid="${f.id}" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="${val}" ${f.readonly?'readonly':''}>`;
+            } else {
+                inputHtml = `<input type="text" data-fid="${f.id}" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="${esc(val)}">`;
+            }
+            div.innerHTML = `<label class="text-xs text-slate-600">${esc(f.label)}</label>${inputHtml}`;
+            container.appendChild(div);
+        });
+        
         qs('ticketModalTitle').textContent = (mode==='edit') ? 'Edit Ticket' : 'Add Ticket';
 
         m.classList.remove('hidden');
         m.classList.add('flex');
-        recalcHoursPreview();
       }
       function closeTicketModal(){
         const m=qs('ticketModal'); if(!m) return;
@@ -517,33 +648,33 @@
       }
 
       function recalcHoursPreview(){
-        const startAt = qs('tStart')?.value || '';
-        const endAt = qs('tEnd')?.value || '';
-        const hrs = (startAt && endAt) ? businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true}) : 0;
-        qs('tActual').value = Number(hrs||0).toFixed(2);
+        const container = qs('ticketFormFields');
+        if(!container) return;
+        const startInp = container.querySelector('input[data-fid="startAt"]');
+        const endInp = container.querySelector('input[data-fid="endAt"]');
+        const actInp = container.querySelector('input[data-fid="actualTime"]');
+        
+        if (!startInp || !endInp || !actInp) return;
+        
+        const startAt = startInp.value;
+        const endAt = endInp.value;
+        if(startAt && endAt){
+          const hrs = businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true});
+          actInp.value = Number(hrs||0).toFixed(2);
+        }
       }
 
       function saveTicketFromModal(){
         const mode = qs('ticketModal').dataset.mode;
         const idxStr = qs('ticketModal').dataset.idx;
         const idx = idxStr ? Number(idxStr) : null;
-
-        const id = String(qs('tId').value||'').trim() || String(Math.floor(Math.random()*1000000));
-        const title = String(qs('tTitle').value||'').trim() || 'Untitled';
-        const type = String(qs('tType').value||'Medium');
-        const startAt = String(qs('tStart').value||'').trim();
-        const endAt = String(qs('tEnd').value||'').trim();
-        const threshold = Number(qs('tThr').value || thresholds[type] || 6);
-        const actualTime = (startAt && endAt) ? businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true}) : 0;
-
-        const ticket = {
-          id, title, type,
-          startAt: startAt || '',
-          endAt: endAt || '',
-          actualTime: isFinite(actualTime) ? actualTime : 0,
-          threshold: isFinite(threshold) ? threshold : (thresholds[type]||6)
-        };
-
+        
+        const ticket = {};
+        qs('ticketFormFields').querySelectorAll('input').forEach(inp => {
+            const fid = inp.dataset.fid;
+            ticket[fid] = inp.value;
+        });
+        
         if(mode==='edit' && idx!==null && tickets[idx]) tickets[idx] = ticket;
         else tickets.unshift(ticket);
 
@@ -572,29 +703,20 @@
       function parseRows(rows){
         const out = [];
         for(const r of (rows||[])){
-          const id = r.ID || r.Id || r.id || r['\ufeffID'] || r['Work Item Id'] || r['System.Id'] || (''+Math.floor(Math.random()*1000000));
-          const title = r.Title || r.title || 'Untitled';
-          // Your CSV uses Tags like: "Rollout; small" or "large" (case-insensitive)
-          const type = typeFromTags(r.Tags || r.tags, 'Medium');
-
-          const startAt = r['Actual Start date'] || r['Actual Start Date'] || r['Actual Start'] || r.Start || r.startAt || '';
-          const endAt = r['Actual End date'] || r['Actual End Date'] || r['Actual End'] || r.End || r.endAt || '';
-
-          const actualTime = (startAt && endAt)
-            ? businessHoursDiff(startAt, endAt, {workStart:9, workEnd:18, weekendOff:true})
-            : 0;
-
-          const threshold = thresholds[type] ?? 6;
-
-          out.push({
-            id: String(id),
-            title: String(title),
-            type: String(type),
-            startAt: startAt ? String(startAt) : '',
-            endAt: endAt ? String(endAt) : '',
-            actualTime: isFinite(actualTime) ? actualTime : 0,
-            threshold
+          const t = {};
+          runConfig.fields.forEach(f => {
+              // Try to match field label or id in CSV keys
+              const key = Object.keys(r).find(k => k.toLowerCase() === f.label.toLowerCase() || k.toLowerCase() === f.id.toLowerCase());
+              t[f.id] = key ? r[key] : '';
           });
+          
+          // Fallback logic for SLA if missing
+          if (!t.actualTime && t.startAt && t.endAt) {
+              t.actualTime = businessHoursDiff(t.startAt, t.endAt, {workStart:9, workEnd:18, weekendOff:true});
+          }
+          if (!t.id) t.id = Math.floor(Math.random()*100000);
+          
+          out.push(t);
         }
         return out;
       }
@@ -644,18 +766,6 @@
       function authHeaderFromPat(pat){
         return 'Basic ' + btoa(':' + String(pat||''));
       }
-      function num(v){ const n = Number(v); return isFinite(n) ? n : 0; }
-      function mapTypeFromWorkItem(wi){
-        const f = (wi && wi.fields) ? wi.fields : {};
-        const wtype = f['System.WorkItemType'] || '';
-        const tags = String(f['System.Tags']||'').toLowerCase();
-        if(tags.includes('small')) return 'Small';
-        if(tags.includes('medium')) return 'Medium';
-        if(tags.includes('large')) return 'Large';
-        if(String(wtype).toLowerCase().includes('bug')) return 'Medium';
-        if(String(wtype).toLowerCase().includes('task')) return 'Small';
-        return 'Medium';
-      }
 
       async function adoSubmit(){
         toast('Querying ADO…','info');
@@ -670,61 +780,65 @@
         }
 
         try{
-          const baseUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}`;
-          const headers = {
-            'Accept':'application/json',
-            'Content-Type':'application/json',
-            'Authorization': authHeaderFromPat(pat)
-          };
-
-          const qUrl = `${baseUrl}/_apis/wit/queries/${encodeURIComponent(queryId)}?$expand=wiql&api-version=7.1`;
-          const qResp = await fetch(qUrl, {method:'GET', headers});
-          const qText = await qResp.text();
-          let qJson={}; try{ qJson=JSON.parse(qText||'{}'); }catch(e){ qJson={error:qText}; }
-          if(!qResp.ok) throw new Error(qJson.error || qJson.message || qText || 'Query fetch failed');
-
-          const wiql = String(qJson.wiql||'').trim();
-          if(!wiql) throw new Error('No WIQL found for queryId');
-
-          const wiqlUrl = `${baseUrl}/_apis/wit/wiql?api-version=7.1`;
-          const wiqlResp = await fetch(wiqlUrl, {method:'POST', headers, body: JSON.stringify({query: wiql})});
-          const wiqlText = await wiqlResp.text();
-          let wiqlJson={}; try{ wiqlJson=JSON.parse(wiqlText||'{}'); }catch(e){ wiqlJson={error:wiqlText}; }
-          if(!wiqlResp.ok) throw new Error(wiqlJson.error || wiqlJson.message || wiqlText || 'WIQL execution failed');
-
-          const ids = (wiqlJson.workItems||[]).map(x=>x.id).filter(Boolean);
-          if(!ids.length){ toast('No tickets returned','error'); return; }
-
-          const batchUrl = `${baseUrl}/_apis/wit/workitemsbatch?api-version=7.1`;
-          const fields = [
-            'System.Id','System.Title','System.WorkItemType','System.Tags',
-            'Microsoft.VSTS.Scheduling.CompletedWork','Microsoft.VSTS.Scheduling.OriginalEstimate'
-          ];
-
-          const items=[];
-          for(let i=0;i<ids.length;i+=200){
-            const chunk = ids.slice(i, i+200);
-            const bResp = await fetch(batchUrl, {method:'POST', headers, body: JSON.stringify({ids: chunk, fields})});
-            const bText = await bResp.text();
-            let bJson={}; try{ bJson=JSON.parse(bText||'{}'); }catch(e){ bJson={error:bText}; }
-            if(!bResp.ok) throw new Error(bJson.error || bJson.message || bText || 'WorkItems batch failed');
-            if(Array.isArray(bJson.value)) items.push(...bJson.value);
-          }
+          // Use Server-Side Proxy for Security & Smart Sync
+          const r = await fetch('/api/ado/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ org, project, queryId, pat })
+          });
+          const data = await r.json();
+          if(!r.ok) throw new Error(data.error || 'Sync failed');
+          
+          const items = data.value || [];
 
           tickets = items.map(wi=>{
             const f = wi.fields || {};
-            const type = mapTypeFromWorkItem(wi);
-            const actualTime = num(f['Microsoft.VSTS.Scheduling.CompletedWork'] || f['Microsoft.VSTS.Scheduling.OriginalEstimate']);
-            const threshold = thresholds[type] ?? 6;
-            return {
-              id: String(f['System.Id'] || wi.id || ''),
-              title: String(f['System.Title'] || ''),
-              type,
-              startAt: '',
-              endAt: '',
-              actualTime,
-              threshold
-            };
+            const t = {};
+            
+            runConfig.fields.forEach(field => {
+                // Smart Mapping Logic
+                let val = f[field.id];
+                
+                // 1. Try case-insensitive match for field ID (e.g. "system.state" -> "System.State")
+                if (val === undefined) {
+                    const key = Object.keys(f).find(k => k.toLowerCase() === field.id.toLowerCase());
+                    if (key) val = f[key];
+                }
+
+                if (val === undefined) {
+                    const lower = field.id.toLowerCase();
+                    if (lower === 'id') val = wi.id;
+                    else if (lower === 'title') val = f['System.Title'];
+                    else if (lower === 'type') val = f['System.WorkItemType'];
+                    else if (lower === 'state') val = f['System.State'];
+                    else if (lower === 'assigned') val = f['System.AssignedTo'];
+                    else if (lower === 'startat') val = f['Microsoft.VSTS.Common.ActivatedDate'] || f['System.CreatedDate'];
+                    else if (lower === 'endat') val = f['Microsoft.VSTS.Common.ClosedDate'];
+                    else if (lower === 'threshold') val = 6; // Default
+                    else {
+                        // 3. Suffix / Fuzzy Match (e.g. "Points" -> "...StoryPoints")
+                        const cleanName = lower.replace(/\s+/g, '');
+                        const key = Object.keys(f).find(k => {
+                            const kLow = k.toLowerCase();
+                            // Check if the property name (last part) contains our field ID
+                            return kLow.endsWith('.' + lower) || kLow.includes(cleanName);
+                        });
+                        if (key) val = f[key];
+                    }
+                }
+                
+                // 2. Handle IdentityRef objects (like AssignedTo)
+                if (val && typeof val === 'object' && val.displayName) val = val.displayName;
+                
+                t[field.id] = val;
+            });
+            
+            // Recalc actual time if dates present
+            if (t.startAt && t.endAt) {
+                t.actualTime = businessHoursDiff(t.startAt, t.endAt, {workStart:9, workEnd:18, weekendOff:true});
+            }
+            
+            return t;
           });
 
           qs('filePill').textContent = `ADO Sync (${tickets.length} tickets)`;
@@ -750,11 +864,11 @@
         const runUpdatedAt = new Date().toISOString();
 
         await window.StateApi.merge(d, {
-          run:{ tickets, updatedAt: runUpdatedAt },
+          run:{ tickets, config: runConfig, updatedAt: runUpdatedAt },
           executive:{ bauData: bau }
         });
 
-        Cache.saveTickets(d, tickets, runUpdatedAt);
+        Cache.saveTickets(d, tickets, runConfig, runUpdatedAt);
         clearDirty();
         toast('Saved','ok');
         window.dispatchEvent(new CustomEvent('tw:refreshIndicator', {detail:{dash:d}}));
@@ -767,19 +881,7 @@
       }
 
       function normalizeTickets(list){
-        // Recompute business hours when start/end are present (fixes old saved/cached data)
-        return (Array.isArray(list)?list:[]).map(t=>{
-          const tt = Object.assign({}, t||{});
-          if(tt.startAt && tt.endAt){
-            const h = businessHoursDiff(tt.startAt, tt.endAt, {workStart:9, workEnd:18, weekendOff:true});
-            tt.actualTime = isFinite(h) ? h : (Number(tt.actualTime)||0);
-          }
-          if(tt.type){
-            const tm = {Small:4, Medium:6, Large:8};
-            if(tt.threshold===undefined || tt.threshold===null || !isFinite(Number(tt.threshold))) tt.threshold = tm[tt.type] ?? 6;
-          }
-          return tt;
-        });
+        return Array.isArray(list) ? list : [];
       }
 
 async function loadFromWorkspace(id){
@@ -790,6 +892,7 @@ async function loadFromWorkspace(id){
 
         const cached = Cache.loadTickets(d);
         if(cached && Array.isArray(cached.tickets)){
+          if(cached.config) { runConfig = cached.config; window.runConfig = runConfig; if(!runConfig.sla) runConfig.sla = { fieldActual: 'actualTime', fieldThreshold: 'threshold', operator: '<=' }; }
           applyTickets(cached.tickets, 'Cached');
         }else{
           qs('filePill').textContent = 'Loading…';
@@ -800,6 +903,7 @@ async function loadFromWorkspace(id){
           if(token !== loadToken) return;
           const st = resp && resp.state ? resp.state : {};
           const run = st.run || {};
+          if(run.config) { runConfig = run.config; window.runConfig = runConfig; if(!runConfig.sla) runConfig.sla = { fieldActual: 'actualTime', fieldThreshold: 'threshold', operator: '<=' }; }
           const serverTickets = Array.isArray(run.tickets) ? run.tickets : [];
           const runUpdatedAt = run.updatedAt || null;
 
@@ -808,7 +912,7 @@ async function loadFromWorkspace(id){
 
           if(!same){
             applyTickets(serverTickets, 'Workspace');
-            Cache.saveTickets(d, serverTickets, runUpdatedAt);
+            Cache.saveTickets(d, serverTickets, runConfig, runUpdatedAt);
           }else{
             qs('filePill').textContent = `Workspace (${serverTickets.length} tickets)`;
           }
@@ -835,9 +939,141 @@ async function loadFromWorkspace(id){
           .catch(()=>toast('Download failed','error'));
       }
 
+      // --- Configuration UI ---
+      function openConfigModal(){
+          const m = qs('configModal');
+          m.classList.remove('hidden'); m.classList.add('flex');
+          renderConfigFields();
+          renderConfigCharts();
+          renderConfigSla();
+          renderConfigSummary();
+      }
+      function closeConfigModal(){ qs('configModal').classList.add('hidden'); qs('configModal').classList.remove('flex'); }
+      
+      function renderConfigFields(){
+          const c = qs('cfgFieldsList');
+          c.innerHTML = window.runConfig.fields.map((f,i) => `
+            <div class="flex gap-2 mb-2 items-center">
+                <input class="border p-1 text-sm w-24" value="${f.id}" onchange="window.runConfig.fields[${i}].id=this.value">
+                <input class="border p-1 text-sm w-32" value="${f.label}" onchange="window.runConfig.fields[${i}].label=this.value">
+                <select class="border p-1 text-sm" onchange="window.runConfig.fields[${i}].type=this.value">
+                    <option value="text" ${f.type==='text'?'selected':''}>Text</option>
+                    <option value="number" ${f.type==='number'?'selected':''}>Number</option>
+                    <option value="datetime" ${f.type==='datetime'?'selected':''}>Date</option>
+                </select>
+                <button onclick="window.runConfig.fields.splice(${i},1); window.renderConfigFields()" class="text-red-500">✕</button>
+            </div>
+          `).join('');
+      }
+      window.renderConfigFields = renderConfigFields;
+      window.addConfigField = function(){ window.runConfig.fields.push({id:'new', label:'New Field', type:'text'}); window.renderConfigFields(); };
+      
+      function renderConfigCharts(){
+          const c = qs('cfgChartsList');
+          c.innerHTML = window.runConfig.charts.map((ch,i) => `
+            <div class="flex flex-col gap-2 mb-3 p-3 border border-slate-100 rounded-lg bg-slate-50">
+                <div class="flex gap-2 items-center">
+                    <span class="text-xs font-bold text-slate-400 w-6">#${i+1}</span>
+                    <input class="border p-1.5 text-sm flex-1 rounded" value="${ch.title}" onchange="window.runConfig.charts[${i}].title=this.value" placeholder="Chart Title">
+                    <button onclick="window.runConfig.charts.splice(${i},1); window.renderConfigCharts()" class="text-red-500 hover:bg-red-100 p-1.5 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold">Type</label>
+                        <select class="w-full border p-1.5 text-sm rounded bg-white" onchange="window.runConfig.charts[${i}].type=this.value">
+                            <option value="bar" ${ch.type==='bar'?'selected':''}>Bar (Vertical)</option>
+                            <option value="horizontalBar" ${ch.type==='horizontalBar'?'selected':''}>Bar (Horizontal)</option>
+                            <option value="line" ${ch.type==='line'?'selected':''}>Line</option>
+                            <option value="doughnut" ${ch.type==='doughnut'?'selected':''}>Doughnut</option>
+                            <option value="pie" ${ch.type==='pie'?'selected':''}>Pie</option>
+                            <option value="polarArea" ${ch.type==='polarArea'?'selected':''}>Polar Area</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold">Group By (X-Axis)</label>
+                        <select class="w-full border p-1.5 text-sm rounded bg-white" onchange="window.runConfig.charts[${i}].groupBy=this.value">
+                            <option value="sla_status" ${ch.groupBy==='sla_status'?'selected':''}>SLA Status</option>
+                            ${window.runConfig.fields.map(f=>`<option value="${f.id}" ${ch.groupBy===f.id?'selected':''}>${f.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold">Pivot (Series)</label>
+                        <select class="w-full border p-1.5 text-sm rounded bg-white" onchange="window.runConfig.charts[${i}].pivotBy=this.value">
+                            <option value="">(None)</option>
+                            <option value="sla_status" ${ch.pivotBy==='sla_status'?'selected':''}>SLA Status</option>
+                            ${window.runConfig.fields.map(f=>`<option value="${f.id}" ${ch.pivotBy===f.id?'selected':''}>${f.label}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+          `).join('');
+          if(window.lucide?.createIcons) window.lucide.createIcons();
+      }
+      window.renderConfigCharts = renderConfigCharts;
+      window.addConfigChart = function(){ window.runConfig.charts.push({id:'c'+Date.now(), title:'New Chart', type:'bar', groupBy:'type', pivotBy:''}); window.renderConfigCharts(); };
+      
+      function renderConfigSla(){
+          const c = qs('cfgSlaSettings');
+          if(!c) return;
+          // Ensure SLA config exists
+          if(!window.runConfig.sla) window.runConfig.sla = { fieldActual: 'actualTime', fieldThreshold: 'threshold', operator: '<=' };
+          const sla = window.runConfig.sla;
+          const fields = window.runConfig.fields || [];
+          
+          c.innerHTML = `
+            <div class="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Actual Value Field</label>
+                    <select class="w-full border p-1 rounded" onchange="window.runConfig.sla.fieldActual=this.value">
+                        ${fields.map(f => `<option value="${f.id}" ${f.id===sla.fieldActual?'selected':''}>${esc(f.label)}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Operator</label>
+                    <select class="w-full border p-1 rounded" onchange="window.runConfig.sla.operator=this.value">
+                        <option value="<=" ${sla.operator==='<='?'selected':''}>&le; (Less or Equal)</option>
+                        <option value=">=" ${sla.operator==='>='?'selected':''}>&ge; (Greater or Equal)</option>
+                        <option value="<" ${sla.operator==='<'?'selected':''}>&lt; (Less)</option>
+                        <option value=">" ${sla.operator==='>'?'selected':''}>&gt; (Greater)</option>
+                        <option value="==" ${sla.operator==='=='?'selected':''}>= (Equal)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Threshold Field</label>
+                    <select class="w-full border p-1 rounded" onchange="window.runConfig.sla.fieldThreshold=this.value">
+                        ${fields.map(f => `<option value="${f.id}" ${f.id===sla.fieldThreshold?'selected':''}>${esc(f.label)}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+          `;
+      }
+      
+      function renderConfigSummary(){
+          const c = qs('cfgSummarySettings');
+          if(!c) return;
+          const fields = window.runConfig.fields || [];
+          const current = window.runConfig.summaryGroupBy || 'type';
+          
+          c.innerHTML = `
+            <div class="text-sm">
+                <label class="block text-xs text-slate-500 mb-1">Group By Field</label>
+                <select class="w-full border p-1 rounded" onchange="window.runConfig.summaryGroupBy=this.value">
+                    ${fields.map(f => `<option value="${f.id}" ${f.id===current?'selected':''}>${esc(f.label)}</option>`).join('')}
+                </select>
+            </div>
+          `;
+      }
+
+      function saveConfig(){
+          markDirty();
+          closeConfigModal();
+          renderAll();
+      }
+
       function init(){
         window.RunApp = {
           openGenerate: openModal,
+          openConfig: openConfigModal,
           download: downloadJpg,
           saveNow: saveToWorkspace,
           loadWorkspace: loadFromWorkspace,
@@ -860,15 +1096,19 @@ async function loadFromWorkspace(id){
         qs('adoCancel')?.addEventListener('click', closeAdoForm);
         qs('adoSubmit')?.addEventListener('click', adoSubmit);
 
+        // Config
+        qs('configSave')?.addEventListener('click', saveConfig);
+        qs('configCancel')?.addEventListener('click', closeConfigModal);
+
         // tickets
         qs('searchBox')?.addEventListener('input', renderTickets);
         qs('toggleTicketsBtn')?.addEventListener('click', ()=>{
-          const sec = qs('ticketsSection');
+          const sec = qs('sec_tickets');
           if(!sec) return;
           sec.classList.toggle('hidden');
           qs('toggleTicketsBtn').textContent = sec.classList.contains('hidden') ? 'Show Tickets' : 'Hide Tickets';
         });
-        qs('ticketsSection')?.classList.add('hidden');
+        qs('sec_tickets')?.classList.add('hidden');
 
         // CRUD
         qs('addTicketBtn')?.addEventListener('click', ()=>openTicketModal('add'));
@@ -884,8 +1124,11 @@ async function loadFromWorkspace(id){
         qs('ticketModalClose')?.addEventListener('click', closeTicketModal);
         qs('ticketCancel')?.addEventListener('click', closeTicketModal);
         qs('ticketSave')?.addEventListener('click', saveTicketFromModal);
-        qs('tStart')?.addEventListener('input', recalcHoursPreview);
-        qs('tEnd')?.addEventListener('input', recalcHoursPreview);
+        
+        document.addEventListener('input', (e) => { 
+          if(e.target.matches('input[data-fid="startAt"]') || e.target.matches('input[data-fid="endAt"]')) 
+            recalcHoursPreview(); 
+        });
 
         renderAll();
 
@@ -1024,6 +1267,84 @@ async function loadFromWorkspace(id){
         setTimeout(()=>URL.revokeObjectURL(url), 1000);
       }
 
+      async function wsExportCurrentExcel(){
+        const id = dashId();
+        if(!id){ toast('Select workspace first','error'); return; }
+        if(typeof XLSX === 'undefined'){ toast('SheetJS not loaded','error'); return; }
+        
+        toast('Generating Excel…','info');
+        try{
+          const tickets = window.RunApp ? window.RunApp.getTickets() : [];
+          const cfg = window.runConfig || {};
+          
+          const wb = XLSX.utils.book_new();
+          
+          // 1. Tickets
+          if(tickets.length){
+            const fields = cfg.fields || [];
+            const exportData = tickets.map(t => {
+              const row = {};
+              fields.forEach(f => { row[f.label || f.id] = t[f.id]; });
+              return row;
+            });
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            XLSX.utils.book_append_sheet(wb, ws, "Tickets");
+          } else {
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{Info:"No tickets"}]), "Tickets");
+          }
+
+          // 2. Summary
+          const grp = cfg.summaryGroupBy || 'type';
+          const slaCfg = cfg.sla || { fieldActual: 'actualTime', fieldThreshold: 'threshold', operator: '<=' };
+          
+          function check(t){
+            const a = Number(t[slaCfg.fieldActual]);
+            const b = Number(t[slaCfg.fieldThreshold]);
+            if(isNaN(a)||isNaN(b)) return false;
+            const op = slaCfg.operator;
+            if(op==='>') return a>b;
+            if(op==='>=') return a>=b;
+            if(op==='<') return a<b;
+            if(op==='==') return a===b;
+            return a<=b;
+          }
+
+          const map={};
+          tickets.forEach(t=>{
+            const k = t[grp]||'Unknown';
+            if(!map[k]) map[k]={Group:k, Total:0, OnTime:0, Breached:0, TimeSum:0};
+            map[k].Total++;
+            map[k].TimeSum += Number(t.actualTime||0);
+            if(check(t)) map[k].OnTime++; else map[k].Breached++;
+          });
+          
+          const sumRows = Object.values(map).map(x=>({
+            Group: x.Group,
+            Total: x.Total,
+            OnTime: x.OnTime,
+            Breached: x.Breached,
+            AvgTime: x.Total ? (x.TimeSum/x.Total).toFixed(2) : '0.00',
+            SLA: x.Total ? ((x.OnTime/x.Total)*100).toFixed(1)+'%' : '0.0%'
+          }));
+          
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sumRows), "Summary");
+
+          // 3. Meta
+          const meta = [
+            {Key:'Workspace', Value:id},
+            {Key:'Date', Value:new Date().toISOString()},
+            {Key:'Tickets', Value:tickets.length}
+          ];
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meta), "Meta");
+
+          XLSX.writeFile(wb, `Run_${id}_${new Date().toISOString().slice(0,10)}.xlsx`);
+          toast('Exported Excel','ok');
+        }catch(e){
+          console.error(e);
+          toast('Export failed: '+(e.message||String(e)),'error');
+        }
+      }
+
       async function exportWorkspace(){
         const id = dashId();
         if(!id){ toast('Select workspace first','error'); return; }
@@ -1134,11 +1455,13 @@ async function loadFromWorkspace(id){
           const act = it.getAttribute('data-ws-action');
 
           if(act==='generate') return window.RunApp?.openGenerate?.();
+          if(act==='configure') return window.RunApp?.openConfig?.();
           if(act==='downloadJpg') return window.RunApp?.download?.();
           if(act==='new') return createWorkspace();
           if(act==='rename') return renameWorkspace();
           if(act==='save') return window.RunApp?.saveNow?.().catch(err=>toast(err.message||String(err),'error'));
           if(act==='export') return exportWorkspace();
+          if(act==='exportExcel') return wsExportCurrentExcel();
           if(act==='import') return qs('ws-import-file')?.click();
           if(act==='publish') return openPublishModal();
           if(act==='unpublish') return doUnpublish();
@@ -1196,13 +1519,15 @@ async function loadFromWorkspace(id){
           <div id="ws-actions-backdrop" class="hidden fixed inset-0 z-40"></div>
           <div id="ws-actions-menu" class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
             <div class="p-2">
+              <button data-ws-action="configure" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">⚙️ Configure Dashboard</button>
               <button data-ws-action="generate" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Generate Report</button>
               <button data-ws-action="downloadJpg" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Download JPG</button>
               <div class="my-1 border-t"></div>
               <button data-ws-action="new" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Create New</button>
               <button data-ws-action="rename" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Rename</button>
               <button data-ws-action="save" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Save</button>
-              <button data-ws-action="export" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Export</button>
+              <button data-ws-action="export" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Export (JSON)</button>
+              <button data-ws-action="exportExcel" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Export (Excel)</button>
               <button data-ws-action="import" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Import</button>
               <div class="my-1 border-t"></div>
               <button data-ws-action="publish" class="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-slate-50">Publish</button>
@@ -1231,6 +1556,7 @@ async function loadFromWorkspace(id){
             <div class="p-2 border-t">
               <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</div>
               <a id="tw-usermgr" href="/user-manager.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">👥 User Manager</a>
+              <a id="tw-logs" href="/logs.html" class="hidden block px-3 py-2 rounded-xl hover:bg-slate-50 text-sm">📜 System Logs</a>
               <button id="tw-logout" class="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-700">⎋ Logout</button>
             </div>
           </div>
@@ -1242,7 +1568,7 @@ async function loadFromWorkspace(id){
   </div>
 
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6" id="captureRegion">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div id="sec_kpi" class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <div class="text-xs text-slate-500">Total Tickets</div>
         <div id="kpiTotal" class="mt-2 text-3xl font-extrabold">0</div>
@@ -1261,18 +1587,11 @@ async function loadFromWorkspace(id){
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="rounded-2xl border border-slate-200 bg-white p-4">
-        <div class="text-sm font-semibold mb-2">📊 SLA Overview</div>
-        <div class="h-72"><canvas id="pieChart"></canvas></div>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-4">
-        <div class="text-sm font-semibold mb-2">📈 Ticket Types</div>
-        <div class="h-72"><canvas id="barChart"></canvas></div>
-      </div>
+    <div id="sec_charts" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Dynamic Charts -->
     </div>
 
-    <div class="rounded-2xl border border-slate-200 bg-white p-4" id="summaryTableSection">
+    <div id="sec_summary" class="rounded-2xl border border-slate-200 bg-white p-4">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="text-sm font-semibold">📋 Ticket Type Summary</div>
         <button id="toggleTicketsBtn" type="button" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100">Show Tickets</button>
@@ -1284,8 +1603,7 @@ async function loadFromWorkspace(id){
         <table class="min-w-[720px] w-full text-sm">
           <thead class="text-slate-600">
             <tr class="border-b">
-              <th class="py-2 text-left">Ticket Type</th>
-              <th class="py-2 text-center">Threshold (hrs)</th>
+              <th class="py-2 text-left" id="summaryGroupHeader">Group</th>
               <th class="py-2 text-center">Total</th>
               <th class="py-2 text-center">On Time</th>
               <th class="py-2 text-center">Breached</th>
@@ -1298,7 +1616,7 @@ async function loadFromWorkspace(id){
       </div>
     </div>
 
-    <div id="ticketsSection" class="hidden">
+    <div id="sec_tickets" class="hidden">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div class="text-sm font-semibold">Tickets</div>
@@ -1312,13 +1630,8 @@ async function loadFromWorkspace(id){
         <div class="mt-3 overflow-auto">
           <table class="min-w-[900px] w-full text-sm">
             <thead class="text-slate-600">
-              <tr class="border-b">
-                <th class="py-2 pr-3 text-left">ID</th>
-                <th class="py-2 pr-3 text-left">Title</th>
-                <th class="py-2 pr-3 text-left">Type</th>
-                <th class="py-2 pr-3 text-right">Hours</th>
-                <th class="py-2 pr-3 text-right">Threshold</th>
-                <th class="py-2 text-right">Actions</th>
+              <tr class="border-b" id="ticketTheadRow">
+                <!-- Dynamic Headers -->
               </tr>
             </thead>
             <tbody id="ticketTbody"></tbody>
@@ -1406,48 +1719,49 @@ async function loadFromWorkspace(id){
         <button id="ticketModalClose" class="text-slate-500 hover:text-slate-900">✕</button>
       </div>
 
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-        <div>
-          <label class="text-xs text-slate-600">ID</label>
-          <input id="tId" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" placeholder="ID" />
-        </div>
-        <div>
-          <label class="text-xs text-slate-600">Type</label>
-          <select id="tType" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200">
-            <option>Small</option>
-            <option selected>Medium</option>
-            <option>Large</option>
-          </select>
-        </div>
-
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-600">Title</label>
-          <input id="tTitle" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="Title" />
-        </div>
-
-        <div>
-          <label class="text-xs text-slate-600">Start Date & Time</label>
-          <input id="tStart" type="datetime-local" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" />
-        </div>
-        <div>
-          <label class="text-xs text-slate-600">End Date & Time</label>
-          <input id="tEnd" type="datetime-local" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" />
-        </div>
-
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-600">Calculated Working Hours (9–18, Sat/Sun off)</label>
-          <input id="tActual" type="text" readonly class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50" />
-        </div>
-
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-600">Threshold (hrs)</label>
-          <input id="tThr" type="number" step="0.01" class="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200" value="6" />
-        </div>
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm" id="ticketFormFields">
+        <!-- Dynamic Fields -->
       </div>
 
       <div class="mt-5 flex justify-end gap-2">
         <button id="ticketCancel" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-sm">Cancel</button>
         <button id="ticketSave" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Save Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuration Modal -->
+  <div id="configModal" class="hidden fixed inset-0 z-[9999] bg-black/40 items-center justify-center p-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5 flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-sm font-semibold">Configure Dashboard</div>
+        <button onclick="document.getElementById('configModal').classList.add('hidden')" class="text-slate-500 hover:text-slate-900">✕</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-1">
+          <div class="mb-4">
+              <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-xs uppercase text-slate-500">Fields</h4><button onclick="addConfigField()" class="text-xs text-blue-600">+ Add</button></div>
+              <div id="cfgFieldsList"></div>
+          </div>
+          <div class="mb-4">
+              <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-xs uppercase text-slate-500">SLA Calculation</h4></div>
+              <div id="cfgSlaSettings" class="bg-slate-50 p-3 rounded border border-slate-200"></div>
+          </div>
+          <div class="mb-4">
+              <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-xs uppercase text-slate-500">Summary Table</h4></div>
+              <div id="cfgSummarySettings" class="bg-slate-50 p-3 rounded border border-slate-200"></div>
+          </div>
+          <div class="mb-4">
+              <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-xs uppercase text-slate-500">Charts</h4><button onclick="addConfigChart()" class="text-xs text-blue-600">+ Add</button></div>
+              <div id="cfgChartsList"></div>
+          </div>
+          <div class="mb-4">
+              <h4 class="font-bold text-xs uppercase text-slate-500 mb-2">Sections Order</h4>
+              <div class="text-xs text-slate-400">Drag/Drop not implemented, use fixed order: KPI > Charts > Summary > Tickets</div>
+          </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2 pt-2 border-t">
+        <button id="configCancel" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-sm">Cancel</button>
+        <button id="configSave" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Save Config</button>
       </div>
     </div>
   </div>

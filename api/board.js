@@ -131,14 +131,25 @@ function pickMilestones(state) {
 function computeAutoSummary(state) {
   const ms = Array.isArray(state?.executive?.milestones) ? state.executive.milestones : [];
   const msPicked = pickMilestones(state);
-  const app = pickApplication(state);
+  const trackers = Array.isArray(state?.executive?.customTrackers) ? state.executive.customTrackers : [];
+  const bau = state?.executive?.bauData;
 
   const parts = [];
   if (ms.length) parts.push(`Project execution is at ${msPicked.progressPct}% completion (${msPicked.count} milestones).`);
-  if (app.bugs) parts.push(`Bugs: ${app.bugs} total (${app.bugsNew} new, ${app.bugsActive} active).`);
-  if (app.userStories) parts.push(`User Stories: ${app.userStories} total (Open ${app.usOpen}).`);
+  
+  if (trackers.length > 0) {
+    const updates = trackers.map(ct => {
+        const active = (ct.items||[]).filter(i => !['Done','Closed','Resolved'].includes(i.stage)).length;
+        return `• ${ct.title}: ${active} active`;
+    });
+    parts.push(`WORKSTREAMS:\n${updates.join('\n')}`);
+  }
 
-  return parts.join(' ').trim();
+  if (bau && bau.totalTickets > 0) {
+    parts.push(`BAU: ${bau.slaPercentage}% SLA (${bau.breachedSLA} breaches).`);
+  }
+
+  return parts.join('\n\n').trim();
 }
 
 function sortItems(items, mode) {

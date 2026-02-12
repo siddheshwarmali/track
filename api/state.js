@@ -2,6 +2,7 @@
 const { json, readBody } = require('./_lib/http');
 const { getSession } = require('./_lib/cookie');
 const { ghGetFile, ghPutFileRetry, ghDeleteFile, decodeContent } = require('./_lib/github');
+const { log, describeChanges } = require('./_lib/logger');
 
 const USERS_PATH = 'db/users.json';
 const INDEX_PATH = 'db/dashboards/index.json';
@@ -38,7 +39,7 @@ function deepMerge(target, patch) {
     const pv = patch[k];
     const tv = out[k];
     if (isPlainObject(tv) && isPlainObject(pv)) out[k] = deepMerge(tv, pv);
-    else if (pv !== undefined && pv !== null) out[k] = pv; 
+    else if (pv !== undefined) out[k] = pv; 
   });
   return out;
 }
@@ -53,15 +54,15 @@ async function loadUsers() {
 async function loadIndex() {
   const f = await ghGetFile(INDEX_PATH);
   if (!f.exists) {
-    await ghPutFileRetry(INDEX_PATH, JSON.stringify({ dashboards: {} }, null, 2), 'init dashboards index');
-    return { dashboards: {} };
+    const res = await ghPutFileRetry(INDEX_PATH, JSON.stringify({ dashboards: {} }, null, 2), 'init dashboards index');
+    return { dashboards: {}, sha: res.content.sha };
   }
   const data = parseJsonSafe((decodeContent(f) || '').trim() || '{"dashboards":{}}', { dashboards: {} });
-  return { dashboards: data.dashboards || {} };
+  return { dashboards: data.dashboards || {}, sha: f.sha };
 }
 
-async function saveIndex(dashboards) {
-  await ghPutFileRetry(INDEX_PATH, JSON.stringify({ dashboards }, null, 2), 'update dashboards index');
+async function saveIndex(dashboards, sha) {
+  await ghPutFileRetry(INDEX_PATH, JSON.stringify({ dashboards }, null, 2), 'update dashboards index', sha);
 }
 
 async function loadDash(id) {
@@ -88,7 +89,10 @@ module.exports = async (req, res) => {
     const me = users[s.userId] || { role: 'viewer' };
     const isAdmin = me.role === 'admin';
 
-    const dash = req.query.dash ? String(req.query.dash) : null;
+    // SECURITY FIX: Validate dashboard ID format (alphanumeric, dashes, underscores only)
+    let dash = req.query.dash ? String(req.query.dash) : null;
+    if (dash && !/^[a-zA-Z0-9\-_]+$/.test(dash)) return json(res, 400, { error: 'Invalid dashboard ID format' });
+
     const list = req.query.list !== undefined;
     const publish = req.query.publish !== undefined;
     const unpublish = req.query.unpublish !== undefined;
@@ -128,6 +132,10 @@ module.exports = async (req, res) => {
 
     // 3. SAVE (Build or Run)
     if (req.method === 'POST' && dash && !publish && !unpublish) {
+      if (me.role === 'viewer') {
+        return json(res, 403, { error: 'Forbidden: Viewers cannot create or edit dashboards' });
+      }
+
       const body = await readBody(req);
       const idx = await loadIndex();
       const dashboards = idx.dashboards;
@@ -137,7 +145,7 @@ module.exports = async (req, res) => {
         return json(res, 403, { error: 'Forbidden' });
       }
 
-      const d = await loadDash(dash);
+      const d = await loadDash(dash); // This is the ONLY declaration of 'd'
       const curState = d.exists ? normalizeStateFromFile(d.data) : {};
       
       // Determine if we are merging (Run) or replacing structure (Build)
@@ -159,13 +167,41 @@ module.exports = async (req, res) => {
       rec.updatedAt = now;
       dashboards[dash] = rec;
 
-      await ghPutFileRetry(
-        d.path, 
-        JSON.stringify({ id: dash, name: rec.name, state: nextState }, null, 2), 
-        `update ${dash}`, 
-        d.sha
-      );
-      await saveIndex(dashboards);
+      // Log Save, Rename, or Create
+      const wsLogName = rec.name ? `${rec.name} (${dash})` : dash;
+      let action = 'save';
+      let details = 'Dashboard saved/updated';
+
+      if (!existingIdx) {
+        action = 'create';
+        details = `Created new workspace "${rec.name}"`;
+      } else if (existingIdx.name !== rec.name) {
+        action = 'rename';
+        details = `Renamed from "${existingIdx.name}" to "${rec.name}"`;
+      }
+
+      // Log specific changes (e.g., "executive modified")
+      const changeLog = describeChanges(curState, nextState);
+      if (changeLog && changeLog !== 'No changes detected') {
+        details += `. ${changeLog}`;
+      }
+      log(s.userId, wsLogName, action, details);
+
+      try {
+        await ghPutFileRetry(
+          d.path, 
+          JSON.stringify({ id: dash, name: rec.name, state: nextState }, null, 2), 
+          `update ${dash}`, 
+          d.sha
+        );
+      } catch (err) {
+        const msg = err.message || '';
+        if (msg.toLowerCase().includes('secret') || msg.toLowerCase().includes('validation')) {
+          return json(res, 400, { error: 'Save rejected by repository: Secret detected. Please remove sensitive tokens or check your repository settings.' });
+        }
+        throw err;
+      }
+      await saveIndex(dashboards, idx.sha);
       return json(res, 200, { ok: true });
     }
 
@@ -175,26 +211,40 @@ module.exports = async (req, res) => {
       const rec = idx.dashboards[dash];
       if (!rec) return json(res, 404, { error: 'Not found' });
       if (rec.ownerId !== s.userId && !isAdmin) return json(res, 403, { error: 'Forbidden' });
+      const wsLogName = rec.name ? `${rec.name} (${dash})` : dash;
 
       if (publish) {
         const body = await readBody(req);
         rec.published = true;
         rec.publishedToAll = !!body.all;
         rec.allowedUsers = body.all ? [] : Array.from(new Set([rec.ownerId, ...(body.users || [])]));
+        log(s.userId, wsLogName, 'publish', `Published to ${body.all ? 'ALL' : (body.users?.length || 0) + ' users'}`);
       } else {
         rec.published = false;
         rec.publishedToAll = false;
         rec.allowedUsers = [rec.ownerId];
+        log(s.userId, wsLogName, 'unpublish', 'Dashboard unpublished');
       }
 
       rec.updatedAt = new Date().toISOString();
-      await saveIndex(idx.dashboards);
+      await saveIndex(idx.dashboards, idx.sha);
       return json(res, 200, { ok: true });
     }
 
     // 5. DELETE
     if (req.method === 'DELETE' && dash) {
-       // ... existing delete logic ...
+      const idx = await loadIndex();
+      const rec = idx.dashboards[dash];
+      if (!rec) return json(res, 404, { error: 'Not found' });
+      if (rec.ownerId !== s.userId && !isAdmin) return json(res, 403, { error: 'Forbidden' });
+      const wsLogName = rec.name ? `${rec.name} (${dash})` : dash;
+
+      const d = await loadDash(dash);
+      if (d.exists) await ghDeleteFile(d.path, `delete ${dash}`, d.sha);
+      delete idx.dashboards[dash];
+      await saveIndex(idx.dashboards, idx.sha);
+      log(s.userId, wsLogName, 'delete', 'Dashboard deleted');
+      return json(res, 200, { ok: true });
     }
 
     return json(res, 400, { error: 'Method not supported' });

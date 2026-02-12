@@ -14,7 +14,7 @@
     <!-- <h1 class="text-2xl font-bold text-green-600 text-center flex items-center justify-center min-h-screen">CycleCipher Login</h1> -->
     <div id="err" class="hidden mt-4 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg p-3"></div>
 
-    <div class="mt-6 space-y-4">
+    <form class="mt-6 space-y-4" onsubmit="event.preventDefault(); login();">
       <div>
         <label class="text-xs text-slate-600">User ID</label>
         <input id="userId" class="w-full border rounded-lg px-3 py-2 text-sm" autocomplete="username" />
@@ -23,8 +23,8 @@
         <label class="text-xs text-slate-600">Password</label>
         <input id="password" type="password" class="w-full border rounded-lg px-3 py-2 text-sm" autocomplete="current-password" />
       </div>
-      <button id="btn" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Login</button>
-    </div>
+      <button id="btn" type="submit" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Login</button>
+    </form>
   </div>
 
 <script>
@@ -51,8 +51,6 @@
     }catch(e){ err(e.message || String(e)); }
     finally{ btn.disabled=false; btn.textContent='Login'; }
   }
-  document.getElementById('btn').onclick = login;
-  document.getElementById('password').addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') login(); });
 </script>
 </body>
 </html>
