@@ -218,10 +218,13 @@ function describeChanges(oldData, newData) {
 function log(userId, workspaceId, action, details) {
   try {
     // Use the global DB root if set, otherwise fallback
-    const dbRoot = process.env.LOCAL_DB_ROOT || path.join(__dirname, '../../');
+    // On Cloudflare, __dirname might not exist or behave differently
+    const dbRoot = process.env.LOCAL_DB_ROOT || (typeof __dirname !== 'undefined' ? path.join(__dirname, '../../') : '/tmp');
     const logsDir = path.join(dbRoot, 'db', 'logs');
 
     if (!fs.existsSync(logsDir)) {
+      // If fs is read-only (Cloudflare), this might throw or fail silently.
+      // We catch the error below.
       fs.mkdirSync(logsDir, { recursive: true });
     }
 
@@ -241,9 +244,17 @@ function log(userId, workspaceId, action, details) {
     };    
 
     // Append as a single line JSON
-    fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+    if (fs.appendFileSync) {
+        fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+    } else {
+        // Fallback for Cloudflare Logs
+        console.log(JSON.stringify(entry));
+    }
   } catch (e) {
-    console.error('Logger Error:', e);
+    // Suppress FS errors on Cloudflare
+    if (e.code !== 'EROFS' && e.code !== 'ENosys') {
+        console.error('Logger Error:', e);
+    }
   }
 }
 

@@ -15,20 +15,22 @@ const { ghGetFile, decodeContent } = githubLib;
 function createAdapters(request) {
   const url = new URL(request.url);
   
+  // Cache body promise to ensure it's only read once
+  let bodyPromise;
+  const getBody = () => {
+    if (!bodyPromise) bodyPromise = request.arrayBuffer().then(b => Buffer.from(b)).catch(e => Buffer.alloc(0));
+    return bodyPromise;
+  };
+
   const req = {
     method: request.method,
     url: request.url,
     headers: Object.fromEntries(request.headers),
     query: Object.fromEntries(url.searchParams),
     // Mock event emitter for body parsing
-    on: async (event, cb) => {
-      if (event === 'data') {
-        try {
-          const buf = await request.arrayBuffer();
-          cb(Buffer.from(buf));
-        } catch (e) {}
-      }
-      if (event === 'end') setTimeout(cb, 0);
+    on: (event, cb) => {
+      if (event === 'data') getBody().then(b => cb(b));
+      if (event === 'end') getBody().then(() => cb());
     }
   };
 

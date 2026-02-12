@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,7 +55,7 @@
 
 <script>
   async function twJson(url, opt){
-    const r = await fetch(url, Object.assign({headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
+    const r = await fetch(url, Object.assign({credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}}, opt||{}));
     const t = await r.text();
     let j={};
     try{ j=JSON.parse(t||'{}'); }catch(e){ j={error:t}; }
