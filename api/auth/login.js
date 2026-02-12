@@ -58,7 +58,8 @@ module.exports = async (req, res) => {
     const password = String(body.password || '');
     if(!userId || !password) return json(res, 400, { error:'userId and password required' });
 
-    const { users } = await loadUsers();
+    const { users, sha } = await loadUsers();
+    console.log(`[Auth] Loaded users from ${sha === 'local' ? 'Local Disk' : 'GitHub'} (${Object.keys(users).length} users)`);
     const u = users[userId];
     if(!u) {
       console.log(`[Auth] Login failed: User ${userId} not found`);
