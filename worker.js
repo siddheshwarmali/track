@@ -48,6 +48,11 @@ export default {
     // Inject env vars into process.env for the handlers
     globalThis.process = { env: { ...env, NODE_ENV: 'production' } };
 
+    // FIX: Redirect root URL to login.html since index.html doesn't exist
+    if (path === '/' || path === '/index.html') {
+      return Response.redirect(url.origin + '/login.html', 302);
+    }
+
     // API Routing
     if (path.startsWith('/api/')) {
       const { req, res, getResponse } = createAdapters(request);
