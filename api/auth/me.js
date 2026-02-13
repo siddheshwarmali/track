@@ -4,11 +4,25 @@ const { ghGetFile, decodeContent } = require('../_lib/github');
 
 const USERS_PATH = 'db/users.json';
 
+function parseJsonSafe(txt, fb) {
+  try { return JSON.parse(txt); } catch { return fb; }
+}
+
 async function loadUsers() {
-  const f = await ghGetFile(USERS_PATH);
-  if (!f.exists) return { users: {} };
-  const data = JSON.parse(decodeContent(f) || '{"users":{}}');
-  return { users: data.users || {} };
+  try {
+    const f = await ghGetFile(USERS_PATH);
+    if (!f.exists) return { users: {} };
+    const data = parseJsonSafe(decodeContent(f) || '{"users":{}}', { users: {} });
+    return { users: data.users || {} };
+  } catch (e) {
+    console.error('[Auth] Error loading users in /me:', e);
+    // Fallback to in-memory default admin if DB is unreachable
+    return { 
+      users: { 
+        admin: { userId: 'admin', role: 'admin', permissions: { userManager: true } } 
+      } 
+    };
+  }
 }
 
 module.exports = async (req, res) => {
