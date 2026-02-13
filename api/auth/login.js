@@ -12,27 +12,48 @@ function parseJsonSafe(txt, fb) {
 }
 
 async function loadUsers(){
-  const f = await ghGetFile(USERS_PATH);
+  try {
+    const f = await ghGetFile(USERS_PATH);
 
-  if (!f.exists) {
-     // If file doesn't exist, create it with a default admin user
-    const defaultUsers = { users: { admin: { userId: 'admin', role: 'admin', passwordHash: bcrypt.hashSync('admin', 10), permissions: { userManager: true } } } };
-    await ghPutFileRetry(USERS_PATH, JSON.stringify(defaultUsers, null, 2), 'seed admin user');
-    return { exists: true, sha: null, users: defaultUsers.users };
+    if (!f.exists) {
+       // If file doesn't exist, create it with a default admin user
+      const defaultUsers = { users: { admin: { userId: 'admin', role: 'admin', passwordHash: bcrypt.hashSync('admin', 10), permissions: { userManager: true } } } };
+      try {
+        await ghPutFileRetry(USERS_PATH, JSON.stringify(defaultUsers, null, 2), 'seed admin user');
+      } catch (err) {
+        console.warn('[Auth] Failed to seed initial users file:', err.message);
+      }
+      return { exists: true, sha: null, users: defaultUsers.users };
+    }
+
+    const data = parseJsonSafe((decodeContent(f) || '').trim() || '{"users":{}}', { users: {} });
+
+    return { exists:true, sha:f.sha, users: data.users || {} };
+  } catch (e) {
+    console.error('[Auth] Error loading users:', e);
+    // Fallback to in-memory default admin if DB is unreachable
+    return { 
+      exists: false, 
+      sha: null, 
+      users: { 
+        admin: { 
+          userId: 'admin', 
+          role: 'admin', 
+          passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin', 10), 
+          permissions: { userManager: true } 
+        } 
+      } 
+    };
   }
-
-  const data = parseJsonSafe((decodeContent(f) || '').trim() || '{"users":{}}', { users: {} });
-
-  return { exists:true, sha:f.sha, users: data.users || {} };
 }
 
 async function ensureSeedAdmin(){
-  const { exists, users } = await loadUsers();
+  const { users } = await loadUsers();
   let valid = false;
-  if (exists && users && users.admin && users.admin.passwordHash) {
+  if (users && users.admin && users.admin.passwordHash) {
     if (/^\$2[aby]\$/.test(users.admin.passwordHash)) valid = true;
   }
-  if (valid) return;
+  if (valid) return users;
   
   console.log('[Auth] Seeding admin user...');
   const pw = process.env.ADMIN_PASSWORD || 'admin';
@@ -42,7 +63,14 @@ async function ensureSeedAdmin(){
     userId:'admin', role:'admin', permissions: { userManager: true }, ...current,
     passwordHash: bcrypt.hashSync(pw, 10), updatedAt: new Date().toISOString() 
   };
-  await ghPutFileRetry(USERS_PATH, JSON.stringify({ users: nextUsers }, null, 2), 'seed admin user');
+  
+  try {
+    await ghPutFileRetry(USERS_PATH, JSON.stringify({ users: nextUsers }, null, 2), 'seed admin user');
+  } catch (e) {
+    console.error('[Auth] Failed to persist admin seed:', e.message);
+  }
+  
+  return nextUsers;
 }
 
 module.exports = async (req, res) => {
@@ -52,14 +80,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    await ensureSeedAdmin();
+    const users = await ensureSeedAdmin();
     const body = await readBody(req);
     const userId = String(body.userId || '').trim();
     const password = String(body.password || '');
     if(!userId || !password) return json(res, 400, { error:'userId and password required' });
 
-    const { users, sha } = await loadUsers();
-    console.log(`[Auth] Loaded users from ${sha === 'local' ? 'Local Disk' : 'GitHub'} (${Object.keys(users).length} users)`);
+    console.log(`[Auth] Attempting login for: ${userId}`);
     const u = users[userId];
     if(!u) {
       console.log(`[Auth] Login failed: User ${userId} not found`);
