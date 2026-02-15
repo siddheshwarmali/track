@@ -34,14 +34,6 @@
     return u.searchParams.get('next') || '/build.html';
   }
 
-  // Auto-redirect if already logged in
-  window.addEventListener('DOMContentLoaded', async () => {
-    try {
-      const r = await fetch('/api/auth/me');
-      if ((await r.json()).authenticated) location.replace(nextUrl());
-    } catch(e) {}
-  });
-
   async function login(){
     document.getElementById('err').classList.add('hidden');
     const userId = document.getElementById('userId').value.trim();
@@ -55,12 +47,6 @@
       let j={};
       try{ j=JSON.parse(t||'{}'); }catch(e){ j={error:t}; }
       if(!r.ok) throw new Error(j.error||j.message||t||('HTTP '+r.status));
-      
-      // Verify session cookie was accepted
-      const v = await fetch('/api/auth/me');
-      const vj = await v.json();
-      if(!vj.authenticated) throw new Error('Login succeeded but session cookie was blocked. Check browser privacy settings.');
-
       location.replace(nextUrl());
     }catch(e){ err(e.message || String(e)); }
     finally{ btn.disabled=false; btn.textContent='Login'; }
