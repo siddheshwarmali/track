@@ -72,7 +72,7 @@
       if(!me || !me.authenticated){
         const next=encodeURIComponent(location.pathname+location.search+location.hash);
         location.replace('/login.html?next='+next);
-        return;
+        return false;
       }
       const role = me.role || 'viewer';
       document.body.classList.remove('role-admin','role-creator','role-viewer');
@@ -85,9 +85,11 @@
  const eb=document.getElementById('tw-execboard');
  if(eb){ const perms = me.permissions || {}; eb.classList.toggle('hidden', !(role==='admin' || perms.executiveBoard)); }
       if(lo) lo.onclick = async ()=>{ try{ await twJson('/api/auth/logout', {method:'POST'});}catch(e){} location.href='/login.html'; };
+      return true;
     }catch(e){
       const next=encodeURIComponent(location.pathname+location.search+location.hash);
       location.replace('/login.html?next='+next);
+      return false;
     }
   }
   window.addEventListener('DOMContentLoaded', ()=>{ twInit(); });
@@ -3448,11 +3450,9 @@ function renderBlockers() {
 
 window.onload = function() {
             lucide.createIcons();
-            wsInitWorkspaceManager();
             // Auto-save disabled (manual Save only)
             const tmpl = document.getElementById('run-dashboard-template');
             if (tmpl) document.getElementById('run-iframe').srcdoc = tmpl.innerHTML;
-            renderAll();
             try { if (typeof loadedTicketData !== "undefined" && loadedTicketData && typeof generateDashboard === "function") generateDashboard(); } catch(e) {}
             window.addEventListener('message', (e) => { if (e.data && e.data.type === 'REQUEST_ADO_SYNC_RUN') openAdoModal('run'); if(e.data && e.data.type === 'BAU_UPDATE') { bauData = e.data.payload; renderBauStats(); } });
         };
@@ -4234,7 +4234,8 @@ async function wsModalPrimary() {
       twLoader.show('Starting…', 'Checking session', 15);
       // Ensure auth init runs (existing twInit redirects if not logged in)
       if (typeof twInit === 'function') {
-        await Promise.resolve(twInit());
+        const authOk = await Promise.resolve(twInit());
+        if (authOk === false) return;
       }
       twLoader.pct(30);
 
