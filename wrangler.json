@@ -5,9 +5,10 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".",
-    "binding": "ASSETS"
+    "binding": ""
   },
   "observability": {
     "enabled": true
   }
+
 }
