@@ -3492,6 +3492,10 @@ async function gh6Request(method, params={}, body=null) {
     const opt = { method, headers: { 'Accept':'application/json' } };
     if (body !== null) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
     const r = await fetch(u.toString(), opt);
+    if (r.status === 401) {
+        window.location.href = '/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+        throw new Error('Not authenticated');
+    }
     const raw = await r.text();
     let data = {};
     try { data = JSON.parse(raw || '{}'); } catch(e) { data = { error:'Invalid JSON', details: (raw||'').slice(0,250) }; }
